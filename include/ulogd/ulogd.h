@@ -242,15 +242,24 @@ int ulogd_select_main();
 /***********************************************************************
  * timer handling
  ***********************************************************************/
+#define TIMER_F_PERIODIC			0x01
 
 struct ulogd_timer {
 	struct llist_head list;
-	struct timeval expires;
-	void (*cb)(void *data);
-	void *data;
+	unsigned expires;			/* seconds */
+	unsigned ival;				/* seconds */
+	unsigned flags;
+	void (*cb)(struct ulogd_timer *);
+	void *data;					/* usually (ulogd_pluginstance *) */
 };
 
+extern time_t t_now;
+
+int ulogd_timer_init(void);
+int ulogd_timer_run(void);
 int ulogd_register_timer(struct ulogd_timer *timer);
 void ulogd_unregister_timer(struct ulogd_timer *timer);
+void ulogd_timer_schedule(void);
+int ulogd_timer_handle(void);
 
 #endif /* _ULOGD_H */

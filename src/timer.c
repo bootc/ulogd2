@@ -25,143 +25,96 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+#include <errno.h>
 
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
 #include <ulogd/linuxlist.h>
 
 static LLIST_HEAD(ulogd_timers);
+static int expired;
+time_t t_now;
 
-static void tv_normalize(struct timeval *out)
+
+int
+ulogd_register_timer(struct ulogd_timer *timer)
 {
-	out->tv_sec += (out->tv_usec / 1000000);
-	out->tv_usec = (out->tv_usec % 1000000);
-}
-
-/* subtract two struct timevals */
-static int tv_sub(struct timeval *res, const struct timeval *from,
-		  const struct timeval *sub)
-{
-	/* FIXME: this stinks.  Deal with wraps, carry, ... */
-	res->tv_sec = from->tv_sec - sub->tv_sec;
-	res->tv_usec = from->tv_usec - sub->tv_usec;
-
-	return 0;
-}
-
-static int tv_add(struct timeval *res, const struct timeval *a1,
-		  const struct timeval *a2)
-{
-	unsigned int carry;
-
-	res->tv_sec = a1->tv_sec + a2->tv_sec;
-	res->tv_usec = a1->tv_usec + a2->tv_usec;
-
-	tv_normalize(res);
-}
-
-static int tv_later(const struct timeval *expires, const struct timeval *now)
-{
-	if (expires->tv_sec < now->tv_sec)
-		return 0;
-	else if (expires->tv_sec > now->tv_sec)
-		return 1;
-	else /* if (expires->tv_sec == now->tv_sec */ {
-		if (expires->tv_usec >= now->tv_usec)
-			return 1;
-	}
-
-	return 0;
-}
-
-static int tv_smaller(const struct timeval *t1, const struct timeval *t2)
-{
-	return tv_later(t2, t1);
-}
-
-static int calc_next_expiration(void)
-{
-	struct ulogd_timer *cur;
-	struct timeval min, now, diff;
-	struct itimerval iti;
-	int ret;
-
-retry:
-	if (llist_empty(&ulogd_timers))
-		return 0;
-
-	llist_for_each_entry(cur, &ulogd_timers, list) {
-		if (ulogd_timers.next == &cur->list)
-			min = cur->expires;
-
-		if (tv_smaller(&cur->expires, &min))
-			min = cur->expires;
-	}
-
-	if (tv_sub(&diff, &min, &now) < 0) {
-		/* FIXME: run expired timer callbacks */
-		/* we cannot run timers from here since we might be
-		 * called from register_timer() within check_n_run() */
-
-		/* FIXME: restart with next minimum timer */
-		goto retry;
-	}
-
-	/* re-set kernel timer */
-	memset(&iti, 0, sizeof(iti));
-	memcpy(&iti.it_value, &diff, sizeof(iti.it_value));
-	ret = setitimer(ITIMER_REAL, &iti, NULL);
-	if (ret < 0)
-		return ret;
-
-	return 0;
-}
-
-void ulogd_timer_check_n_run(void)
-{
-	struct ulogd_timer *cur, *cur2;
-	struct timeval now;
-
-	if (gettimeofday(&now, NULL) < 0)
-		return;
-
-	llist_for_each_entry_safe(cur, cur2, &ulogd_timers, list) {
-		if (tv_later(&cur->expires, &now)) {
-			/* fist delete it from the list of timers */
-			llist_del(&cur->list);
-			/* then call.  called function can re-add it */
-			(cur->cb)(cur->data);
+	if (timer->flags & TIMER_F_PERIODIC) {
+		timer->expires = t_now + timer->ival;
+	} else {
+		if (timer->expires == 0) {
+			errno = EINVAL;
+			return -1;
 		}
 	}
 
-	calc_next_expiration();
-}
-
-
-int ulogd_register_timer(struct ulogd_timer *timer)
-{
-	int ret;
-	struct timeval tv;
-
-	ret = gettimeofday(&tv, NULL);
-	if (ret < 0)
-		return ret;
-
-	/* convert expiration time into absoulte time */
-	timer->expires.tv_sec += tv.tv_sec;
-	timer->expires.tv_usec += tv.tv_usec;
-
 	llist_add_tail(&timer->list, &ulogd_timers);
-
-	/* re-calculate next expiration */
-	calc_next_expiration();
 
 	return 0;
 }
 
-void ulogd_unregister_timer(struct ulogd_timer *timer)
+
+void
+ulogd_timer_schedule(void)
+{
+	t_now = time(NULL);
+
+	expired++;
+}
+
+
+int
+ulogd_timer_handle(void)
+{
+	struct ulogd_timer *t;
+
+	if (expired == 0)
+		return 0;
+
+	llist_for_each_entry(t, &ulogd_timers, list) {
+		if (t->expires <= t_now) {
+			(t->cb)(t);
+			
+			if (t->flags & TIMER_F_PERIODIC)
+				t->expires = t_now + t->ival;
+			else
+				llist_del(&t->list);
+		}
+	}
+
+	expired = 0;
+
+	return 0;
+}
+
+
+void
+ulogd_unregister_timer(struct ulogd_timer *timer)
 {
 	llist_del(&timer->list);
+}
 
-	/* re-calculate next expiration */
-	calc_next_expiration();
+
+int
+ulogd_timer_init(void)
+{
+	t_now = time(NULL);
+}
+
+
+/* start periodic timer */
+int
+ulogd_timer_run(void)
+{
+	struct itimerval itv = {	/* run timer every second */
+		.it_interval = { .tv_sec = 1, },
+		.it_value = { .tv_sec = 1, },
+	};
+
+	if (setitimer(ITIMER_REAL, &itv, NULL) < 0) {
+		ulogd_log(ULOGD_ERROR, "setitimer: %s\n", strerror(errno));
+		return -1;
+	}
+
+	return 0;
 }
