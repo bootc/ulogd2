@@ -60,6 +60,7 @@
 #include <getopt.h>
 #include <pwd.h>
 #include <grp.h>
+#include <pthread.h>
 #include <syslog.h>
 #include <ulogd/conffile.h>
 #include <ulogd/ulogd.h>
@@ -298,7 +299,7 @@ void __ulogd_log(int level, char *file, int line, const char *format, ...)
 		vsyslog(ulogd2syslog_level(level), format, ap);
 		va_end(ap);
 	} else {
-		if (logfile)
+  		if (logfile)
 			outfd = logfile;
 		else
 			outfd = stderr;
@@ -712,13 +713,9 @@ static int ulogd_main_loop(void)
 			continue;
 
 		if (ret < 0) {
-			if (errno == -EINTR)
-				continue;
-			else {
-				ulogd_log(ULOGD_ERROR, "select returned %s\n",
+			ulogd_log(ULOGD_ERROR, "select returned %s\n",
 					  strerror(errno));
-				break;
-			}
+			break;
 		}
 	}
 
@@ -812,6 +809,14 @@ static void sigterm_handler(int signal)
 	exit(0);
 }
 
+
+static void
+sigalrm_handler(int signal)
+{
+	ulogd_timer_schedule();		/* we have synchronous timer handlers */
+}
+
+
 static void signal_handler(int signal)
 {
 	ulogd_log(ULOGD_NOTICE, "signal received, calling pluginstances\n");
@@ -826,9 +831,7 @@ static void signal_handler(int signal)
 				sigterm_handler(signal);
 		}
 		break;
-	case SIGALRM:
-		ulogd_timer_check_n_run();
-		break;
+
 	default:
 		break;
 	}
@@ -859,7 +862,12 @@ static struct option opts[] = {
 	{ 0 }
 };
 
-int main(int argc, char* argv[])
+
+static sigset_t fullset, currset, oldset;
+
+
+int
+main(int argc, char* argv[])
 {
 	int argch;
 	int daemonize = 0;
@@ -913,6 +921,11 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
+
+	sigfillset(&fullset);
+	pthread_sigmask(SIG_SETMASK, &fullset, &oldset);
+
+	ulogd_timer_init();
 
 	if (config_register_file(ulogd_configfile)) {
 		ulogd_log(ULOGD_FATAL, "error registering configfile \"%s\"\n",
@@ -969,17 +982,33 @@ int main(int argc, char* argv[])
 		setsid();
 	}
 
+	sigemptyset(&currset);
 	signal(SIGTERM, &sigterm_handler);
-	signal(SIGHUP, &signal_handler);
-	signal(SIGALRM, &signal_handler);
-	signal(SIGUSR1, &signal_handler);
-	signal(SIGUSR2, &signal_handler);
+	sigaddset(&currset, SIGTERM);
 
-	ulogd_log(ULOGD_INFO, 
-		  "initialization finished, entering main loop\n");
+	sigaddset(&currset, SIGINT);
+
+	signal(SIGHUP, &signal_handler);
+	sigaddset(&currset, SIGHUP);
+
+	signal(SIGALRM, &sigalrm_handler);
+	sigaddset(&currset, SIGALRM);
+
+	signal(SIGUSR1, &signal_handler);
+	sigaddset(&currset, SIGUSR1);
+
+	signal(SIGUSR2, &signal_handler);
+	sigaddset(&currset, SIGUSR2);
+
+	pthread_sigmask(SIG_UNBLOCK, &currset, NULL);
 
 	if (ifi_init() < 0)
 		exit(EXIT_FAILURE);
+
+	ulogd_timer_run();
+
+	ulogd_log(ULOGD_INFO, 
+		  "initialization finished, entering main loop\n");
 
 	ulogd_main_loop();
 

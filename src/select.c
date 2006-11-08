@@ -23,6 +23,7 @@
 
 #include <fcntl.h>
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
 #include <ulogd/linuxlist.h>
 
 static int maxfd = 0;
@@ -59,6 +60,7 @@ int ulogd_select_main()
 {
 	struct ulogd_fd *ufd;
 	fd_set readset, writeset, exceptset;
+	struct timeval tv = { .tv_sec = 1, };
 	int i;
 
 	FD_ZERO(&readset);
@@ -77,7 +79,15 @@ int ulogd_select_main()
 			FD_SET(ufd->fd, &exceptset);
 	}
 
-	i = select(maxfd+1, &readset, &writeset, &exceptset, NULL);
+ again:
+	i = select(maxfd+1, &readset, &writeset, &exceptset, &tv);
+	if (i < 0) {
+		if (errno == EINTR)
+			goto again;
+	}
+
+	ulogd_timer_handle();
+
 	if (i > 0) {
 		/* call registered callback functions */
 		llist_for_each_entry(ufd, &ulogd_fds, list) {
