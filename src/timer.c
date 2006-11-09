@@ -33,6 +33,7 @@
 
 static LLIST_HEAD(ulogd_timers);
 static int expired;
+static sigset_t ss_alrm;
 time_t t_now;
 
 
@@ -71,6 +72,9 @@ ulogd_timer_handle(void)
 	if (expired == 0)
 		return 0;
 
+	/* disable SIGALRM for duration of this call */
+	pthread_sigmask(SIG_BLOCK, &ss_alrm, NULL);
+	
 	llist_for_each_entry(t, &ulogd_timers, list) {
 		if (t->expires <= t_now) {
 			(t->cb)(t);
@@ -81,6 +85,9 @@ ulogd_timer_handle(void)
 				llist_del(&t->list);
 		}
 	}
+
+	/* enable again */
+	pthread_sigmask(SIG_UNBLOCK, &ss_alrm, NULL);
 
 	expired = 0;
 
@@ -99,6 +106,11 @@ int
 ulogd_timer_init(void)
 {
 	t_now = time(NULL);
+
+	sigemptyset(&ss_alrm);
+	sigaddset(&ss_alrm, SIGALRM);
+
+	return 0;
 }
 
 
