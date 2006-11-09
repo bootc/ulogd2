@@ -53,12 +53,14 @@ typedef unsigned conntrack_hash_t;
 struct ct_timestamp {
 	struct llist_head list;
 	struct nfct_tuple tuple;
+	unsigned last_seq;
 	struct timeval time[__TIME_MAX];
 };
 
 struct ct_htable {
 	struct llist_head *buckets;
 	unsigned num_buckets;
+	unsigned curr_bucket;
 	unsigned used;
 };
 
@@ -67,6 +69,10 @@ struct nfct_pluginstance {
 	struct ulogd_fd nfct_fd;
 	struct ct_htable *htable;
 	struct ulogd_timer timer;
+	struct {
+		unsigned nl_err;
+		unsigned nl_ovr;
+	} stats;
 };
 
 #define HTABLE_SIZE	(8192)
@@ -293,6 +299,135 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 };
 
 
+/* forward declarations */
+static struct ct_timestamp * ct_hash_find_seq(const struct ct_htable *,
+											  unsigned);
+static void ct_hash_free(struct ct_htable *, struct ct_timestamp *);
+
+
+static int
+nl_error(struct ulogd_pluginstance *pi, struct nlmsghdr *nlh, int *err)
+{
+	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nlmsgerr *e = NLMSG_DATA(nlh);
+	struct ct_timestamp *ts;
+
+	ts = ct_hash_find_seq(priv->htable, e->msg.nlmsg_seq);
+	if (ts == NULL)
+		return 0;						/* already gone */
+
+	switch (-e->error) {
+	case ENOENT:
+		/* destroy message was lost (FIXME log all what we got) */
+		ct_hash_free(priv->htable, ts);
+		break;
+
+	case 0:								/* "Success" */
+		break;
+
+	default:
+		ulogd_log(ULOGD_ERROR, "netlink error: %s (seq %u)\n",
+				  strerror(-e->error), e->msg.nlmsg_seq);
+		break;
+	}
+
+	*err = -e->error;
+
+	return 0;
+}
+
+
+/* this should go into its own file */
+static int
+nfnl_recv_msgs(struct nfnl_handle *nfnlh,
+			   int (* cb)(struct nlmsghdr *, void *arg), void *arg)
+{
+	static char buf[NFNL_BUFFSIZE];
+	struct ulogd_pluginstance *pi = arg;
+	struct nfct_pluginstance *priv = (void *)pi->private;
+
+	for (;;) {
+		struct nlmsghdr *nlh = (void *)buf;
+		ssize_t nread;
+
+		nread = nfnl_recv(nfct_nfnlh(priv->cth), buf, sizeof(buf));
+		if (nread < 0) {
+			if (errno == EWOULDBLOCK)
+				break;
+
+			return -1;
+		}
+
+		while (NLMSG_OK(nlh, nread)) {
+			int err;
+
+			if (nlh->nlmsg_type == NLMSG_ERROR) {
+				if (nl_error(pi, nlh, &err) == 0 && err != 0)
+					priv->stats.nl_err++;
+
+				break;
+			}
+
+			if (nlh->nlmsg_type == NLMSG_OVERRUN)
+				priv->stats.nl_ovr++;	/* continue?  payload? */
+				
+			(cb)(nlh, pi);
+
+			nlh = NLMSG_NEXT(nlh, nread);
+		}
+	}
+
+	return 0;
+}
+
+
+static int
+nfct_msg_type(const struct nlmsghdr *nlh)
+{
+	uint16_t type = NFNL_MSG_TYPE(nlh->nlmsg_type);
+	int nfct_type;
+
+	if (type == IPCTNL_MSG_CT_NEW) {
+		if (nlh->nlmsg_flags & (NLM_F_CREATE | NLM_F_EXCL))
+			nfct_type = NFCT_MSG_NEW;
+		else
+			nfct_type = NFCT_MSG_UPDATE;
+	} else if (type == IPCTNL_MSG_CT_DELETE)
+		nfct_type = NFCT_MSG_DESTROY;
+	else
+		nfct_type = NFCT_MSG_UNKNOWN;
+
+	return nfct_type;
+}
+
+
+/* seq: sequence number used for the request */
+static int
+nfct_get_conntrack_x(struct nfct_handle *cth, struct nfct_tuple *t,
+					 int dir, uint32_t *seq)
+{
+	static char buf[NFNL_BUFFSIZE];
+	struct nfnlhdr *req = (void *)buf;
+	int cta_dir;
+
+	memset(buf, 0, sizeof(buf));
+
+	/* intendedly do not set NLM_F_ACK in order to skip the
+	   ACK message (but NACKs are still send) */
+	nfnl_fill_hdr(nfct_subsys_ct(cth), &req->nlh, 0, t->l3protonum,
+				  0, IPCTNL_MSG_CT_GET, NLM_F_REQUEST);
+
+	if (seq != NULL)
+		*seq = req->nlh.nlmsg_seq;
+
+	cta_dir = (dir == NFCT_DIR_ORIGINAL) ? CTA_TUPLE_ORIG : CTA_TUPLE_REPLY;
+
+	nfct_build_tuple(req, sizeof(buf), t, cta_dir);
+
+	return nfnl_send(nfct_nfnlh(cth), &req->nlh);
+}
+
+
 static conntrack_hash_t
 hash_conntrack(const struct nfct_tuple *t, size_t hash_sz)
 {
@@ -384,6 +519,25 @@ ct_hash_find(struct ct_htable *htable, const struct nfct_tuple *t)
 	return NULL;
 }
 
+
+static struct ct_timestamp *
+ct_hash_find_seq(const struct ct_htable *htable, unsigned seq)
+{
+	int i;
+
+	for (i = 0; i < htable->num_buckets; i++) {
+		struct ct_timestamp *ts;
+
+		llist_for_each_entry(ts, &htable->buckets[i], list) {
+			if (ts->last_seq == seq)
+				return ts;
+		}
+	}
+
+	return NULL;
+}
+
+
 /* time diff with second resolution */
 static inline unsigned
 tv_diff_sec(const struct ct_timestamp *ts)
@@ -399,6 +553,7 @@ ct_hash_free(struct ct_htable *htable, struct ct_timestamp *ts)
 {
 	llist_del(&ts->list);
 
+	free(ts);
 	htable->used--;
 }
 
@@ -493,40 +648,56 @@ propagate_ct(struct ulogd_pluginstance *upi, struct nfct_conntrack *ct,
 	return 0;
 }
 
-static int event_handler(void *arg, unsigned int flags, int type,
-			 void *data)
+
+static int
+do_nfct_msg(struct nlmsghdr *nlh, void *arg)
 {
-	struct nfct_conntrack *ct = arg;
-	struct ulogd_pluginstance *upi = data;
-	struct nfct_pluginstance *cpi = (void *)upi->private;
+	struct ulogd_pluginstance *pi = arg;
+	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfgenmsg *nfh = NLMSG_DATA(nlh);
+	struct nfct_conntrack ct;
 	struct ct_timestamp *ts;
+	int flags, type = nfct_msg_type(nlh);
+
+	if (type == NFCT_MSG_UNKNOWN)
+		return 0;
+
+	bzero(&ct, sizeof(ct));
+
+	ct.tuple[NFCT_DIR_ORIGINAL].l3protonum = 
+		ct.tuple[NFCT_DIR_REPLY].l3protonum = nfh->nfgen_family;
+
+	if (nfct_netlink_to_conntrack(nlh, &ct, &flags) < 0)
+		return -1;
 
 	switch (type) { 
 	case NFCT_MSG_NEW:
-		ts = ct_hash_add(cpi->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
-		gettimeofday(&ts->time[START], NULL);
+		ts = ct_hash_add(priv->htable, &ct.tuple[NFCT_DIR_ORIGINAL]);
+		if (ts != NULL) {
+			gettimeofday(&ts->time[START], NULL);
+		}
 		break;
 
 	case NFCT_MSG_UPDATE:
-		ts = ct_hash_find(cpi->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
+		ts = ct_hash_find(priv->htable, &ct.tuple[NFCT_DIR_ORIGINAL]);
 		if (ts == NULL) {
-			ts = ct_hash_add(cpi->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
-			if (ts == NULL)
-				exit(EXIT_FAILURE);
+			/* do not add CT to cache, as there would be no start
+			   information */
+			break;
 		}
 
 		/* handle TCP connections differently in order not to bloat CT
 		   hash with many TIME_WAIT connections */
-		if (ct->tuple[NFCT_DIR_ORIGINAL].protonum == IPPROTO_TCP) {
-			if (ct->protoinfo.tcp.state == TCP_CONNTRACK_TIME_WAIT)
-				return propagate_ct(upi, ct, ts, flags);
+		if (ct.tuple[NFCT_DIR_ORIGINAL].protonum == IPPROTO_TCP) {
+			if (ct.protoinfo.tcp.state == TCP_CONNTRACK_TIME_WAIT)
+				return propagate_ct(pi, &ct, ts, flags);
 		}
 		break;
 		
 	case NFCT_MSG_DESTROY:
-		ts = ct_hash_find(cpi->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
+		ts = ct_hash_find(priv->htable, &ct.tuple[NFCT_DIR_ORIGINAL]);
 		if (ts != NULL)
-			return propagate_ct(upi, ct, ts, flags);
+			return propagate_ct(pi, &ct, ts, flags);
 		break;
 		
 	default:
@@ -536,30 +707,41 @@ static int event_handler(void *arg, unsigned int flags, int type,
 	return 0;
 }
 
-static int read_cb_nfct(int fd, unsigned int what, void *param)
+
+static int
+read_cb_nfct(int fd, unsigned what, void *param)
 {
-	struct nfct_pluginstance *cpi = (struct nfct_pluginstance *) param;
+	struct ulogd_pluginstance *pi = param;
+	struct nfct_pluginstance *priv = (void *)pi->private;
 
 	if (!(what & ULOGD_FD_READ))
 		return 0;
 
-	/* FIXME: implement this */
-	nfct_event_conntrack(cpi->cth);
-	return 0;
+	return nfnl_recv_msgs(nfct_nfnlh(priv->cth), do_nfct_msg, pi);
 }
 
-static int get_ctr_zero(struct ulogd_pluginstance *upi)
+
+#define STOP_HERE(h)	(((h)->curr_bucket + (h)->num_buckets / 10) \
+								% (h)->num_buckets)
+
+static void
+timer_cb(struct ulogd_timer *t)
 {
-	struct nfct_pluginstance *cpi = (void *)upi->private;
+	struct ulogd_pluginstance *pi = t->data;
+	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct ct_htable *ht = priv->htable;
+	struct ct_timestamp *ts;
+	int end = STOP_HERE(ht);
 
-	return nfct_dump_conntrack_table_reset_counters(cpi->cth, AF_INET);
-}
+	for (; ht->curr_bucket != end; ht->curr_bucket++) {
+		ht->curr_bucket = ht->curr_bucket % ht->num_buckets;
 
-static void getctr_timer_cb(void *data)
-{
-	struct ulogd_pluginstance *upi = data;
-
-	get_ctr_zero(upi);
+		llist_for_each_entry(ts, &ht->buckets[ht->curr_bucket], list) {
+			/* check if its still there */
+			nfct_get_conntrack_x(priv->cth, &ts->tuple, NFCT_DIR_ORIGINAL,
+								 &ts->last_seq);
+		}
+	}
 }
 
 static int configure_nfct(struct ulogd_pluginstance *upi,
@@ -573,18 +755,6 @@ static int configure_nfct(struct ulogd_pluginstance *upi,
 	ret = config_parse_file(upi->id, upi->config_kset);
 	if (ret < 0)
 		return ret;
-	
-	/* initialize getctrzero timer structure */
-	priv->timer.cb = &getctr_timer_cb;
-	priv->timer.data = priv;
-
-	if (pollint_ce(upi->config_kset).u.value != 0) {
-		priv->timer.expires.tv_sec = 
-			pollint_ce(upi->config_kset).u.value;
-		ulogd_register_timer(&priv->timer);
-	}
-
-	
 
 	return 0;
 }
@@ -593,18 +763,15 @@ static int constructor_nfct(struct ulogd_pluginstance *upi)
 {
 	struct nfct_pluginstance *cpi = (void *)upi->private;
 
-	/* FIXME: make eventmask configurable */
 	cpi->cth = nfct_open(NFNL_SUBSYS_CTNETLINK, CT_EVENTS);
 	if (!cpi->cth) {
 		ulogd_log(ULOGD_FATAL, "error opening ctnetlink\n");
 		return -1;
 	}
 
-	nfct_register_callback(cpi->cth, &event_handler, upi);
-
 	cpi->nfct_fd.fd = nfct_fd(cpi->cth);
 	cpi->nfct_fd.cb = &read_cb_nfct;
-	cpi->nfct_fd.data = cpi;
+	cpi->nfct_fd.data = upi;
 	cpi->nfct_fd.when = ULOGD_FD_READ;
 
 	ulogd_register_fd(&cpi->nfct_fd);
@@ -618,6 +785,13 @@ static int constructor_nfct(struct ulogd_pluginstance *upi)
 
 		return -1;
 	}
+
+	cpi->timer.cb = timer_cb;
+	cpi->timer.ival = 1 SEC;
+	cpi->timer.flags = TIMER_F_PERIODIC;
+	cpi->timer.data = upi;
+
+	ulogd_register_timer(&cpi->timer);
 
 	ulogd_log(ULOGD_INFO, "%s: hashsize %u\n", upi->id,
 			  cpi->htable->num_buckets);
@@ -641,7 +815,6 @@ static void signal_nfct(struct ulogd_pluginstance *pi, int signal)
 {
 	switch (signal) {
 	case SIGUSR2:
-		get_ctr_zero(pi);
 		break;
 	}
 }
