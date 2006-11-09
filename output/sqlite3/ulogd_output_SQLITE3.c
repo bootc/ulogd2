@@ -68,6 +68,9 @@ struct sqlite3_priv {
 	sqlite3_stmt *p_stmt;
 	int buffer_size;
 	int buffer_curr;
+	struct {
+		unsigned err_tbl_busy;	/* "Table busy" */
+	} stats;
 };
 
 static struct config_keyset sqlite3_kset = {
@@ -110,7 +113,7 @@ add_row(struct ulogd_pluginstance *pi)
 	if (ret == SQLITE_DONE)
 		priv->buffer_curr++;
 	else if (ret == SQLITE_BUSY)
-		ulogd_log(ULOGD_ERROR, "SQLITE3: step: table busy\n");
+		priv->stats.err_tbl_busy++;
 	else if (ret == SQLITE_ERROR) {
 		ret = sqlite3_finalize(priv->p_stmt);
 		priv->p_stmt = NULL;
