@@ -68,8 +68,8 @@ static struct config_keyset pgsql_kset = {
 #define host_ce(x)	(x->ces[DB_CE_NUM+1])
 #define user_ce(x)	(x->ces[DB_CE_NUM+2])
 #define pass_ce(x)	(x->ces[DB_CE_NUM+3])
-#define port_ce(x)	(x->ces[DB_CE_NUM+5])
-#define schema_ce(x)	(x->ces[DB_CE_NUM+6])
+#define port_ce(x)	(x->ces[DB_CE_NUM+4])
+#define schema_ce(x)	(x->ces[DB_CE_NUM+5])
 
 #define PGSQL_HAVE_NAMESPACE_TEMPLATE 			\
 	"SELECT nspname FROM pg_namespace n WHERE n.nspname='%s'"
