@@ -24,16 +24,12 @@
  * $Id: ulogd_output_MYSQL.c 6304 2005-12-08 09:43:19Z /C=DE/ST=Berlin/L=Berlin/O=Netfilter Project/OU=Development/CN=laforge/emailAddress=laforge@netfilter.org $
  */
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+#include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/db.h>
+#include <time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include <ulogd/ulogd.h>
-#include <ulogd/db.h>
-
 
 /* generic db layer */
 
