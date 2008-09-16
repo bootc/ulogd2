@@ -33,10 +33,10 @@
 
 #include <sys/time.h>
 #include <time.h>
-#include <ulogd/linuxlist.h>
 
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/linuxlist.h>
 #include <ulogd/ipfix_protocol.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -467,6 +467,7 @@ htable_alloc(int htable_size)
 
 	htable->buckets = (void *)htable + sizeof(*htable);
 	htable->num_buckets = htable_size;
+	htable->curr_bucket = 0;
 	htable->used = 0;
 
 	for (i = 0; i < htable->num_buckets; i++)
@@ -743,7 +744,7 @@ read_cb_nfct(int fd, unsigned what, void *param)
 #define STOP_HERE(h)	(((h)->curr_bucket + 16) % (h)->num_buckets)
 
 static void
-timer_cb(struct ulogd_timer *t)
+nfct_timer_cb(struct ulogd_timer *t)
 {
 	struct ulogd_pluginstance *pi = t->data;
 	struct nfct_pluginstance *priv = (void *)pi->private;
@@ -762,13 +763,18 @@ timer_cb(struct ulogd_timer *t)
 
 		ht->curr_bucket = (ht->curr_bucket + 1) % ht->num_buckets;
 	} while (ht->curr_bucket != end);
+
+	pr_debug("%s: now=%ld\n", __func__, t_now);
 }
 
-static int configure_nfct(struct ulogd_pluginstance *upi,
-			  struct ulogd_pluginstance_stack *stack)
+static int
+nfct_configure(struct ulogd_pluginstance *upi,
+			   struct ulogd_pluginstance_stack *stack)
 {
 	struct nfct_pluginstance *priv = (void *)upi->private;
 	int ret;
+
+	pr_debug("%s: pi=%p\n", __func__, upi);
 
 	memset(priv, 0, sizeof(struct nfct_pluginstance));
 	
@@ -780,68 +786,87 @@ static int configure_nfct(struct ulogd_pluginstance *upi,
 }
 
 
-static int constructor_nfct(struct ulogd_pluginstance *upi)
+static int
+nfct_start(struct ulogd_pluginstance *upi)
 {
-	struct nfct_pluginstance *cpi = (void *)upi->private;
+	struct nfct_pluginstance *priv = (void *)upi->private;
 
-	cpi->cth = nfct_open(NFNL_SUBSYS_CTNETLINK, CT_EVENTS);
-	if (!cpi->cth) {
+	pr_debug("%s: pi=%p\n", __func__, upi);
+
+	priv->htable = htable_alloc(buckets_ce(upi->config_kset).u.value);
+	if (priv->htable == NULL) {
+		ulogd_log(ULOGD_FATAL, "%s: out of memory\n", upi->id);
+		return -1;
+	}
+
+	priv->cth = nfct_open(NFNL_SUBSYS_CTNETLINK, CT_EVENTS);
+	if (priv->cth == NULL) {
 		ulogd_log(ULOGD_FATAL, "error opening ctnetlink\n");
-		return -1;
+		goto err_free;
 	}
 
-	cpi->nfct_fd.fd = nfct_fd(cpi->cth);
-	cpi->nfct_fd.cb = &read_cb_nfct;
-	cpi->nfct_fd.data = upi;
-	cpi->nfct_fd.when = ULOGD_FD_READ;
+	priv->nfct_fd.fd = nfct_fd(priv->cth);
+	priv->nfct_fd.cb = &read_cb_nfct;
+	priv->nfct_fd.data = upi;
+	priv->nfct_fd.when = ULOGD_FD_READ;
 
-	ulogd_register_fd(&cpi->nfct_fd);
+	if (ulogd_register_fd(&priv->nfct_fd) < 0)
+		goto err_nfct_close;
 
-	cpi->htable = htable_alloc(buckets_ce(upi->config_kset).u.value);
-	if (cpi->htable == NULL) {
-		ulogd_log(ULOGD_FATAL, "htable_alloc: out of memory\n");
+	priv->timer.cb = nfct_timer_cb;
+	priv->timer.ival = 1 SEC;
+	priv->timer.flags = TIMER_F_PERIODIC;
+	priv->timer.data = upi;
 
-		nfct_close(cpi->cth);
-		cpi->cth = NULL;
+	if (ulogd_register_timer(&priv->timer) < 0)
+		goto err_unreg_fd;
 
-		return -1;
-	}
-
-	cpi->timer.cb = timer_cb;
-	cpi->timer.ival = 1 SEC;
-	cpi->timer.flags = TIMER_F_PERIODIC;
-	cpi->timer.data = upi;
-
-	ulogd_register_timer(&cpi->timer);
-
-	ulogd_log(ULOGD_INFO, "%s: hashsize %u\n", upi->id,
-			  cpi->htable->num_buckets);
-	
-	return 0;
-}
-
-static int destructor_nfct(struct ulogd_pluginstance *pi)
-{
-	struct nfct_pluginstance *cpi = (void *) pi;
-	
-	nfct_close(cpi->cth);
-	cpi->cth = NULL;
-
-	htable_free(cpi->htable);
+	ulogd_log(ULOGD_INFO, "%s: started\n", upi->id);
 
 	return 0;
+
+ err_unreg_fd:
+	ulogd_unregister_fd(&priv->nfct_fd);
+ err_nfct_close:
+	nfct_close(priv->cth);
+	priv->cth = NULL;
+ err_free:
+	htable_free(priv->htable);
+	priv->htable = NULL;
+
+	return -1;
 }
 
-static void signal_nfct(struct ulogd_pluginstance *pi, int signal)
+static int
+nfct_stop(struct ulogd_pluginstance *pi)
 {
-	switch (signal) {
-	case SIGUSR2:
-		break;
+	struct nfct_pluginstance *priv = (void *)pi->private;
+
+	pr_debug("%s: pi=%p\n", __func__, pi);
+
+	if (priv->htable == NULL)
+		return 0;				/* already stopped */
+
+	ulogd_unregister_timer(&priv->timer);
+
+	ulogd_unregister_fd(&priv->nfct_fd);
+
+	if (priv->cth != NULL) {
+		nfct_close(priv->cth);
+		priv->cth = NULL;
 	}
+
+	if (priv->htable != NULL) {
+		htable_free(priv->htable);
+		priv->htable = NULL;
+	}
+
+	return 0;
 }
 
 static struct ulogd_plugin nfct_plugin = {
 	.name = "NFCT",
+	.flags = ULOGD_PF_RECONF,
 	.input = {
 		.type = ULOGD_DTYPE_SOURCE,
 	},
@@ -852,17 +877,17 @@ static struct ulogd_plugin nfct_plugin = {
 	},
 	.config_kset 	= &nfct_kset,
 	.interp 	= NULL,
-	.configure	= &configure_nfct,
-	.start		= &constructor_nfct,
-	.stop		= &destructor_nfct,
-	.signal		= &signal_nfct,
+	.configure	= nfct_configure,
+	.start		= nfct_start,
+	.stop		= nfct_stop,
 	.priv_size	= sizeof(struct nfct_pluginstance),
 	.version	= ULOGD_VERSION,
 };
 
 void __attribute__ ((constructor)) init(void);
 
-void init(void)
+void
+init(void)
 {
 	ulogd_register_plugin(&nfct_plugin);
 }
