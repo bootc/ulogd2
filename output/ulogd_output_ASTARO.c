@@ -43,24 +43,28 @@
 #define CFG_FACILITY(pi)	((pi)->config_kset->ces[0].u.string)
 #define CFG_LEVEL(pi)		((pi)->config_kset->ces[1].u.string)
 
-#define __LOG_ID_BASE		2000
-#define LOG_ID_LOG			(__LOG_ID_BASE + 0)
-#define LOG_ID_DROP			(__LOG_ID_BASE + 1)
-#define LOG_ID_ACCEPT		(__LOG_ID_BASE + 2)
-#define LOG_ID_REJECT		(__LOG_ID_BASE + 3)
-#define LOG_ID_INVAL_PKT	(__LOG_ID_BASE + 4)
-#define LOG_ID_SPOOFING_DROP (__LOG_ID_BASE + 5)
-#define LOG_ID_SYN_FLOOD	(__LOG_ID_BASE + 6)
-#define LOG_ID_ICMP_FLOOD	(__LOG_ID_BASE + 7)
-#define LOG_ID_UDP_FLOOD	(__LOG_ID_BASE + 8)
-#define LOG_ID_ICMP_REDIR	(__LOG_ID_BASE + 9)
-#define LOG_ID_H323_RTP		(__LOG_ID_BASE + 10)
-#define LOG_ID_Q931_GK		(__LOG_ID_BASE + 11)
-#define LOG_ID_STRICT_TCP	(__LOG_ID_BASE + 12)
-#define LOG_ID_FTP_DATA		(__LOG_ID_BASE + 13)
-#define LOG_ID_DNS_REQ		(__LOG_ID_BASE + 14)
-#define LOG_ID_PORTSCAN		(__LOG_ID_BASE + 15)
-#define LOG_ID_SIP_RTP		(__LOG_ID_BASE + 16)
+/* packetfilter range */
+#define __PF_BASE		2000
+#define LOG_ID_LOG			(__PF_BASE + 0)
+#define LOG_ID_DROP			(__PF_BASE + 1)
+#define LOG_ID_ACCEPT		(__PF_BASE + 2)
+#define LOG_ID_REJECT		(__PF_BASE + 3)
+#define LOG_ID_INVAL_PKT	(__PF_BASE + 4)
+#define LOG_ID_SYN_FLOOD	(__PF_BASE + 6)
+#define LOG_ID_ICMP_FLOOD	(__PF_BASE + 7)
+#define LOG_ID_UDP_FLOOD	(__PF_BASE + 8)
+#define LOG_ID_ICMP_REDIR	(__PF_BASE + 9)
+#define LOG_ID_H323_RTP		(__PF_BASE + 10)
+#define LOG_ID_Q931_GK		(__PF_BASE + 11)
+#define LOG_ID_STRICT_TCP	(__PF_BASE + 12)
+#define LOG_ID_FTP_DATA		(__PF_BASE + 13)
+#define LOG_ID_DNS_REQ		(__PF_BASE + 14)
+#define LOG_ID_SIP_RTP		(__PF_BASE + 16)
+
+/* IPS range */
+#define __IPS_BASE	2100
+#define LOG_ID_PORTSCAN		(__IPS_BASE + 2)
+#define LOG_ID_SPOOFING_DROP (__IPS_BASE + 3)
 
 /* logging flags for custom log handler */
 #define LH_F_NOLOG		0x0001
@@ -417,6 +421,19 @@ print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 	return pch - buf;
 }
 
+
+/* map log ID to subsystem (packetfilter, ips) */
+static const char *
+id_to_sub(unsigned id)
+{
+	if (id >= __IPS_BASE)
+		return "ips";
+	if (id >= __PF_BASE)
+		return "packetfilter";
+
+	return "unknown";
+}
+
 static int
 astaro_output(struct ulogd_pluginstance *pi)
 {
@@ -434,10 +451,10 @@ astaro_output(struct ulogd_pluginstance *pi)
 	
 	/* static part */
 	pch += snprintf(pch, end - pch,
-					"id=\"%u\" severity=\"%s\" sys=\"SecureNet\" " 
-					"sub=\"packetfilter\" name=\"%s\" action=\"%s\" ",
-					log_types[type].id, "info", log_types[type].desc,
-					log_types[type].action);
+					"id=\"%u\" severity=\"info\" sys=\"SecureNet\" " 
+					"sub=\"%s\" name=\"%s\" action=\"%s\" ",
+					log_types[type].id, id_to_sub(log_types[type].id),
+					log_types[type].desc, log_types[type].action);
 
 	pch += print_dyn_part(pi, pch, end - pch);
 	
