@@ -118,6 +118,19 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
+static int
+check_driver(const struct ulogd_pluginstance *pi)
+{
+	const struct db_instance *di = upi_priv(pi);
+	const struct db_driver *drv = di->driver;
+
+	if (drv->open_db == NULL || drv->close_db == NULL
+		|| drv->get_columns == NULL)
+		return -1;
+
+	return 0;
+}
+
 int
 ulogd_db_configure(struct ulogd_pluginstance *upi,
 				   struct ulogd_pluginstance_stack *stack)
@@ -128,6 +141,9 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
 	ulogd_log(ULOGD_NOTICE, "(re)configuring\n");
+
+	if (check_driver(upi) < 0)
+		return -1;
 
 	/* First: Parse configuration file section for this instance */
 	ret = config_parse_file(upi->id, upi->config_kset);
