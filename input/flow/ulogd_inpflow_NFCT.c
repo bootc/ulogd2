@@ -701,10 +701,10 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 {
 	struct ulogd_key *ret = upi->output.keys;
 
-	ret[O_IP_SADDR].u.value.ui32 = htonl(nfct->tuple[dir].src.v4);
+	ret[O_IP_SADDR].u.value.ui32 = htonl(nfct->tuple[0].src.v4);
 	ret[O_IP_SADDR].flags |= ULOGD_RETF_VALID;
 
-	ret[O_IP_DADDR].u.value.ui32 = htonl(nfct->tuple[dir].dst.v4);
+	ret[O_IP_DADDR].u.value.ui32 = htonl(nfct->tuple[1].src.v4);
 	ret[O_IP_DADDR].flags |= ULOGD_RETF_VALID;
 
 	ret[O_IP_PROTO].u.value.ui8 = nfct->tuple[dir].protonum;
@@ -715,9 +715,9 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 	case IPPROTO_UDP:
 	case IPPROTO_SCTP:
 		/* FIXME: DCCP */
-		ret[O_L4_SPORT].u.value.ui16 = htons(nfct->tuple[dir].l4src.tcp.port);
+		ret[O_L4_SPORT].u.value.ui16 = htons(nfct->tuple[0].l4src.tcp.port);
 		ret[O_L4_SPORT].flags |= ULOGD_RETF_VALID;
-		ret[O_L4_DPORT].u.value.ui16 = htons(nfct->tuple[dir].l4dst.tcp.port);
+		ret[O_L4_DPORT].u.value.ui16 = htons(nfct->tuple[1].l4src.tcp.port);
 		ret[O_L4_DPORT].flags |= ULOGD_RETF_VALID;
 		break;
 	case IPPROTO_ICMP:
