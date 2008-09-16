@@ -82,8 +82,7 @@ struct nfct_pluginstance {
 	} stats;
 };
 
-#define HTABLE_SIZE	(8192)
-#define MAX_ENTRIES	(4 * HTABLE_SIZE)
+#define HTABLE_SIZE	(512)
 
 static struct config_keyset nfct_kset = {
 	.num_ces = 3,
@@ -104,13 +103,12 @@ static struct config_keyset nfct_kset = {
 			.key	 = "hash_max_entries",
 			.type	 = CONFIG_TYPE_INT,
 			.options = CONFIG_OPT_NONE,
-			.u.value = MAX_ENTRIES,
+			.u.value = 0,
 		},
 	},
 };
 #define pollint_ce(x)	(x->ces[0])
 #define buckets_ce(x)	(x->ces[1])
-#define maxentries_ce(x) (x->ces[2])
 
 enum {
 	O_IP_SADDR = 0,
@@ -349,7 +347,7 @@ static int
 nfnl_recv_msgs(struct nfnl_handle *nfnlh,
 			   int (* cb)(struct nlmsghdr *, void *arg), void *arg)
 {
-	static char buf[NFNL_BUFFSIZE];
+	static unsigned char buf[NFNL_BUFFSIZE];
 	struct ulogd_pluginstance *pi = arg;
 	struct nfct_pluginstance *priv = (void *)pi->private;
 
@@ -415,7 +413,7 @@ nfct_get_conntrack_x(struct nfct_handle *cth, struct nfct_tuple *t,
 {
 	static char buf[NFNL_BUFFSIZE];
 	struct nfnlhdr *req = (void *)buf;
-	int cta_dir;
+	int cta_dir, nbytes;
 
 	memset(buf, 0, sizeof(buf));
 
@@ -431,7 +429,9 @@ nfct_get_conntrack_x(struct nfct_handle *cth, struct nfct_tuple *t,
 
 	nfct_build_tuple(req, sizeof(buf), t, cta_dir);
 
-	return nfnl_send(nfct_nfnlh(cth), &req->nlh);
+	nbytes = nfnl_send(nfct_nfnlh(cth), &req->nlh);
+
+	return nbytes;
 }
 
 
@@ -740,8 +740,7 @@ read_cb_nfct(int fd, unsigned what, void *param)
 
 
 /* choosing powers of two for all values helps here */
-#define STOP_HERE(h)	(((h)->curr_bucket + (h)->num_buckets / 16) \
-								% (h)->num_buckets)
+#define STOP_HERE(h)	(((h)->curr_bucket + 16) % (h)->num_buckets)
 
 static void
 timer_cb(struct ulogd_timer *t)
@@ -779,6 +778,7 @@ static int configure_nfct(struct ulogd_pluginstance *upi,
 
 	return 0;
 }
+
 
 static int constructor_nfct(struct ulogd_pluginstance *upi)
 {
