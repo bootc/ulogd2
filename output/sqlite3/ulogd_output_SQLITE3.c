@@ -48,7 +48,7 @@
 #define SQLITE3_BUSY_TIMEOUT 300
 
 /* number of colums we have (really should be configurable) */
-#define DB_NUM_COLS	11
+#define DB_NUM_COLS	12
 
 
 /* map DB column to ulogd key */
@@ -154,7 +154,7 @@ static struct config_keyset sqlite3_kset = {
 		"ip_protocol integer, l4_dport integer, raw_in_pktlen integer, " \
 		"raw_in_pktcount integer, raw_out_pktlen integer, " \
 		"raw_out_pktcount integer, flow_start_day integer, " \
-		"flow_start_sec integer, flow_duration integer)"
+		"flow_start_sec integer, flow_duration integer, flow_count integer)"
 
 
 static struct row *
@@ -353,6 +353,10 @@ db_init(struct ulogd_pluginstance *pi)
 
 		strncpy(col->name, buf, ULOGD_MAX_KEYLEN);
 
+		/* hack alarm: ignore this column */
+		if (strcmp(buf, "flow.count") == 0)
+			continue;
+
 		if ((col->key = ulogd_find_key(pi, buf)) == NULL) {
 			printf(PFX "%s: key not found\n", buf);
 			return -1;
@@ -465,6 +469,11 @@ db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 		goto err_bind;
 
 	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_duration);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
+
+	/* hack alarm: add static data (argh!) */
+	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, 1);
 	if (db_ret != SQLITE_OK)
 		goto err_bind;
 
