@@ -42,8 +42,9 @@
 #define PFX		"SQLITE3: "
 
 /* config defaults */
-#define CFG_BUFFER_DEFAULT		10
+#define CFG_BUFFER_DEFAULT		100
 #define CFG_TIMER_DEFAULT		1 SEC
+#define CFG_MAX_BACKLOG_DEFAULT	0		/* unlimited */
 
 
 #define SQLITE3_BUSY_TIMEOUT 300
@@ -99,13 +100,16 @@ struct sqlite3_priv {
 	/* our backlog buffer */
 	struct row_lh rows;
 	int num_rows;
-	int max_rows;
+	int max_rows;				/* number of rows actually seen */
+	int max_rows_allowed;
+
+	unsigned overlimit_msg : 1;
 };
 
 
 static int do_reinit;
 static struct config_keyset sqlite3_kset = {
-	.num_ces = 4,
+	.num_ces = 5,
 	.ces = {
 		{
 			.key = "db",
@@ -129,6 +133,12 @@ static struct config_keyset sqlite3_kset = {
 			.options = CONFIG_OPT_NONE,
 			.u.value = CFG_TIMER_DEFAULT,
 		},
+		{
+			.key = "max-backlog",
+			.type = CONFIG_TYPE_INT,
+			.options = CONFIG_OPT_NONE,
+			.u.value = CFG_MAX_BACKLOG_DEFAULT,
+		},
 	},
 };
 
@@ -136,6 +146,7 @@ static struct config_keyset sqlite3_kset = {
 #define table_ce(pi)	(pi)->config_kset->ces[1].u.string
 #define buffer_ce(pi)	(pi)->config_kset->ces[2].u.value
 #define timer_ce(pi)	(pi)->config_kset->ces[3].u.value
+#define max_backlog_ce(pi)	(pi)->config_kset->ces[4].u.value
 
 
 #define SQL_CREATE_STR \
@@ -159,15 +170,6 @@ row_new(void)
 
 
 static void
-row_add(struct sqlite3_priv *priv, struct row *row)
-{
-	TAILQ_INSERT_TAIL(&priv->rows, row, link);
-
-	priv->num_rows++;
-}
-
-
-static void
 row_del(struct sqlite3_priv *priv, struct row *row)
 {
 	TAILQ_REMOVE(&priv->rows, row, link);
@@ -175,6 +177,25 @@ row_del(struct sqlite3_priv *priv, struct row *row)
 	free(row);
 
 	priv->num_rows--;
+}
+
+
+static void
+row_add(struct sqlite3_priv *priv, struct row *row)
+{
+	if (priv->max_rows_allowed && priv->num_rows > priv->max_rows_allowed) {
+		if (!priv->overlimit_msg) {
+			ulogd_error(PFX "over max-backlog limit, dropping row\n");
+
+			priv->overlimit_msg = 1;
+		}
+
+		return;
+	}
+
+	TAILQ_INSERT_TAIL(&priv->rows, row, link);
+
+	priv->num_rows++;
 }
 
 
@@ -388,6 +409,8 @@ db_start(struct ulogd_pluginstance *pi)
 	/* initialize our buffer size and counter */
 	priv->buffer_size = buffer_ce(pi);
 
+	priv->max_rows_allowed = max_backlog_ce(pi);
+
 	/* create and prepare the actual insert statement */
 	db_createstmt(pi);
 
@@ -521,7 +544,7 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 	ret = sqlite3_exec(priv->dbh, "begin immediate transaction", NULL,
 					   NULL, NULL);
 	if (ret != SQLITE_OK) {
-		if (sqlite3_errcode(priv->dbh) == SQLITE_LOCKED)
+		if (ret == SQLITE_BUSY || sqlite3_errcode(priv->dbh) == SQLITE_LOCKED)
 			return 0;			/* perform commit later */
 	
 		ulogd_error(PFX "begin transaction: %s\n",
@@ -541,7 +564,14 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 	if (ret == SQLITE_OK) {
 		sqlite3_reset(priv->p_stmt);
 
+		if (priv->num_rows > priv->buffer_size)
+			ulogd_log(ULOGD_INFO, PFX "commited backlog buffer (%d rows)\n",
+					  priv->num_rows);
+
 		delete_all_rows(pi);
+
+		if (priv->overlimit_msg)
+			priv->overlimit_msg = 0;
 
 		return 0;
 	}
@@ -636,7 +666,17 @@ sqlite3_configure(struct ulogd_pluginstance *pi,
 		return -1;
 	}
 
-	DEBUGP("%s: db='%s' table='%s'\n", pi->id, db_ce(pi), table_ce(pi));
+	if (max_backlog_ce(pi)) {
+		if (max_backlog_ce(pi) <= buffer_ce(pi)) {
+			ulogd_error(PFX "configure: invalid max-backlog value\n");
+			return -1;
+		}
+	}
+
+	priv->max_rows_allowed = max_backlog_ce(pi);
+
+	DEBUGP("%s: db='%s' table='%s' timer=%d max-backlog=%d\n", pi->id,
+		   db_ce(pi), table_ce(pi), timer_ce(pi), max_backlog_ce(pi));
 
 	/* init timer */
 	priv->timer.cb = timer_cb;
