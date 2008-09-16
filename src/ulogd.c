@@ -53,7 +53,6 @@
 #include <errno.h>
 #include <time.h>
 #include <ctype.h>
-#include <signal.h>
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -62,13 +61,17 @@
 #include <grp.h>
 #include <pthread.h>
 #include <syslog.h>
-#include <ulogd/conffile.h>
+
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/conffile.h>
+#include <ulogd/signal.h>
 #include <ulogd/ifi.h>
 
 
 #ifdef DEBUG
-#define DEBUGP(format, args...) fprintf(stderr, format, ## args)
+/*#define DEBUGP(format, args...) fprintf(stderr, format, ## args) */
+#define DEBUGP(format, args...) 
 #else
 #define DEBUGP(format, args...) 
 #endif
@@ -205,7 +208,6 @@ int ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi)
 
 	/* second pass: copy key names */
 	llist_for_each_entry(pi_cur, &stack->list, list) {
-		struct ulogd_key *cur;
 		int i;
 
 		for (i = 0; i < pi_cur->plugin->output.num_keys; i++)
@@ -217,6 +219,23 @@ int ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
+/*
+  ulogd_pluginstance_reset_cfg() - reset to default config
+*/
+int
+ulogd_pluginstance_reset_cfg(const struct ulogd_pluginstance *pi)
+{
+	size_t size;
+
+	assert(pi->plugin != NULL);
+
+	size = sizeof(struct config_keyset)
+		+ pi->plugin->config_kset->num_ces * sizeof(struct config_entry);
+
+	memcpy(pi->config_kset, pi->plugin->config_kset, size);
+
+	return 0;
+}
 
 /***********************************************************************
  * PLUGIN MANAGEMENT 
@@ -705,9 +724,14 @@ out_buf:
 
 static int ulogd_main_loop(void)
 {
+	sigset_t curr;
 	int ret = 0;
 
-	while (1) {
+	ulogd_get_sigset(&curr);
+
+	pthread_sigmask(SIG_UNBLOCK, &curr, NULL);
+
+	for (;;) {
 		ret = ulogd_select_main();
 		if (ret == 0) 
 			continue;
@@ -726,7 +750,7 @@ static int ulogd_main_loop(void)
 static int logfile_open(const char *name)
 {
 	if (name)
-		ulogd_logfile = name;
+		ulogd_logfile = (char *)name;
 
 	if (!strcmp(name, "stdout")) {
 		logfile = stdout;
@@ -783,60 +807,146 @@ static int parse_conffile(const char *section, struct config_keyset *ce)
 	return 1;
 }
 
-static void deliver_signal_pluginstances(int signal)
+static int
+for_each_pluginstance(int (* cb)(struct ulogd_pluginstance *,
+								 struct ulogd_pluginstance_stack *,
+								 void *), void *arg)
 {
 	struct ulogd_pluginstance_stack *stack;
-	struct ulogd_pluginstance *pi;
+	int sum = 0;
+
+	pr_debug("%s: cb=%p\n", __func__, cb);
 
 	llist_for_each_entry(stack, &ulogd_pi_stacks, stack_list) {
+		struct ulogd_pluginstance *pi;
+
 		llist_for_each_entry(pi, &stack->list, list) {
-			if (pi->plugin->signal)
-				(*pi->plugin->signal)(pi, signal);
+			int ret;
+
+			if ((ret = cb(pi, stack, arg)) < 0)
+				return -1;
+
+			sum += ret;
 		}
 	}
+
+	return sum;
 }
 
-static void sigterm_handler(int signal)
+static int
+_do_signal(struct ulogd_pluginstance *pi,
+		   struct ulogd_pluginstance_stack *stack, void *arg)
 {
-	
-	ulogd_log(ULOGD_NOTICE, "sigterm received, exiting\n");
+	int signo = (int)arg;
 
-	deliver_signal_pluginstances(signal);
+	if (pi->plugin->signal) {
+		pi->plugin->signal(pi, signo);
 
-	if (logfile != stdout)
-		fclose(logfile);
+		return 1;
+	}
 
-	exit(0);
+	return 0;
 }
 
+enum ReconfOp {
+	INVAL=0,
+	STOP,
+	CONFIGURE,
+	START,
+};
+
+static int
+_do_reconf(struct ulogd_pluginstance *pi,
+		   struct ulogd_pluginstance_stack *stack, void *arg)
+{
+	enum ReconfOp op = (unsigned)arg;
+	int ret = 0;
+
+	assert(pi != NULL);
+
+	if ((pi->plugin->flags & ULOGD_PF_RECONF) == 0)
+		return 0;
+
+	switch (op) {
+	case STOP:
+		ret = pi->plugin->stop(pi);
+		break;
+
+	case CONFIGURE:
+		ulogd_pluginstance_reset_cfg(pi);
+		ret = pi->plugin->configure(pi, stack);
+		break;
+
+	case START:
+		ret = pi->plugin->start(pi);
+		break;
+
+	default:
+		return -1;
+	}
+
+	if (ret < 0) {
+		ulogd_log(ULOGD_FATAL, "reconfiguring '%s' failed\n", pi->id);
+		return -1;
+	}
+
+	return 1;
+}
+
+static int
+reconfigure_plugins(void)
+{
+	ulogd_log(ULOGD_INFO, "reconfiguring plugins\n");
+
+	if (for_each_pluginstance(_do_reconf, (void *)STOP) < 0)
+		abort();
+
+	if (for_each_pluginstance(_do_reconf, (void *)CONFIGURE) < 0)
+		abort();
+
+	if (for_each_pluginstance(_do_reconf, (void *)START) < 0)
+		abort();
+
+	return 0;
+}
 
 static void
-sigalrm_handler(int signal)
+sync_sig_handler(int signo)
 {
-	ulogd_timer_schedule();		/* we have synchronous timer handlers */
-}
+	pr_debug("%s: signal '%d' received\n", __func__, signo);
 
-
-static void signal_handler(int signal)
-{
-	ulogd_log(ULOGD_NOTICE, "signal received, calling pluginstances\n");
-	
-	switch (signal) {
+	switch (signo) {
 	case SIGHUP:
-		/* reopen logfile */
-		if (logfile != stdout && logfile != &syslog_dummy) {
-			fclose(logfile);
-			logfile = fopen(ulogd_logfile, "a");
-			if (!logfile)
-				sigterm_handler(signal);
-		}
+		reconfigure_plugins();
+		break;
+
+	case SIGALRM:
+		ulogd_timer_handle();
+		break;
+
+	case SIGTERM:
 		break;
 
 	default:
 		break;
 	}
 
-	deliver_signal_pluginstances(signal);
+	for_each_pluginstance(_do_signal, (void *)signo);
+}
+
+static void
+sig_handler(int signo)
+{
+	pr_debug("%s: signal '%d' received\n", __func__, signo);
+
+	switch (signo) {
+	case SIGINT:
+		exit(0);
+		break;
+
+	default:
+		break;
+	}
 }
 
 static void print_usage(void)
@@ -861,10 +971,6 @@ static struct option opts[] = {
 	{ "uid", 1, NULL, 'u' },
 	{ 0 }
 };
-
-
-static sigset_t fullset, currset, oldset;
-
 
 int
 main(int argc, char* argv[])
@@ -922,8 +1028,8 @@ main(int argc, char* argv[])
 		}
 	}
 
-	sigfillset(&fullset);
-	pthread_sigmask(SIG_SETMASK, &fullset, &oldset);
+	if (ulogd_signal_init() < 0)
+		exit(EXIT_FAILURE);
 
 	ulogd_timer_init();
 
@@ -986,37 +1092,21 @@ main(int argc, char* argv[])
 		setsid();
 	}
 
-	sigemptyset(&currset);
-	signal(SIGTERM, &sigterm_handler);
-	sigaddset(&currset, SIGTERM);
-
-	sigaddset(&currset, SIGINT);
-
-	signal(SIGHUP, &signal_handler);
-	sigaddset(&currset, SIGHUP);
-
-	signal(SIGALRM, &sigalrm_handler);
-	sigaddset(&currset, SIGALRM);
-
-	signal(SIGUSR1, &signal_handler);
-	sigaddset(&currset, SIGUSR1);
-
-	signal(SIGUSR2, &signal_handler);
-	sigaddset(&currset, SIGUSR2);
-
-	pthread_sigmask(SIG_UNBLOCK, &currset, NULL);
+	ulogd_register_signal(SIGTERM, sync_sig_handler, ULOGD_SIGF_SYNC);
+	ulogd_register_signal(SIGINT, sig_handler, 0);
+	ulogd_register_signal(SIGHUP, sync_sig_handler, ULOGD_SIGF_SYNC);
+	ulogd_register_signal(SIGALRM, sync_sig_handler, ULOGD_SIGF_SYNC);
+	ulogd_register_signal(SIGUSR1, sync_sig_handler, ULOGD_SIGF_SYNC);
+	ulogd_register_signal(SIGUSR2, sync_sig_handler, ULOGD_SIGF_SYNC);
 
 	if (ifi_init() < 0)
 		exit(EXIT_FAILURE);
 
 	ulogd_timer_run();
 
-	ulogd_log(ULOGD_INFO, 
-		  "initialization finished, entering main loop\n");
+	ulogd_log(ULOGD_INFO, "entering main loop\n");
 
 	ulogd_main_loop();
 
-	/* hackish, but result is the same */
-	sigterm_handler(SIGTERM);	
-	return(0);
+	return 0;
 }

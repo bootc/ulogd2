@@ -32,14 +32,15 @@
 #include <ulogd/linuxlist.h>
 
 static LLIST_HEAD(ulogd_timers);
-static int expired;
-static sigset_t ss_alrm;
-time_t t_now;
+static struct tm tm_local;
+struct timeval tv_now, tv_now_local;
 
 
 int
 ulogd_register_timer(struct ulogd_timer *timer)
 {
+	pr_debug("%s: timer=%p\n", __func__, timer);
+
 	if (timer->flags & TIMER_F_PERIODIC) {
 		timer->expires = t_now + timer->ival;
 	} else {
@@ -56,11 +57,13 @@ ulogd_register_timer(struct ulogd_timer *timer)
 
 
 void
-ulogd_timer_schedule(void)
+ulogd_unregister_timer(struct ulogd_timer *timer)
 {
-	t_now = time(NULL);
+	pr_debug("%s: timer=%p\n", __func__, timer);
 
-	expired++;
+	/* TODO check for race conditions on unregister */
+
+	llist_del(&timer->list);
 }
 
 
@@ -69,12 +72,16 @@ ulogd_timer_handle(void)
 {
 	struct ulogd_timer *t;
 
-	if (expired == 0)
-		return 0;
+	t_now = time(NULL);			/* UTC */
 
-	/* disable SIGALRM for duration of this call */
-	pthread_sigmask(SIG_BLOCK, &ss_alrm, NULL);
-	
+	pr_debug("%s: t_now=%ld\n", __func__, t_now);
+
+	/* get offset to local time every hour */
+	if ((t_now % (1 HOUR)) == 0)
+		localtime_r(&t_now, &tm_local);
+
+	t_now_local = t_now + tm_local.tm_gmtoff;
+
 	llist_for_each_entry(t, &ulogd_timers, list) {
 		if (t->expires <= t_now) {
 			(t->cb)(t);
@@ -86,19 +93,7 @@ ulogd_timer_handle(void)
 		}
 	}
 
-	expired = 0;
-
-	/* enable again */
-	pthread_sigmask(SIG_UNBLOCK, &ss_alrm, NULL);
-
 	return 0;
-}
-
-
-void
-ulogd_unregister_timer(struct ulogd_timer *timer)
-{
-	llist_del(&timer->list);
 }
 
 
@@ -106,9 +101,7 @@ int
 ulogd_timer_init(void)
 {
 	t_now = time(NULL);
-
-	sigemptyset(&ss_alrm);
-	sigaddset(&ss_alrm, SIGALRM);
+	localtime_r(&t_now, &tm_local);
 
 	return 0;
 }

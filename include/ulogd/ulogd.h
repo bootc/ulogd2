@@ -125,6 +125,10 @@ struct ulogd_keyset {
 
 struct ulogd_pluginstance_stack;
 struct ulogd_pluginstance;
+
+/* plugin flags */
+#define ULOGD_PF_RECONF			0x00000001
+
 struct ulogd_plugin {
 	/* global list of plugins */
 	struct llist_head list;
@@ -134,6 +138,8 @@ struct ulogd_plugin {
 	char name[ULOGD_MAX_KEYLEN+1];
 	/* ID for this plugin (dynamically assigned) */
 	unsigned int id;
+
+	unsigned flags;
 
 	struct ulogd_keyset input;
 	struct ulogd_keyset output;
@@ -237,10 +243,10 @@ struct ulogd_fd {
 
 int ulogd_register_fd(struct ulogd_fd *ufd);
 void ulogd_unregister_fd(struct ulogd_fd *ufd);
-int ulogd_select_main();
+int ulogd_dispatch(void);
 
 /***********************************************************************
- * timer handling
+ * timer handling (timer.c)
  ***********************************************************************/
 #define TIMER_F_PERIODIC			0x01
 
@@ -249,11 +255,15 @@ struct ulogd_timer {
 	unsigned expires;			/* seconds */
 	unsigned ival;				/* seconds */
 	unsigned flags;
-	void (*cb)(struct ulogd_timer *);
+	void (* cb)(struct ulogd_timer *);
 	void *data;					/* usually (ulogd_pluginstance *) */
 };
 
-extern time_t t_now;
+extern struct timeval tv_now;
+extern struct timeval tv_now_local;
+
+#define t_now			tv_now.tv_sec
+#define t_now_local		tv_now_local.tv_sec
 
 int ulogd_timer_init(void);
 int ulogd_timer_run(void);
