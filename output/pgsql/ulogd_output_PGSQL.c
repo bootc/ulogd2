@@ -9,13 +9,8 @@
  * The support PostgreSQL were made by Jakab Laszlo.
  *
  */
-
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <arpa/inet.h>
-
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
 #include <ulogd/conffile.h>
 #include <ulogd/db.h>
 
