@@ -971,6 +971,10 @@ main(int argc, char* argv[])
 		}
 	}
 
+	/* seems like some plugins (sqlite, ctnetlink) are quite sensible
+	   on busy sites, therefore be a bit less nice here */
+	nice(-1);
+
 	if (daemonize){
 		if (fork()) {
 			exit(0);
