@@ -84,14 +84,15 @@ ifi_find_or_add(unsigned idx)
 	/* add */
 	if (idx < IFI_STATIC_MAX)
 		ifi = &ifi_static[idx];
-	else
+	else {
 		ifi = ifi_alloc();
+
+		TAILQ_INSERT_TAIL(&ifi_list, ifi, link);
+	}
 		
 	ifi->idx = idx;
 	ifi->used = 1;
 
-	TAILQ_INSERT_TAIL(&ifi_list, ifi, link);
-	
 	return ifi;
 }
 
@@ -159,17 +160,10 @@ static ssize_t sprint_lladdr(char *, size_t, const unsigned char *) unused;
 static ssize_t
 sprint_lladdr(char *buf, size_t len, const unsigned char *addr)
 {
-	char delim = '\0', *pch = buf;
-	int i;
+	char *pch = buf;
 
-	for (i = 0; i < 6; i++) {
-		pch += sprintf(pch, "%02x", addr[i]);
-
-		delim = ':';
-
-		if (i + 1 < 6)
-			*pch++ = delim;
-	}
+	pch += sprintf(pch, "%02x:%02x:%02x:%02x:%02x:%02x",
+				   addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
 	return pch - buf;
 }
