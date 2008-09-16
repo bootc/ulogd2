@@ -173,6 +173,8 @@ row_del(struct sqlite3_priv *priv, struct row *row)
 {
 	TAILQ_REMOVE(&priv->rows, row, link);
 
+	free(row);
+
 	priv->num_rows--;
 }
 
@@ -184,11 +186,11 @@ db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 	int db_col = 1, ret;
 
 	do {
-		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->ip_saddr);
+		ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_saddr);
 		if (ret != SQLITE_OK)
 			break;
 
-		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->ip_daddr);
+		ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_daddr);
 		if (ret != SQLITE_OK)
 			break;
 
@@ -204,7 +206,7 @@ db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 		if (ret != SQLITE_OK)
 			break;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_in_pktcount);
+		sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_in_pktcount);
 		if (ret != SQLITE_OK)
 			break;
 
@@ -212,7 +214,7 @@ db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 		if (ret != SQLITE_OK)
 			break;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_out_pktcount);
+		sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_out_pktcount);
 		if (ret != SQLITE_OK)
 			break;
 
@@ -276,8 +278,8 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 	ret = sqlite3_exec(priv->dbh, "begin immediate transaction", NULL,
 					   NULL, NULL);
 	if (ret != SQLITE_OK) {
-		if (ret == SQLITE_BUSY)
-			return 0;
+		if (ret == SQLITE_LOCKED || ret == SQLITE_BUSY)
+			return -1;
 
 		ulogd_error("SQLITE3: sqlite3_exec: %s\n", sqlite3_errmsg(priv->dbh));
 
@@ -286,7 +288,7 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 
 	TAILQ_FOR_EACH(row, priv->rows, link) {
 		if (db_add_row(pi, row) < 0)
-			return -1;
+			goto err;
 	}
 
 	ret = sqlite3_exec(priv->dbh, "commit", NULL, NULL, NULL);
@@ -296,9 +298,11 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 		return 0;
 	}
 
-	/* XXX SQLITE_BUSY possible here? */
+ err:
+	if (ret != SQLITE_BUSY && ret != SQLITE_LOCKED)
+		ulogd_error("SQLITE3: sqlite3_exec: %s\n", sqlite3_errmsg(priv->dbh));
 
-	ulogd_error("SQLITE3: sqlite3_exec: %s\n", sqlite3_errmsg(priv->dbh));
+	sqlite3_exec(priv->dbh, "rollback", NULL, NULL, NULL);
 
 	return -1;
 }
