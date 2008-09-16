@@ -25,7 +25,7 @@ struct pgsql_priv {
 	PGresult *pgres;
 	unsigned char pgsql_have_schemas;
 };
-#define TIME_ERR	((time_t)-1)
+
 
 /* our configuration directives */
 static struct config_keyset pgsql_kset = {
