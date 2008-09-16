@@ -43,8 +43,11 @@
 
 #ifdef DEBUG
 #define pr_debug(fmt, ...)		ulogd_log(ULOGD_DEBUG, fmt, ## __VA_ARGS__)
+#define pr_fn_debug(fmt, ...)	ulogd_log(ULOGD_DEBUG, "%s: " fmt, \
+				__func__, __VA_ARGS__)
 #else
 #define pr_debug(fmt, ...)
+#define pr_fn_debug(fmt, ...)
 #endif /* DEBUG */
 
 int set_sockbuf_len(int fd, int rcv_len, int snd_len);
