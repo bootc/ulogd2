@@ -17,7 +17,7 @@
 #include <libpq-fe.h>
 
 
-struct pgsql_instance {
+struct pgsql_priv {
 	struct db_instance db_inst;
 
 	PGconn *dbh;
@@ -77,7 +77,7 @@ static struct config_keyset pgsql_kset = {
 /* Determine if server support schemas */
 static int pgsql_namespace(struct ulogd_pluginstance *upi)
 {
-	struct pgsql_instance *pi = upi_priv(upi);
+	struct pgsql_priv *pi = upi_priv(upi);
 	char pgbuf[strlen(PGSQL_HAVE_NAMESPACE_TEMPLATE) + 
 		   strlen(schema_ce(upi->config_kset).u.string) + 1];
 
@@ -116,7 +116,7 @@ static int pgsql_namespace(struct ulogd_pluginstance *upi)
 /* find out which columns the table has */
 static int get_columns_pgsql(struct ulogd_pluginstance *upi)
 {
-	struct pgsql_instance *pi = upi_priv(upi);
+	struct pgsql_priv *pi = upi_priv(upi);
 	char pgbuf[strlen(PGSQL_GETCOLUMN_TEMPLATE_SCHEMA)
 		   + strlen(table_ce(upi->config_kset).u.string) 
 		   + strlen(pi->db_inst.schema) + 2];
@@ -194,7 +194,7 @@ static int get_columns_pgsql(struct ulogd_pluginstance *upi)
 
 static int close_db_pgsql(struct ulogd_pluginstance *upi)
 {
-	struct pgsql_instance *pi = upi_priv(upi);
+	struct pgsql_priv *pi = upi_priv(upi);
 
 	PQfinish(pi->dbh);
 
@@ -204,7 +204,7 @@ static int close_db_pgsql(struct ulogd_pluginstance *upi)
 /* make connection and select database */
 static int open_db_pgsql(struct ulogd_pluginstance *upi)
 {
-	struct pgsql_instance *pi = upi_priv(upi);
+	struct pgsql_priv *pi = upi_priv(upi);
 	int len;
 	char *connstr;
 	char *server = host_ce(upi->config_kset).u.string;
@@ -276,7 +276,7 @@ static int escape_string_pgsql(struct ulogd_pluginstance *upi,
 static int execute_pgsql(struct ulogd_pluginstance *upi,
 			 const char *stmt, unsigned int len)
 {
-	struct pgsql_instance *pi = upi_priv(upi);
+	struct pgsql_priv *pi = upi_priv(upi);
 
 	pi->pgres = PQexec(pi->dbh, stmt);
 	if (!pi->pgres || PQresultStatus(pi->pgres) != PGRES_COMMAND_OK) {
@@ -301,7 +301,7 @@ static struct db_driver db_driver_pgsql = {
 static int configure_pgsql(struct ulogd_pluginstance *upi,
 			   struct ulogd_pluginstance_stack *stack)
 {
-	struct pgsql_instance *pi = upi_priv(upi);
+	struct pgsql_priv *pi = upi_priv(upi);
 
 	pi->db_inst.driver = &db_driver_pgsql;
 
@@ -319,7 +319,7 @@ static struct ulogd_plugin pgsql_plugin = {
 		.type	= ULOGD_DTYPE_SINK,
 	},
 	.config_kset 	= &pgsql_kset,
-	.priv_size	= sizeof(struct pgsql_instance),
+	.priv_size	= sizeof(struct pgsql_priv),
 	.configure	= &configure_pgsql,
 	.start		= &ulogd_db_start,
 	.stop		= &ulogd_db_stop,
