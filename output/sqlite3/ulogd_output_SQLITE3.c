@@ -273,12 +273,12 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
 	struct row *row;
-	int ret;
+	int ret, rows = 0;
 
 	ret = sqlite3_exec(priv->dbh, "begin immediate transaction", NULL,
 					   NULL, NULL);
 	if (ret != SQLITE_OK) {
-		if (ret == SQLITE_LOCKED || ret == SQLITE_BUSY)
+		if (ret == SQLITE_LOCKED)
 			return -1;
 
 		ulogd_error("SQLITE3: sqlite3_exec: %s\n", sqlite3_errmsg(priv->dbh));
@@ -289,6 +289,8 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 	TAILQ_FOR_EACH(row, priv->rows, link) {
 		if (db_add_row(pi, row) < 0)
 			goto err;
+
+		rows++;
 	}
 
 	ret = sqlite3_exec(priv->dbh, "commit", NULL, NULL, NULL);
@@ -299,7 +301,7 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 	}
 
  err:
-	if (ret != SQLITE_BUSY && ret != SQLITE_LOCKED)
+	if (ret != SQLITE_LOCKED)
 		ulogd_error("SQLITE3: sqlite3_exec: %s\n", sqlite3_errmsg(priv->dbh));
 
 	sqlite3_exec(priv->dbh, "rollback", NULL, NULL, NULL);
@@ -515,7 +517,8 @@ timer_cb(struct ulogd_timer *t)
 
 	priv->max_rows = max(priv->max_rows, priv->num_rows);
 
-	db_commit_rows(pi);
+	if (priv->num_rows > 0)
+		db_commit_rows(pi);
 }
 
 
