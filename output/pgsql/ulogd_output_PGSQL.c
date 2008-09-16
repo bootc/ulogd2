@@ -13,7 +13,6 @@
 #include <ulogd/common.h>
 #include <ulogd/conffile.h>
 #include <ulogd/db.h>
-
 #include <libpq-fe.h>
 
 
@@ -75,7 +74,8 @@ static struct config_keyset pgsql_kset = {
 	"SELECT nspname FROM pg_namespace n WHERE n.nspname='%s'"
 
 /* Determine if server support schemas */
-static int pgsql_namespace(struct ulogd_pluginstance *upi)
+static int
+pgsql_namespace(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 	char pgbuf[strlen(PGSQL_HAVE_NAMESPACE_TEMPLATE) + 
@@ -114,7 +114,8 @@ static int pgsql_namespace(struct ulogd_pluginstance *upi)
 	"SELECT a.attname FROM pg_attribute a, pg_class c LEFT JOIN pg_namespace n ON c.relnamespace=n.oid WHERE c.relname ='%s' AND n.nspname='%s' AND a.attnum>0 AND a.attrelid=c.oid AND a.attisdropped=FALSE ORDER BY a.attnum"
 
 /* find out which columns the table has */
-static int get_columns_pgsql(struct ulogd_pluginstance *upi)
+static int
+get_columns_pgsql(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 	char pgbuf[strlen(PGSQL_GETCOLUMN_TEMPLATE_SCHEMA)
@@ -192,7 +193,8 @@ static int get_columns_pgsql(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static int close_db_pgsql(struct ulogd_pluginstance *upi)
+static int
+close_db_pgsql(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 
@@ -202,7 +204,8 @@ static int close_db_pgsql(struct ulogd_pluginstance *upi)
 }
 
 /* make connection and select database */
-static int open_db_pgsql(struct ulogd_pluginstance *upi)
+static int
+open_db_pgsql(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 	int len;
@@ -266,15 +269,17 @@ static int open_db_pgsql(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static int escape_string_pgsql(struct ulogd_pluginstance *upi,
-			       char *dst, const char *src, unsigned int len)
+static int
+escape_string_pgsql(struct ulogd_pluginstance *upi,
+					char *dst, const char *src, unsigned int len)
 {
 	PQescapeString(dst, src, strlen(src)); 
 	return 0;
 }
 
-static int execute_pgsql(struct ulogd_pluginstance *upi,
-			 const char *stmt, unsigned int len)
+static int
+execute_pgsql(struct ulogd_pluginstance *upi,
+			  const char *stmt, unsigned int len)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 
@@ -298,8 +303,9 @@ static struct db_driver db_driver_pgsql = {
 	.execute	= &execute_pgsql,
 };
 
-static int configure_pgsql(struct ulogd_pluginstance *upi,
-			   struct ulogd_pluginstance_stack *stack)
+static int
+configure_pgsql(struct ulogd_pluginstance *upi,
+				struct ulogd_pluginstance_stack *stack)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 
