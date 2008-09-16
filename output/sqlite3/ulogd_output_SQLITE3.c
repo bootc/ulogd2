@@ -96,6 +96,35 @@ static struct config_keyset sqlite3_kset = {
 #define table_ce(pi)	(pi)->config_kset->ces[1].u.string
 #define buffer_ce(pi)	(pi)->config_kset->ces[2].u.value
 
+
+static int
+add_row(struct ulogd_pluginstance *pi)
+{
+	struct sqlite3_priv *priv = (void *)pi->private;
+	int ret;
+
+	ret = sqlite3_step(priv->p_stmt);
+	if (ret == SQLITE_DONE)
+		priv->buffer_curr++;
+	else if (ret == SQLITE_BUSY)
+		ulogd_log(ULOGD_ERROR, "SQLITE3: step: table busy\n");
+	else if (ret == SQLITE_ERROR) {
+		ulogd_log(ULOGD_ERROR, "SQLITE3: step: %s\n",
+				  sqlite3_errmsg(priv->dbh));
+		goto err_reset;
+	}
+
+	ret = sqlite3_reset(priv->p_stmt);
+
+	return 0;
+
+ err_reset:
+	sqlite3_reset(priv->p_stmt);
+
+	return -1;
+}
+
+
 /* our main output function, called by ulogd */
 static int
 sqlite3_interp(struct ulogd_pluginstance *pi)
@@ -184,34 +213,13 @@ sqlite3_interp(struct ulogd_pluginstance *pi)
 		i++;
 	}
 
-	/* add row */
-	if (sqlite3_step(priv->p_stmt) == SQLITE_DONE) {
-		sqlite3_reset(priv->p_stmt);
-		priv->buffer_curr++;
-	} else {
-		ulogd_log(ULOGD_ERROR, "SQL error during insert: %s\n",
-				  sqlite3_errmsg(priv->dbh));
+	if (add_row(pi) < 0)
 		return ULOGD_IRET_ERR;
-	}
-
-	if (priv->buffer_curr >= priv->buffer_size) {
-		int ret;
-
-		ret = sqlite3_exec(priv->dbh, "commit", NULL, NULL, NULL);
-		if (ret != SQLITE_OK)
-			ulogd_log(ULOGD_ERROR, "unable to commit rows to DB\n");
-
-		ret = sqlite3_exec(priv->dbh, "begin deferred", NULL, NULL, NULL);
-		if (ret != SQLITE_OK)
-			ulogd_log(ULOGD_ERROR, "unable to begin new transaction\n");
-
-		priv->buffer_curr = 0;
-	}
 
 	return ULOGD_IRET_OK;
 
  err_bind:
-	ulogd_log(ULOGD_ERROR, "%d: %s\n", i, sqlite3_errmsg(priv->dbh));
+	ulogd_log(ULOGD_ERROR, "SQLITE: bind: %s\n", sqlite3_errmsg(priv->dbh));
 	
 	return ULOGD_IRET_ERR;
 }
@@ -256,7 +264,7 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 	ulogd_log(ULOGD_DEBUG, "allocating %u bytes for statement\n", size);
 
 	if ((priv->stmt = calloc(1, size)) == NULL) {
-		ulogd_log(ULOGD_ERROR, "OOM!\n");
+		ulogd_log(ULOGD_ERROR, "SQLITE3: out of memory\n");
 		return -1;
 	}
 
@@ -289,13 +297,13 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 	DEBUGP("about to prepare statement.\n");
 
 	sqlite3_prepare(priv->dbh, priv->stmt, -1, &priv->p_stmt, 0);
-
-	DEBUGP("statement prepared.\n");
-
 	if (priv->p_stmt == NULL) {
-		ulogd_log(ULOGD_ERROR, "%s: unable to prepare statement\n", pi->id);
+		ulogd_log(ULOGD_ERROR, "SQLITE3: prepare: %s\n",
+				  sqlite3_errmsg(priv->dbh));
 		return 1;
 	}
+
+	DEBUGP("statement prepared.\n");
 
 	return 0;
 }
@@ -349,7 +357,7 @@ db_create_tbl(struct ulogd_pluginstance *pi)
 
 	ret = sqlite3_exec(priv->dbh, SQL_CREATE_STR, NULL, NULL, &errmsg);
 	if (ret != SQLITE_OK) {
-		ulogd_log(ULOGD_ERROR, "%s: create table: %s\n", pi->id, errmsg);
+		ulogd_log(ULOGD_ERROR, "SQLITE3: create table: %s\n", errmsg);
 		sqlite3_free(errmsg);
 
 		return -1;
@@ -393,7 +401,7 @@ sqlite3_init_db(struct ulogd_pluginstance *pi)
 
 		/* prepend it to the linked list */
 		if ((f = calloc(1, sizeof(struct field))) == NULL) {
-			ulogd_log(ULOGD_ERROR, "OOM!\n");
+			ulogd_log(ULOGD_ERROR, "SQLITE3: out of memory\n");
 			return -1;
 		}
 		strncpy(f->name, buf, ULOGD_MAX_KEYLEN);
@@ -436,7 +444,7 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 	TAILQ_INIT(&priv->fields);
 
 	if (sqlite3_open(db_ce(pi), &priv->dbh) != SQLITE_OK) {
-		ulogd_log(ULOGD_ERROR, "can't open the database file\n");
+		ulogd_log(ULOGD_ERROR, "SQLITE3: %s\n", sqlite3_errmsg(priv->dbh));
 		return -1;
 	}
 
@@ -445,20 +453,12 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 	sqlite3_busy_timeout(priv->dbh, SQLITE3_BUSY_TIMEOUT);
 
 	/* read the fieldnames to know which values to insert */
-	if (sqlite3_init_db(pi) < 0) {
-		ulogd_log(ULOGD_ERROR, "unable to get sqlite columns\n");
+	if (sqlite3_init_db(pi) < 0)
 		return -1;
-	}
 
 	/* initialize our buffer size and counter */
 	priv->buffer_size = buffer_ce(pi);
 	priv->buffer_curr = 0;
-
-	ret = sqlite3_exec(priv->dbh, "begin deferred", NULL, NULL, NULL);
-	if (ret != SQLITE_OK) {
-		ulogd_log(ULOGD_ERROR, "can't create a new transaction\n");
-		return -1;
-	}
 
 	/* create and prepare the actual insert statement */
 	sqlite3_createstmt(pi);
@@ -471,7 +471,6 @@ static int
 sqlite3_stop(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
-	int result;
 
 	/* free up our prepared statements so we can close the db */
 	if (priv->p_stmt) {
@@ -482,11 +481,6 @@ sqlite3_stop(struct ulogd_pluginstance *pi)
 	if (priv->dbh == NULL)
 		return -1;
 
-	/* flush the remaining insert statements to the database. */
-	result = sqlite3_exec(priv->dbh, "commit", NULL, NULL, NULL);
-	if (result != SQLITE_OK)
-		ulogd_log(ULOGD_ERROR, "unable to commit remaining records to db");
-	
 	sqlite3_close(priv->dbh);
 
 	return 0;
