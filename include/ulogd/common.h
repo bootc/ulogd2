@@ -34,13 +34,17 @@
         typeof(x) _x = (x);  typeof(y) _y = (y); \
         _x > _y ? _x : _y; })
 
-
 #define SEC		* 1
 #define MIN		* 60 SEC
 #define HOUR	* 60 MIN
 #define DAY		* 24 HOUR
 
-
 #define unused		__attribute__((unused))
+
+#ifdef DEBUG
+#define pr_debug(fmt, ...)		ulogd_log(ULOGD_DEBUG, fmt, ## __VA_ARGS__)
+#else
+#define pr_debug(fmt, ...)
+#endif /* DEBUG */
 
 #endif /* COMMON_H */
