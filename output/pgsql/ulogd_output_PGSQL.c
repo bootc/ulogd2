@@ -1,4 +1,5 @@
-/* ulogd_PGSQL.c, Version $Revision$
+/*
+ * ulogd_output_PGSQL.c
  *
  * ulogd output plugin for logging to a PGSQL database
  *
@@ -8,6 +9,7 @@
  * This plugin is based on the MySQL plugin made by Harald Welte.
  * The support PostgreSQL were made by Jakab Laszlo.
  *
+ * Holger Eitzenberger <holger@eitzenberger.org>  Astaro AG 2008
  */
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
@@ -296,11 +298,11 @@ pgsql_execute(struct ulogd_pluginstance *upi,
 }
 
 static struct db_driver db_driver_pgsql = {
-	.get_columns	= &pgsql_get_columns,
-	.open_db	= &pgsql_open_db,
-	.close_db	= &pgsql_close_db,
-	.escape_string	= &pgsql_escape_string,
-	.execute	= &pgsql_execute,
+	.get_columns = &pgsql_get_columns,
+	.open_db = &pgsql_open_db,
+	.close_db = &pgsql_close_db,
+	.escape_string = &pgsql_escape_string,
+	.execute = &pgsql_execute,
 };
 
 static int
