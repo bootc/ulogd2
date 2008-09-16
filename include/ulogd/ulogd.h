@@ -189,6 +189,12 @@ struct ulogd_pluginstance {
 	char private[0];
 };
 
+static inline void *
+upi_priv(struct ulogd_pluginstance *upi)
+{
+	return (void *)&upi->private;
+}
+
 /* stack flags */
 #define ULOGD_SF_RECONF			0x00000001 /* stack is reconfigurable */
 
