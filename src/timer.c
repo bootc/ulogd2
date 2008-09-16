@@ -93,7 +93,7 @@ ulogd_timer_handle(void)
 		}
 	}
 
-	return 0;
+	return 1;
 }
 
 

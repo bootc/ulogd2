@@ -84,6 +84,7 @@ static FILE *logfile = NULL;		/* logfile pointer */
 static char *ulogd_configfile = ULOGD_CONFIGFILE;
 static char *ulogd_logfile = ULOGD_LOGFILE_DEFAULT;
 static FILE syslog_dummy;
+static enum GlobalState state;
 
 /* linked list for all registered plugins */
 static LLIST_HEAD(ulogd_plugins);
@@ -129,6 +130,19 @@ static struct config_keyset ulogd_kset = {
 #define plugin_ce	ulogd_kset.ces[1]
 #define loglevel_ce	ulogd_kset.ces[2]
 #define stack_ce	ulogd_kset.ces[3]
+
+
+void
+ulogd_set_state(enum GlobalState s)
+{
+	state = s;
+}
+
+enum GlobalState
+ulogd_get_state(void)
+{
+	return state;
+}
 
 /***********************************************************************
  * UTILITY FUNCTIONS FOR PLUGINS
@@ -210,8 +224,12 @@ int ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi)
 	llist_for_each_entry(pi_cur, &stack->list, list) {
 		int i;
 
-		for (i = 0; i < pi_cur->plugin->output.num_keys; i++)
+		for (i = 0; i < pi_cur->plugin->output.num_keys; i++) {
+			pr_debug("%s: copy key '%s' from plugin '%s'\n", upi->id,
+					 pi_cur->id);
+
 			upi->input.keys[index++] = pi_cur->output.keys[i];
+		}
 	}
 
 	upi->input.num_keys = num_keys;
@@ -644,6 +662,10 @@ static int create_stack(const char *option)
 	}
 	INIT_LLIST_HEAD(&stack->list);
 
+	/* By default a stack is reconfigurable unless there is a plugin
+	   which is not reconfigurable */
+	stack->flags = ULOGD_SF_RECONF;
+
 	ulogd_log(ULOGD_DEBUG, "building new pluginstance stack (%s):\n",
 		  option);
 
@@ -692,6 +714,9 @@ static int create_stack(const char *option)
 			
 		ulogd_log(ULOGD_DEBUG, "pushing `%s' on stack\n", pl->name);
 		llist_add_tail(&pi->list, &stack->list);
+
+		if ((pi->plugin->flags & ULOGD_PF_RECONF) == 0)
+			stack->flags &= ~ULOGD_SF_RECONF;
 	}
 
 	/* PASS 2: resolve key connections from bottom to top of stack */
@@ -838,7 +863,8 @@ _do_reconf(struct ulogd_pluginstance *pi,
 
 	assert(pi != NULL);
 
-	if ((pi->plugin->flags & ULOGD_PF_RECONF) == 0)
+	/* check whether stack is reconfigurable */
+	if ((stack->flags & ULOGD_SF_RECONF) == 0)
 		return 0;
 
 	switch (op) {
@@ -870,16 +896,31 @@ _do_reconf(struct ulogd_pluginstance *pi,
 static int
 reconfigure_plugins(void)
 {
+	struct ulogd_pluginstance_stack *stack;
+
 	ulogd_log(ULOGD_INFO, "reconfiguring plugins\n");
+
+	ulogd_set_state(GS_INITIALIZING);
+
+	/* Skip stacks which contain at least one plugin which is not
+	   reconfigurable.  This a short-term workaround until all plugins
+	   are reconfigurable. */
 
 	if (for_each_pluginstance(_do_reconf, (void *)STOP) < 0)
 		abort();
 
-	if (for_each_pluginstance(_do_reconf, (void *)CONFIGURE) < 0)
-		abort();
+	llist_for_each_entry(stack, &ulogd_pi_stacks, stack_list) {
+		if ((stack->flags & ULOGD_SF_RECONF) == 0)
+			continue;
+
+		if (create_stack_resolve_keys(stack) < 0)
+			abort();
+	}
 
 	if (for_each_pluginstance(_do_reconf, (void *)START) < 0)
 		abort();
+
+	ulogd_set_state(GS_RUNNING);
 
 	return 0;
 }
@@ -888,6 +929,9 @@ static void
 sync_sig_handler(int signo)
 {
 	pr_debug("%s: signal '%d' received\n", __func__, signo);
+
+	if (ulogd_get_state() != GS_RUNNING)
+		return;
 
 	switch (signo) {
 	case SIGHUP:
@@ -957,6 +1001,7 @@ main(int argc, char* argv[])
 	uid_t uid = 0;
 	gid_t gid = 0;
 
+	ulogd_set_state(GS_INITIALIZING);
 
 	while ((argch = getopt_long(argc, argv, "c:dh::Vu:", opts, NULL)) != -1) {
 		switch (argch) {
@@ -1079,6 +1124,8 @@ main(int argc, char* argv[])
 	ulogd_timer_run();
 
 	ulogd_log(ULOGD_INFO, "entering main loop\n");
+
+	ulogd_set_state(GS_RUNNING);
 
 	ulogd_dispatch();
 

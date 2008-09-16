@@ -189,17 +189,29 @@ struct ulogd_pluginstance {
 	char private[0];
 };
 
+/* stack flags */
+#define ULOGD_SF_RECONF			0x00000001 /* stack is reconfigurable */
+
 struct ulogd_pluginstance_stack {
 	/* global list of pluginstance stacks */
 	struct llist_head stack_list;
 	/* list of plugins in this stack */
 	struct llist_head list;
 	char *name;
+	unsigned flags;
 };
 
 /***********************************************************************
  * PUBLIC INTERFACE 
  ***********************************************************************/
+enum GlobalState {
+	GS_INVAL = 0,
+	GS_INITIALIZING,			/* also reconfiguration */
+	GS_RUNNING,
+};
+
+void ulogd_set_state(enum GlobalState);
+enum GlobalState ulogd_get_state(void);
 
 void ulogd_propagate_results(struct ulogd_pluginstance *pi);
 
