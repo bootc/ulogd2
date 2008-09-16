@@ -41,7 +41,7 @@
 #define CFG_BUFFER_DEFAULT		10
 
 /* number of colums we have (really should be configurable) */
-#define DB_NUM_COLS	10
+#define DB_NUM_COLS	11
 
 #if 0
 #define DEBUGP(x, args...)	fprintf(stderr, x, ## args)
@@ -338,7 +338,7 @@ db_count_cols(struct ulogd_pluginstance *pi, sqlite3_stmt **stmt)
 		"ip_protocol integer, l4_dport integer, raw_in_pktlen integer, " \
 		"raw_in_pktcount integer, raw_out_pktlen integer, " \
 		"raw_out_pktcount integer, flow_start_day integer, " \
-		"flow_duration integer)"
+		"flow_start_sec integer, flow_duration integer)"
 
 static int
 db_create_tbl(struct ulogd_pluginstance *pi)
@@ -346,6 +346,8 @@ db_create_tbl(struct ulogd_pluginstance *pi)
 	struct sqlite3_priv *priv = (void *)pi->private;
 	char *errmsg;
 	int ret;
+
+	sqlite3_exec(priv->dbh, "drop table daily", NULL, NULL, NULL);
 
 	ret = sqlite3_exec(priv->dbh, SQL_CREATE_STR, NULL, NULL, &errmsg);
 	if (ret != SQLITE_OK) {
