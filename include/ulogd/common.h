@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #define min(x, y) ({ \
         typeof(x) _x = (x);  typeof(y) _y = (y); \

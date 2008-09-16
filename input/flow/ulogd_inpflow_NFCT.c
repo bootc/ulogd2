@@ -733,15 +733,17 @@ timer_cb(struct ulogd_timer *t)
 	struct ct_timestamp *ts;
 	int end = STOP_HERE(ht);
 
-	for (; ht->curr_bucket != end; ht->curr_bucket++) {
-		ht->curr_bucket = ht->curr_bucket % ht->num_buckets;
+	do {
+		assert(ht->curr_bucket < ht->num_buckets);
 
 		llist_for_each_entry(ts, &ht->buckets[ht->curr_bucket], list) {
 			/* check if its still there */
 			nfct_get_conntrack_x(priv->cth, &ts->tuple, NFCT_DIR_ORIGINAL,
 								 &ts->last_seq);
 		}
-	}
+
+		ht->curr_bucket = (ht->curr_bucket + 1) % ht->num_buckets;
+	} while (ht->curr_bucket != end);
 }
 
 static int configure_nfct(struct ulogd_pluginstance *upi,
