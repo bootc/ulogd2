@@ -26,12 +26,17 @@
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 
+#define IFI_STATIC_MAX			64
 
-#define tailq_for_each(pos, head, link) \
+#define TAILQ_FOR_EACH(pos, head, link) \
         for (pos = (head).tqh_first; pos != NULL; pos = pos->link.tqe_next)
 
-
+/* the first IFI_STATIC_MAX entries are kept in ifi_static[] for performance
+   reasons, whereas all entries with an interface index larger than
+   IFI_STATIX_MAX-1 are kept in the linked ifi_list. */
 static TAILQ_HEAD(ifi_lh, ifi) ifi_list;
+static struct ifi ifi_static[IFI_STATIC_MAX];
+
 static unsigned nl_seq;			/* last seq# */
 
 
@@ -47,23 +52,45 @@ ifi_alloc(void)
 }
 
 
+struct ifi *
+ifi_find_by_idx(unsigned idx)
+{
+	struct ifi *ifi;
+
+	if (idx < IFI_STATIC_MAX)
+		ifi = &ifi_static[idx];
+	else {
+		TAILQ_FOR_EACH(ifi, ifi_list, link) {
+			if (ifi->idx == idx)
+				break;
+		}
+
+		if (ifi == NULL)
+			return NULL;
+	}
+
+	return ifi->used ? ifi : NULL;
+}
+
+
 static struct ifi *
 ifi_find_or_add(unsigned idx)
 {
-	struct ifi *ifi;
+	struct ifi *ifi = ifi_find_by_idx(idx);
 	
-	tailq_for_each(ifi, ifi_list, link) {
-		if (ifi->idx == idx)
-			break;
-	}
-	
-	if (ifi == NULL) {
+	if (ifi != NULL)
+		return ifi;
+
+	/* add */
+	if (idx < IFI_STATIC_MAX)
+		ifi = &ifi_static[idx];
+	else
 		ifi = ifi_alloc();
 		
-		ifi->idx = idx;
+	ifi->idx = idx;
+	ifi->used = 1;
 
-		TAILQ_INSERT_TAIL(&ifi_list, ifi, link);
-	}
+	TAILQ_INSERT_TAIL(&ifi_list, ifi, link);
 	
 	return ifi;
 }
@@ -74,30 +101,26 @@ ifi_del(unsigned idx)
 {
 	struct ifi *ifi;
 	
-	tailq_for_each(ifi, ifi_list, link) {
-		if (ifi->idx == idx) {
-			TAILQ_REMOVE(&ifi_list, ifi, link);
-			free(ifi);
+	if (idx < IFI_STATIC_MAX) {
+		ifi = &ifi_static[idx];
+
+		if (ifi->used) {
+			ifi->used = 0;
 
 			return true;
+		}
+	} else {
+		TAILQ_FOR_EACH(ifi, ifi_list, link) {
+			if (ifi->idx == idx) {
+				TAILQ_REMOVE(&ifi_list, ifi, link);
+				free(ifi);
+				
+				return true;
+			}
 		}
 	}
 
 	return false;
-}
-
-
-struct ifi *
-ifi_find_by_idx(unsigned idx)
-{
-	struct ifi *ifi;
-
-	tailq_for_each(ifi, ifi_list, link) {
-		if (ifi->idx == idx)
-			return ifi;
-	}
-
-	return NULL;
 }
 
 
@@ -269,7 +292,6 @@ rtnl_handle_msg(struct nlmsghdr *nlh, size_t len)
 			break;
 
 		case NLMSG_ERROR:
-			printf("netlink error\n");
 			break;
 
 		default:
@@ -295,8 +317,6 @@ rtnl_read_cb(int fd, unsigned what, void *data)
 		if ((nbytes = nl_listen(fd, buf, sizeof(buf))) < 0) {
 			if (errno == EWOULDBLOCK)
 				return 0;
-
-			printf("nbytes=%d\n", nbytes);
 
 			ulogd_log(ULOGD_ERROR, "nl_listen: %s\n", strerror(errno));
 
@@ -351,6 +371,3 @@ ifi_init(void)
 
 	return 0;
 }
-
-
-

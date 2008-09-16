@@ -29,16 +29,15 @@
 struct ifi {
 	TAILQ_ENTRY(ifi) link;
 	unsigned idx;			/* interface index */
+	unsigned used : 1;
 	unsigned flags;
 	char name[IFNAMSIZ];
 	unsigned char lladdr[6];
 };
 
-
 int ifi_init(void);
 void ifi_fini(void);
 
 struct ifi *ifi_find_by_idx(unsigned);
-
 
 #endif /* IFI_H */
