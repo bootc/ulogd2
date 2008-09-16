@@ -168,9 +168,9 @@ row_new(void)
 static inline void
 __row_del(struct sqlite3_priv *priv, struct row *row)
 {
-	free(row);
+	assert(row != NULL);
 
-	priv->num_rows--;
+	free(row);
 }
 
 
@@ -180,15 +180,17 @@ row_del(struct sqlite3_priv *priv, struct row *row)
 	llist_del(&row->link);
 
 	__row_del(priv, row);
+
+	priv->num_rows--;
 }
 
 
 static int
 row_add(struct sqlite3_priv *priv, struct row *row)
 {
-	if (priv->max_backlog && priv->num_rows > priv->max_backlog) {
+	if (priv->max_backlog && priv->num_rows >= priv->max_backlog) {
 		if (!priv->overlimit_msg) {
-			ulogd_error(PFX "over max-backlog limit, dropping row\n");
+			ulogd_error(PFX "over max-backlog limit, dropping rows\n");
 
 			priv->overlimit_msg = 1;
 		}
@@ -441,111 +443,126 @@ db_start(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
+/* db_err() - handle database errors */
+static int
+db_err(struct ulogd_pluginstance *pi, int ret)
+{
+	struct sqlite3_priv *priv = (void *)pi->private;
+
+	pr_debug("%s: ret=%d (errcode %d)\n", __func__, ret,
+			 sqlite3_errcode(priv->dbh));
+
+	assert(ret != SQLITE_OK && ret != SQLITE_DONE);
+
+	if (ret == SQLITE_BUSY || ret == SQLITE_LOCKED)
+		set_commit_time(pi);
+	else {
+		switch (sqlite3_errcode(priv->dbh)) {
+		case SQLITE_LOCKED:
+		case SQLITE_BUSY:
+			set_commit_time(pi);
+			break;
+
+		case SQLITE_SCHEMA:
+			if (priv->stmt) {
+				sqlite3_finalize(priv->p_stmt);
+
+				db_createstmt(pi);
+
+				ulogd_log(ULOGD_INFO, "%s: database schema changed\n",
+						  pi->id);
+			}
+			break;
+
+		default:
+			ulogd_error("%s: transaction: %s\n", pi->id,
+						sqlite3_errmsg(priv->dbh));
+			break;
+		}
+	}
+
+	sqlite3_exec(priv->dbh, "rollback", NULL, NULL, NULL);
+
+	/* no sqlit3_clear_bindings(), as an unbind will be done implicitely
+	   on next bind. */
+	if (priv->p_stmt != NULL)
+		sqlite3_reset(priv->p_stmt);
+
+	return 0;
+}
 
 static int
 db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
-	int db_col = 1, ret = 0, db_ret;
+	int db_col = 1, ret;
 
-	db_ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_saddr);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+	do {
+		ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_saddr);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_daddr);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_daddr);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->ip_proto);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->ip_proto);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->l4_dport);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->l4_dport);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_in_pktlen);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_in_pktlen);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_in_pktcount);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_in_pktcount);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_out_pktlen);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_out_pktlen);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_out_pktcount);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int64(priv->p_stmt, db_col++,
+								 row->raw_out_pktcount);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_start_day);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_start_day);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_start_sec);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_start_sec);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_duration);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_duration);
+		if (ret != SQLITE_OK)
+			break;
 
-	/* hack alarm: add static data (argh!) */
-	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, 1);
-	if (db_ret != SQLITE_OK)
-		goto err_bind;
+		/* hack alarm: add static data (argh!) */
+		ret = sqlite3_bind_int(priv->p_stmt, db_col++, 1);
+		if (ret != SQLITE_OK)
+			break;
 
-	db_ret = sqlite3_step(priv->p_stmt);
+		if ((ret = sqlite3_step(priv->p_stmt)) == SQLITE_DONE) {
+			/* no sqlite3_clear_bindings(), as an unbind will be
+			   implicetely done before next bind. */
+			sqlite3_reset(priv->p_stmt);
 
-	if (db_ret == SQLITE_DONE) {
-		/* the SQLITE book doesn't say that expclicitely _but_ between
-		   two sqlite_bind_*() calls to the same variable you need to
-		   call sqlite3_reset(). */
-		sqlite3_reset(priv->p_stmt);
-
-		return 0;
-	}
-
-	/* Ok, this is a bit confusing: some errors are reported as return
-	   values, most others are reported through sqlite3_errcode() instead.
-	   I think the only authorative source of information is the sqlite
-	   source code.	*/
-	switch (sqlite3_errcode(priv->dbh)) {
-	case SQLITE_LOCKED:
-	case SQLITE_BUSY:
-		set_commit_time(pi);
-		break;
-
-	case SQLITE_SCHEMA:
-		if (priv->stmt) {
-			sqlite3_finalize(priv->p_stmt);
-
-			db_createstmt(pi);
+			return 0;
 		}
-		return -1;
 
-	case SQLITE_ERROR: /* e.g. constraint violation */
-	case SQLITE_MISUSE:
-		ulogd_error(PFX "step: %s\n", sqlite3_errmsg(priv->dbh));
-		ret = -1;
-		break;
+		/* according to the documentation sqlite3_step() always returns a
+		   generic SQLITE_ERROR.  In order to find out the cause of the
+		   error you have to call sqlite3_reset() or sqlite3_finalize(). */
+		ret = sqlite3_reset(priv->p_stmt);
+	} while (0);
 
-	default:
-		break;
-	}
-
-	sqlite3_reset(priv->p_stmt);
-
-	return ret;
-
- err_bind:
-	ulogd_error(PFX "bind: %s\n", sqlite3_errmsg(priv->dbh));
-
-	sqlite3_reset(priv->p_stmt);
-
-	return -1;
+	return db_err(pi, ret);
 }
 
 #define llist_for_each_prev_safe(pos, n, head) \
@@ -588,23 +605,8 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 
 	ret = sqlite3_exec(priv->dbh, "begin immediate transaction", NULL,
 					   NULL, NULL);
-	if (ret != SQLITE_OK) {
-		if (ret == SQLITE_BUSY) {
-			set_commit_time(pi);
-			goto err_rollback;
-		}
-
-		if (sqlite3_errcode(priv->dbh) == SQLITE_LOCKED) {
-			set_commit_time(pi);
-			return 0;			/* perform commit later */
-		}
-	
-		ulogd_error("%s: begin transaction: %s\n", pi->id,
-					sqlite3_errmsg(priv->dbh));
-
-		return -1;
-	}
-
+	if (ret != SQLITE_OK)
+		return db_err(pi, ret);
 
 	/* Limit number of rows to commit.  Note that currently three times
 	   buffer_size is a bit arbitrary and therefore might be adjusted in
@@ -616,33 +618,26 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 			break;
 
 		if (db_add_row(pi, row) < 0)
-			goto err_rollback;
+			return db_err(pi, ret);
 	}
 
 	ret = sqlite3_exec(priv->dbh, "commit", NULL, NULL, NULL);
-	if (ret == SQLITE_OK) {
-		sqlite3_reset(priv->p_stmt);
+	if (ret != SQLITE_OK)
+		return db_err(pi, ret);
 
-		pr_debug("%s: commited %d/%d rows\n", pi->id, rows, priv->num_rows);
+	sqlite3_reset(priv->p_stmt);
+	
+	pr_debug("%s: commited %d/%d rows\n", pi->id, rows, priv->num_rows);
 
-		delete_rows(pi, rows);
+	delete_rows(pi, rows);
+	
+	if (priv->commit_time >= t_now)
+		priv->commit_time = 0;		/* release commit lock */
+	
+	if (priv->overlimit_msg)
+		priv->overlimit_msg = 0;
 
-		if (priv->commit_time >= t_now)
-			priv->commit_time = 0;		/* release commit lock */
-
-		if (priv->overlimit_msg)
-			priv->overlimit_msg = 0;
-
-		return rows;
-	}
-
- err_rollback:
-	if (sqlite3_errcode(priv->dbh) == SQLITE_LOCKED)
-		return 0;
-
-	sqlite3_exec(priv->dbh, "rollback", NULL, NULL, NULL);
-
-	return -1;
+	return rows;
 }
 
 

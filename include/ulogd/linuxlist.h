@@ -117,8 +117,10 @@ static inline void __llist_del(struct llist_head * prev, struct llist_head * nex
 static inline void llist_del(struct llist_head *entry)
 {
 	__llist_del(entry->prev, entry->next);
+#ifdef ULOGD_DEBUG_LLIST
 	entry->next = LLIST_POISON1;
 	entry->prev = LLIST_POISON2;
+#endif /* ULOGD_DEBUG_LLIST */
 }
 
 /**
