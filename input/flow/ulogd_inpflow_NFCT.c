@@ -660,7 +660,7 @@ cache_add(struct cache *c, struct conntrack *ct)
 {
 	ct_get(ct);
 
-	ct->time[UPDATE].tv_sec = ct->time[START].tv_sec = t_now;
+	ct->time[UPDATE].tv_sec = ct->time[START].tv_sec = t_now_local;
 
 	/* order of these two is important for debugging purposes */
 	c->c_cnt++;
@@ -787,7 +787,7 @@ propagate_ct(struct ulogd_pluginstance *upi, struct nfct_conntrack *nfct,
 						   INADDR_CLUSTER))
 			break;
 
-		ct->time[STOP].tv_sec = t_now;
+		ct->time[STOP].tv_sec = t_now_local;
 		
 		propagate_ct_flow(upi, nfct, flags, NFCT_DIR_ORIGINAL, ct);
 	} while (0);
@@ -838,7 +838,7 @@ do_nfct_msg(struct nlmsghdr *nlh, void *arg)
 			break;
 		}
 
-		ct->time[UPDATE].tv_sec = t_now;
+		ct->time[UPDATE].tv_sec = t_now_local;
 
 		if (ct->used > 1) {
 			struct conntrack *ct_tmp = scache_find(pi, nlh->nlmsg_seq);
