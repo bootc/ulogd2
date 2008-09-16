@@ -50,9 +50,7 @@
 #define LOG_ID_ACCEPT		(__PF_BASE + 2)
 #define LOG_ID_REJECT		(__PF_BASE + 3)
 #define LOG_ID_INVAL_PKT	(__PF_BASE + 4)
-#define LOG_ID_SYN_FLOOD	(__PF_BASE + 6)
-#define LOG_ID_ICMP_FLOOD	(__PF_BASE + 7)
-#define LOG_ID_UDP_FLOOD	(__PF_BASE + 8)
+#define LOG_ID_SPOOFING_DROP (__PF_BASE + 5)
 #define LOG_ID_ICMP_REDIR	(__PF_BASE + 9)
 #define LOG_ID_H323_RTP		(__PF_BASE + 10)
 #define LOG_ID_Q931_GK		(__PF_BASE + 11)
@@ -64,7 +62,9 @@
 /* IPS range */
 #define __IPS_BASE	2100
 #define LOG_ID_PORTSCAN		(__IPS_BASE + 2)
-#define LOG_ID_SPOOFING_DROP (__IPS_BASE + 3)
+#define LOG_ID_SYN_FLOOD	(__IPS_BASE + 3)
+#define LOG_ID_ICMP_FLOOD	(__IPS_BASE + 4)
+#define LOG_ID_UDP_FLOOD	(__IPS_BASE + 5)
 
 /* logging flags for custom log handler */
 #define LH_F_NOLOG		0x0001
