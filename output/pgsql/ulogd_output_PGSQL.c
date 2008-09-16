@@ -115,7 +115,7 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 
 /* find out which columns the table has */
 static int
-get_columns_pgsql(struct ulogd_pluginstance *upi)
+pgsql_get_columns(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 	char pgbuf[strlen(PGSQL_GETCOLUMN_TEMPLATE_SCHEMA)
@@ -194,7 +194,7 @@ get_columns_pgsql(struct ulogd_pluginstance *upi)
 }
 
 static int
-close_db_pgsql(struct ulogd_pluginstance *upi)
+pgsql_close_db(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 
@@ -205,7 +205,7 @@ close_db_pgsql(struct ulogd_pluginstance *upi)
 
 /* make connection and select database */
 static int
-open_db_pgsql(struct ulogd_pluginstance *upi)
+pgsql_open_db(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 	int len;
@@ -256,13 +256,13 @@ open_db_pgsql(struct ulogd_pluginstance *upi)
 	if (PQstatus(pi->dbh) != CONNECTION_OK) {
 		ulogd_log(ULOGD_ERROR, "unable to connect to db (%s): %s\n",
 			  connstr, PQerrorMessage(pi->dbh));
-		close_db_pgsql(upi);
+		pgsql_close_db(upi);
 		return -1;
 	}
 
 	if (pgsql_namespace(upi)) {
 		ulogd_log(ULOGD_ERROR, "unable to test for pgsql schemas\n");
-		close_db_pgsql(upi);
+		pgsql_close_db(upi);
 		return -1;
 	}
 
@@ -270,7 +270,7 @@ open_db_pgsql(struct ulogd_pluginstance *upi)
 }
 
 static int
-escape_string_pgsql(struct ulogd_pluginstance *upi,
+pgsql_escape_string(struct ulogd_pluginstance *upi,
 					char *dst, const char *src, unsigned int len)
 {
 	PQescapeString(dst, src, strlen(src)); 
@@ -278,7 +278,7 @@ escape_string_pgsql(struct ulogd_pluginstance *upi,
 }
 
 static int
-execute_pgsql(struct ulogd_pluginstance *upi,
+pgsql_execute(struct ulogd_pluginstance *upi,
 			  const char *stmt, unsigned int len)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
@@ -296,15 +296,15 @@ execute_pgsql(struct ulogd_pluginstance *upi,
 }
 
 static struct db_driver db_driver_pgsql = {
-	.get_columns	= &get_columns_pgsql,
-	.open_db	= &open_db_pgsql,
-	.close_db	= &close_db_pgsql,
-	.escape_string	= &escape_string_pgsql,
-	.execute	= &execute_pgsql,
+	.get_columns	= &pgsql_get_columns,
+	.open_db	= &pgsql_open_db,
+	.close_db	= &pgsql_close_db,
+	.escape_string	= &pgsql_escape_string,
+	.execute	= &pgsql_execute,
 };
 
 static int
-configure_pgsql(struct ulogd_pluginstance *upi,
+pgsql_configure(struct ulogd_pluginstance *upi,
 				struct ulogd_pluginstance_stack *stack)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
@@ -326,7 +326,7 @@ static struct ulogd_plugin pgsql_plugin = {
 	},
 	.config_kset 	= &pgsql_kset,
 	.priv_size	= sizeof(struct pgsql_priv),
-	.configure	= &configure_pgsql,
+	.configure	= &pgsql_configure,
 	.start		= &ulogd_db_start,
 	.stop		= &ulogd_db_stop,
 	.signal		= &ulogd_db_signal,
