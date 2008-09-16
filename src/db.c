@@ -1,4 +1,4 @@
-/* db.c, Version $Revision: 6304 $
+/* db.c
  *
  * ulogd helper functions for Database / SQL output plugins
  *
@@ -9,7 +9,7 @@
  *           (C) 2005 Jozsef Kadlecsik <kadlec@blackhole.kfki.hu>
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 
+ *  it under the terms of the GNU General Public License version 2
  *  as published by the Free Software Foundation
  *
  *  This program is distributed in the hope that it will be useful,
@@ -20,10 +20,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
- * $Id: ulogd_output_MYSQL.c 6304 2005-12-08 09:43:19Z /C=DE/ST=Berlin/L=Berlin/O=Netfilter Project/OU=Development/CN=laforge/emailAddress=laforge@netfilter.org $
+ *
  */
-
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/db.h>
@@ -84,7 +82,7 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 		/* we need space for the key and a comma, as well as
 		 * enough space for the values */
 		size += strlen(upi->input.keys[i].name) + 1 + SQL_VALSIZE;
-	}	
+	}
 
 	ulogd_log(ULOGD_DEBUG, "allocating %u bytes for statement\n", size);
 
@@ -104,7 +102,7 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 		if (upi->input.keys[i].flags & ULOGD_KEYF_INACTIVE)
 			continue;
 
-		strncpy(buf, upi->input.keys[i].name, ULOGD_MAX_KEYLEN);	
+		strncpy(buf, upi->input.keys[i].name, ULOGD_MAX_KEYLEN);
 		while ((underscore = strchr(buf, '.')))
 			*underscore = '_';
 		sprintf(mi->stmt_val, "%s,", buf);
@@ -149,12 +147,12 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	ret = di->driver->get_columns(upi);
 	if (ret < 0)
 		ulogd_log(ULOGD_ERROR, "error in get_columns\n");
-	
+
 	/* Close database, since ulogd core could just call configure
 	 * but abort during input key resolving routines.  configure
 	 * doesn't have a destructor... */
 	di->driver->close_db(upi);
-	
+
 	return ret;
 }
 
@@ -223,12 +221,13 @@ _init_reconnect(struct ulogd_pluginstance *upi)
 	/* Disable plugin permanently */
 	ulogd_log(ULOGD_ERROR, "permanently disabling plugin\n");
 	di->interp = &disabled_interp_db;
-	
+
 	return 0;
 }
 
 /* our main output function, called by ulogd */
-static int __interp_db(struct ulogd_pluginstance *upi)
+static int
+__interp_db(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
 	int i;
@@ -237,7 +236,7 @@ static int __interp_db(struct ulogd_pluginstance *upi)
 
 	di->stmt_ins = di->stmt_val;
 
-	for (i = 0; i < upi->input.num_keys; i++) { 
+	for (i = 0; i < upi->input.num_keys; i++) {
 		struct ulogd_key *res = upi->input.keys[i].u.source;
 
 		if (upi->input.keys[i].flags & ULOGD_KEYF_INACTIVE)
@@ -246,13 +245,13 @@ static int __interp_db(struct ulogd_pluginstance *upi)
 		if (!res)
 			ulogd_log(ULOGD_NOTICE, "no source for `%s' ?!?\n",
 				  upi->input.keys[i].name);
-			
+
 		if (!res || !IS_VALID(*res)) {
 			/* no result, we have to fake something */
 			di->stmt_ins += sprintf(di->stmt_ins, "NULL,");
 			continue;
 		}
-		
+
 		switch (res->type) {
 			char *tmpstr;
 			struct in_addr addr;
@@ -299,8 +298,8 @@ static int __interp_db(struct ulogd_pluginstance *upi)
 		case ULOGD_RET_STRING:
 			*(di->stmt_ins++) = '\'';
 			if (res->u.value.ptr) {
-				di->stmt_ins += 
-				di->driver->escape_string(upi, di->stmt_ins, 
+				di->stmt_ins +=
+				di->driver->escape_string(upi, di->stmt_ins,
 							  res->u.value.ptr,
 							strlen(res->u.value.ptr));
 			}
@@ -329,7 +328,8 @@ static int __interp_db(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static int _init_db(struct ulogd_pluginstance *upi)
+static int
+_init_db(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
 
@@ -353,8 +353,8 @@ static int _init_db(struct ulogd_pluginstance *upi)
 	return __interp_db(upi);
 }
 
-
-void ulogd_db_signal(struct ulogd_pluginstance *upi, int signal)
+void
+ulogd_db_signal(struct ulogd_pluginstance *upi, int signal)
 {
 	switch (signal) {
 	case SIGHUP:

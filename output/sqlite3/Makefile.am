@@ -5,7 +5,7 @@ if HAVE_SQLITE3
 
 pkglib_LTLIBRARIES = ulogd_output_SQLITE3.la
 
-ulogd_output_SQLITE3_la_SOURCES = ulogd_output_SQLITE3.c ../../util/db.c
+ulogd_output_SQLITE3_la_SOURCES = ulogd_output_SQLITE3.c
 ulogd_output_SQLITE3_la_LDFLAGS = -module
 
 endif
