@@ -76,6 +76,7 @@ struct nfct_pluginstance {
 	struct ulogd_fd nfct_fd;
 	struct ct_htable *htable;
 	struct ulogd_timer timer;
+	unsigned disable : 1;
 	struct {
 		unsigned nl_err;
 		unsigned nl_ovr;
@@ -85,7 +86,7 @@ struct nfct_pluginstance {
 #define HTABLE_SIZE	(512)
 
 static struct config_keyset nfct_kset = {
-	.num_ces = 3,
+	.num_ces = 4,
 	.ces = {
 		{
 			.key	 = "pollinterval",
@@ -105,10 +106,18 @@ static struct config_keyset nfct_kset = {
 			.options = CONFIG_OPT_NONE,
 			.u.value = 0,
 		},
+		{
+			.key	 = "disable",
+			.type	 = CONFIG_TYPE_INT,
+			.options = CONFIG_OPT_NONE,
+			.u.value = 0,
+		},
 	},
 };
 #define pollint_ce(x)	(x->ces[0])
 #define buckets_ce(x)	(x->ces[1])
+#define hash_max_entries(x)		((x)->ces[2])
+#define disable_ce(x)	(x->ces[3])
 
 enum {
 	O_IP_SADDR = 0,
@@ -782,6 +791,8 @@ nfct_configure(struct ulogd_pluginstance *upi,
 	if (ret < 0)
 		return ret;
 
+	priv->disable = disable_ce(upi->config_kset).u.value;
+
 	return 0;
 }
 
@@ -792,6 +803,11 @@ nfct_start(struct ulogd_pluginstance *upi)
 	struct nfct_pluginstance *priv = (void *)upi->private;
 
 	pr_debug("%s: pi=%p\n", __func__, upi);
+
+	if (priv->disable) {
+		ulogd_log(ULOGD_INFO, "%s: disabled\n", upi->id);
+		return 0;
+	}
 
 	priv->htable = htable_alloc(buckets_ce(upi->config_kset).u.value);
 	if (priv->htable == NULL) {
@@ -804,6 +820,8 @@ nfct_start(struct ulogd_pluginstance *upi)
 		ulogd_log(ULOGD_FATAL, "error opening ctnetlink\n");
 		goto err_free;
 	}
+
+	ulogd_log(ULOGD_DEBUG, "%s: ctnetlink connection opened\n", upi->id);
 
 	priv->nfct_fd.fd = nfct_fd(priv->cth);
 	priv->nfct_fd.cb = &read_cb_nfct;
@@ -844,6 +862,9 @@ nfct_stop(struct ulogd_pluginstance *pi)
 
 	pr_debug("%s: pi=%p\n", __func__, pi);
 
+	if (priv->disable)
+		return 0;				/* wasn't started */
+
 	if (priv->htable == NULL)
 		return 0;				/* already stopped */
 
@@ -855,6 +876,8 @@ nfct_stop(struct ulogd_pluginstance *pi)
 		nfct_close(priv->cth);
 		priv->cth = NULL;
 	}
+
+	ulogd_log(ULOGD_DEBUG, "%s: ctnetlink connection closed\n", pi->id);
 
 	if (priv->htable != NULL) {
 		htable_free(priv->htable);
