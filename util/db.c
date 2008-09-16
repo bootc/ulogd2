@@ -33,11 +33,10 @@
 
 /* generic db layer */
 
-static int __interp_db(struct ulogd_pluginstance *upi);
-
 /* this is a wrapper that just calls the current real
  * interp function */
-int ulogd_db_interp(struct ulogd_pluginstance *upi)
+int
+ulogd_db_interp(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *dbi = upi_priv(upi);
 
@@ -45,7 +44,8 @@ int ulogd_db_interp(struct ulogd_pluginstance *upi)
 }
 
 /* no connection, plugin disabled */
-static int disabled_interp_db(struct ulogd_pluginstance *upi)
+static int
+disabled_interp_db(struct ulogd_pluginstance *upi)
 {
 	return 0;
 }
@@ -54,7 +54,8 @@ static int disabled_interp_db(struct ulogd_pluginstance *upi)
 #define SQL_VALSIZE	100
 
 /* create the static part of our insert statement */
-static int sql_createstmt(struct ulogd_pluginstance *upi)
+static int
+sql_createstmt(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *mi = upi_priv(upi);
 	unsigned int size;
@@ -111,8 +112,9 @@ static int sql_createstmt(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-int ulogd_db_configure(struct ulogd_pluginstance *upi,
-			struct ulogd_pluginstance_stack *stack)
+int
+ulogd_db_configure(struct ulogd_pluginstance *upi,
+				   struct ulogd_pluginstance_stack *stack)
 {
 	struct db_instance *di = upi_priv(upi);
 	int ret;
@@ -146,7 +148,8 @@ int ulogd_db_configure(struct ulogd_pluginstance *upi,
 	return ret;
 }
 
-int ulogd_db_start(struct ulogd_pluginstance *upi)
+int
+ulogd_db_start(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
 	int ret;
@@ -164,7 +167,8 @@ int ulogd_db_start(struct ulogd_pluginstance *upi)
 	return ret;
 }
 
-int ulogd_db_stop(struct ulogd_pluginstance *upi)
+int
+ulogd_db_stop(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
 	ulogd_log(ULOGD_NOTICE, "stopping\n");
@@ -180,7 +184,8 @@ int ulogd_db_stop(struct ulogd_pluginstance *upi)
 
 static int _init_db(struct ulogd_pluginstance *upi);
 
-static int _init_reconnect(struct ulogd_pluginstance *upi)
+static int
+_init_reconnect(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
 
@@ -202,29 +207,6 @@ static int _init_reconnect(struct ulogd_pluginstance *upi)
 	
 	return 0;
 }
-
-static int _init_db(struct ulogd_pluginstance *upi)
-{
-	struct db_instance *di = upi_priv(upi);
-
-	if (di->reconnect && di->reconnect > time(NULL))
-		return 0;
-	
-	if (di->driver->open_db(upi)) {
-		ulogd_log(ULOGD_ERROR, "can't establish database connection\n");
-		return _init_reconnect(upi);
-	}
-
-	/* enable 'real' logging */
-	di->interp = &__interp_db;
-
-	di->reconnect = 0;
-
-	/* call the interpreter function to actually write the
-	 * log line that we wanted to write */
-	return __interp_db(upi);
-}
-
 
 /* our main output function, called by ulogd */
 static int __interp_db(struct ulogd_pluginstance *upi)
@@ -325,6 +307,29 @@ static int __interp_db(struct ulogd_pluginstance *upi)
 
 	return 0;
 }
+
+static int _init_db(struct ulogd_pluginstance *upi)
+{
+	struct db_instance *di = upi_priv(upi);
+
+	if (di->reconnect && di->reconnect > time(NULL))
+		return 0;
+
+	if (di->driver->open_db(upi)) {
+		ulogd_log(ULOGD_ERROR, "can't establish database connection\n");
+		return _init_reconnect(upi);
+	}
+
+	/* enable 'real' logging */
+	di->interp = &__interp_db;
+
+	di->reconnect = 0;
+
+	/* call the interpreter function to actually write the
+	 * log line that we wanted to write */
+	return __interp_db(upi);
+}
+
 
 void ulogd_db_signal(struct ulogd_pluginstance *upi, int signal)
 {
