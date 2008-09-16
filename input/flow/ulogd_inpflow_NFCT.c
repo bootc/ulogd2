@@ -27,6 +27,7 @@
  */
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 
@@ -38,28 +39,33 @@
 #include <ulogd/ipfix_protocol.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+#include <linux/netfilter/nf_conntrack_tcp.h>
+#include "linux_jhash.h"
+
+#define CT_EVENTS		(NF_NETLINK_CONNTRACK_NEW \
+						 | NF_NETLINK_CONNTRACK_UPDATE \
+						 | NF_NETLINK_CONNTRACK_DESTROY)
 
 typedef enum TIMES_ { START, STOP, __TIME_MAX } TIMES;
- 
+typedef unsigned conntrack_hash_t;
+
 struct ct_timestamp {
 	struct llist_head list;
+	struct nfct_tuple tuple;
 	struct timeval time[__TIME_MAX];
-	int id;
 };
 
 struct ct_htable {
 	struct llist_head *buckets;
-	int num_buckets;
-	int prealloc;
-	struct llist_head idle;
-	struct ct_timestamp *ts;
+	unsigned num_buckets;
+	unsigned used;
 };
 
 struct nfct_pluginstance {
 	struct nfct_handle *cth;
 	struct ulogd_fd nfct_fd;
+	struct ct_htable *htable;
 	struct ulogd_timer timer;
-	struct ct_htable *ct_active;
 };
 
 #define HTABLE_SIZE	(8192)
@@ -73,18 +79,6 @@ static struct config_keyset nfct_kset = {
 			.type	 = CONFIG_TYPE_INT,
 			.options = CONFIG_OPT_NONE,
 			.u.value = 0,
-		},
-		{
-			.key	 = "hash_enable",
-			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
-			.u.value = 1,
-		},
-		{
-			.key	 = "hash_prealloc",
-			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
-			.u.value = 1,
 		},
 		{
 			.key	 = "hash_buckets",
@@ -101,10 +95,8 @@ static struct config_keyset nfct_kset = {
 	},
 };
 #define pollint_ce(x)	(x->ces[0])
-#define usehash_ce(x)	(x->ces[1])
-#define prealloc_ce(x)	(x->ces[2])
-#define buckets_ce(x)	(x->ces[3])
-#define maxentries_ce(x) (x->ces[4])
+#define buckets_ce(x)	(x->ces[1])
+#define maxentries_ce(x) (x->ces[2])
 
 static struct ulogd_key nfct_okeys[] = {
 	{
@@ -251,124 +243,110 @@ static struct ulogd_key nfct_okeys[] = {
 	},
 };
 
-static struct ct_htable *htable_alloc(int htable_size, int prealloc)
+
+static conntrack_hash_t
+hash_conntrack(const struct nfct_tuple *t, size_t hash_sz)
+{
+	static unsigned rnd;
+
+	if (rnd == 0U)
+		rnd = rand();
+
+	return jhash_3words(t->src.v4, t->dst.v4 ^ t->protonum,
+						t->l4src.all | (t->l4dst.all << 16), rnd) % hash_sz;
+}
+
+static inline bool
+ct_cmp(const struct nfct_tuple *t1, const struct nfct_tuple *t2)
+{
+	return memcmp(t1, t2, sizeof(struct nfct_tuple)) == 0;
+}
+
+
+static struct ct_htable *
+htable_alloc(int htable_size)
 {
 	struct ct_htable *htable;
-	struct ct_timestamp *ct;
 	int i;
 
 	htable = malloc(sizeof(*htable)
-			+ sizeof(struct llist_head)*htable_size);
+			+ sizeof(struct llist_head) * htable_size);
 	if (!htable)
 		return NULL;
 
 	htable->buckets = (void *)htable + sizeof(*htable);
 	htable->num_buckets = htable_size;
-	htable->prealloc = prealloc;
-	INIT_LLIST_HEAD(&htable->idle);
+	htable->used = 0;
 
 	for (i = 0; i < htable->num_buckets; i++)
-                INIT_LLIST_HEAD(&htable->buckets[i]);
+		INIT_LLIST_HEAD(&htable->buckets[i]);
 	
-	if (!htable->prealloc)
-		return htable;
-
-	ct = malloc(sizeof(struct ct_timestamp)
-		    * htable->num_buckets * htable->prealloc);
-	if (!ct) {
-		free(htable);
-		return NULL;
-	}
-
-	/* save the pointer for later free()ing */
-	htable->ts = ct;
-
-	for (i = 0; i < htable->num_buckets * htable->prealloc; i++)
-		llist_add(&ct[i].list, &htable->idle);
-
 	return htable;
 }
 
-static void htable_free(struct ct_htable *htable)
+static void
+htable_free(struct ct_htable *htable)
 {
 	struct llist_head *ptr, *ptr2;
 	int i;
-
-	if (htable->prealloc) {
-		/* the easy case */
-		free(htable->ts);
-		free(htable);
-
-		return;
-	}
-
-	/* non-prealloc case */
 
 	for (i = 0; i < htable->num_buckets; i++) {
 		llist_for_each_safe(ptr, ptr2, &htable->buckets[i])
 			free(container_of(ptr, struct ct_timestamp, list));
 	}
 
-	/* don't need to check for 'idle' list, since it is only used in
-	 * the preallocated case */
+	free(htable);
 }
 
-static int ct_hash_add(struct ct_htable *htable, unsigned int id)
+static struct ct_timestamp *
+ct_hash_add(struct ct_htable *htable, const struct nfct_tuple *t)
 {
-	struct ct_timestamp *ct;
+	struct ct_timestamp *ts;
+	conntrack_hash_t h;
 
-	if (htable->prealloc) {
-		if (llist_empty(&htable->idle)) {
-			ulogd_log(ULOGD_ERROR, "Not enough ct_timestamp entries\n");
-			return -1;
-		}
+	h = hash_conntrack(t, htable->num_buckets);
 
-		ct = container_of(htable->idle.next, struct ct_timestamp, list);
-
-		ct->id = id;
-		gettimeofday(&ct->time[START], NULL);
-
-		llist_move(&ct->list, &htable->buckets[id % htable->num_buckets]);
-	} else {
-		ct = malloc(sizeof *ct);
-		if (!ct) {
-			ulogd_log(ULOGD_ERROR, "Not enough memory\n");
-			return -1;
-		}
-
-		ct->id = id;
-		gettimeofday(&ct->time[START], NULL);
-
-		llist_add(&ct->list, &htable->buckets[id % htable->num_buckets]);
+	if ((ts = calloc(1, sizeof(struct ct_timestamp))) == NULL) {
+		ulogd_log(ULOGD_ERROR, "Out of memory\n");
+		return NULL;
 	}
 
-	return 0;
+	memcpy(&ts->tuple, t, sizeof(struct nfct_tuple));
+
+	llist_add(&ts->list, &htable->buckets[h]);
+	htable->used++;
+
+	return ts;
 }
 
-static struct ct_timestamp *ct_hash_get(struct ct_htable *htable, uint32_t id)
-{
-	struct ct_timestamp *ct = NULL;
+static struct ct_timestamp *
+ct_hash_find(struct ct_htable *htable, const struct nfct_tuple *t)
+{  
 	struct llist_head *ptr;
+	conntrack_hash_t h = hash_conntrack(t, htable->num_buckets);
 
-	llist_for_each(ptr, &htable->buckets[id % htable->num_buckets]) {
-		ct = container_of(ptr, struct ct_timestamp, list);
-		if (ct->id == id) {
-			gettimeofday(&ct->time[STOP], NULL);
-			if (htable->prealloc)
-				llist_move(&ct->list, &htable->idle);
-			else
-				free(ct);
-			break;
-		}
+	llist_for_each(ptr, &htable->buckets[h]) {
+		struct ct_timestamp *ts = container_of(ptr, struct ct_timestamp, list);
+
+		if (ct_cmp(t, &ts->tuple))
+			return ts;
 	}
-	return ct;
+
+	return NULL;
 }
 
-static int propagate_ct_flow(struct ulogd_pluginstance *upi, 
-		             struct nfct_conntrack *ct,
-			     unsigned int flags,
-			     int dir,
-			     struct ct_timestamp *ts)
+static void
+ct_hash_free(struct ct_htable *htable, struct ct_timestamp *ts)
+{
+	llist_del(&ts->list);
+
+	htable->used--;
+}
+
+static int
+propagate_ct_flow(struct ulogd_pluginstance *upi, 
+				  struct nfct_conntrack *ct, unsigned int flags,
+				  int dir, struct ct_timestamp *ts)
 {
 	struct ulogd_key *ret = upi->output.keys;
 
@@ -437,18 +415,22 @@ static int propagate_ct_flow(struct ulogd_pluginstance *upi,
 	return 0;
 }
 
-static int propagate_ct(struct ulogd_pluginstance *upi,
-			struct nfct_conntrack *ct,
-			unsigned int flags,
-			struct ct_timestamp *ctstamp)
+static int
+propagate_ct(struct ulogd_pluginstance *upi,
+			 struct nfct_conntrack *ct, unsigned int flags)
 {
-	int rc;
+	struct nfct_pluginstance *priv = (void *)upi->private;
+	struct ct_timestamp *ts;
 
-	rc = propagate_ct_flow(upi, ct, flags, NFCT_DIR_ORIGINAL, ctstamp);
-	if (rc < 0)
-		return rc;
+	ts = ct_hash_find(priv->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
 
-	return propagate_ct_flow(upi, ct, flags, NFCT_DIR_REPLY, ctstamp);
+	gettimeofday(&ts->time[STOP], NULL);
+	
+	propagate_ct_flow(upi, ct, flags, NFCT_DIR_ORIGINAL, ts);
+
+	ct_hash_free(priv->htable, ts);
+
+	return 0;
 }
 
 static int event_handler(void *arg, unsigned int flags, int type,
@@ -456,20 +438,40 @@ static int event_handler(void *arg, unsigned int flags, int type,
 {
 	struct nfct_conntrack *ct = arg;
 	struct ulogd_pluginstance *upi = data;
-	struct nfct_pluginstance *cpi = 
-				(struct nfct_pluginstance *) upi->private;
+	struct nfct_pluginstance *cpi = (void *)upi->private;
+	struct ct_timestamp *ts;
 
-	if (type == NFCT_MSG_NEW) {
-		if (usehash_ce(upi->config_kset).u.value != 0)
-			ct_hash_add(cpi->ct_active, ct->id);
-	} else if (type == NFCT_MSG_DESTROY) {
-		struct ct_timestamp *ts = NULL;
+	switch (type) { 
+	case NFCT_MSG_NEW:
+		ts = ct_hash_add(cpi->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
+		gettimeofday(&ts->time[START], NULL);
+		break;
 
-		if (usehash_ce(upi->config_kset).u.value != 0)
-			ts = ct_hash_get(cpi->ct_active, ct->id);
+	case NFCT_MSG_UPDATE:
+		ts = ct_hash_find(cpi->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
+		if (ts == NULL) {
+			ts = ct_hash_add(cpi->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
+			if (ts == NULL)
+				exit(EXIT_FAILURE);
+		}
 
-		return propagate_ct(upi, ct, flags, ts);
+		/* handle TCP connections differently in order not to bloat CT
+		   hash with many TIME_WAIT connections */
+		if (ct->tuple[NFCT_DIR_ORIGINAL].protonum == IPPROTO_TCP) {
+			if (ct->protoinfo.tcp.state == TCP_CONNTRACK_TIME_WAIT)
+				return propagate_ct(upi, ct, flags);
+		}
+		break;
+		
+	case NFCT_MSG_DESTROY:
+		if (ct->tuple[NFCT_DIR_ORIGINAL].protonum != IPPROTO_TCP)
+			return propagate_ct(upi, ct, flags);
+		break;
+		
+	default:
+		break;
 	}
+
 	return 0;
 }
 
@@ -487,8 +489,7 @@ static int read_cb_nfct(int fd, unsigned int what, void *param)
 
 static int get_ctr_zero(struct ulogd_pluginstance *upi)
 {
-	struct nfct_pluginstance *cpi = 
-			(struct nfct_pluginstance *)upi->private;
+	struct nfct_pluginstance *cpi = (void *)upi->private;
 
 	return nfct_dump_conntrack_table_reset_counters(cpi->cth, AF_INET);
 }
@@ -503,39 +504,36 @@ static void getctr_timer_cb(void *data)
 static int configure_nfct(struct ulogd_pluginstance *upi,
 			  struct ulogd_pluginstance_stack *stack)
 {
-	struct nfct_pluginstance *cpi = 
-			(struct nfct_pluginstance *)upi->private;
+	struct nfct_pluginstance *priv = (void *)upi->private;
 	int ret;
+
+	memset(priv, 0, sizeof(struct nfct_pluginstance));
 	
 	ret = config_parse_file(upi->id, upi->config_kset);
 	if (ret < 0)
 		return ret;
 	
 	/* initialize getctrzero timer structure */
-	memset(&cpi->timer, 0, sizeof(cpi->timer));
-	cpi->timer.cb = &getctr_timer_cb;
-	cpi->timer.data = cpi;
+	priv->timer.cb = &getctr_timer_cb;
+	priv->timer.data = priv;
 
 	if (pollint_ce(upi->config_kset).u.value != 0) {
-		cpi->timer.expires.tv_sec = 
+		priv->timer.expires.tv_sec = 
 			pollint_ce(upi->config_kset).u.value;
-		ulogd_register_timer(&cpi->timer);
+		ulogd_register_timer(&priv->timer);
 	}
+
+	
 
 	return 0;
 }
 
 static int constructor_nfct(struct ulogd_pluginstance *upi)
 {
-	struct nfct_pluginstance *cpi = 
-			(struct nfct_pluginstance *)upi->private;
-	int prealloc;
-
-	memset(cpi, 0, sizeof(*cpi));
+	struct nfct_pluginstance *cpi = (void *)upi->private;
 
 	/* FIXME: make eventmask configurable */
-	cpi->cth = nfct_open(NFNL_SUBSYS_CTNETLINK, NF_NETLINK_CONNTRACK_NEW|
-			     NF_NETLINK_CONNTRACK_DESTROY);
+	cpi->cth = nfct_open(NFNL_SUBSYS_CTNETLINK, CT_EVENTS);
 	if (!cpi->cth) {
 		ulogd_log(ULOGD_FATAL, "error opening ctnetlink\n");
 		return -1;
@@ -550,21 +548,18 @@ static int constructor_nfct(struct ulogd_pluginstance *upi)
 
 	ulogd_register_fd(&cpi->nfct_fd);
 
-	if (prealloc_ce(upi->config_kset).u.value != 0)
-		prealloc = maxentries_ce(upi->config_kset).u.value / 
-				buckets_ce(upi->config_kset).u.value;
-	else
-		prealloc = 0;
+	cpi->htable = htable_alloc(buckets_ce(upi->config_kset).u.value);
+	if (cpi->htable == NULL) {
+		ulogd_log(ULOGD_FATAL, "htable_alloc: out of memory\n");
 
-	if (usehash_ce(upi->config_kset).u.value != 0) {
-		cpi->ct_active = htable_alloc(buckets_ce(upi->config_kset).u.value,
-					      prealloc);
-		if (!cpi->ct_active) {
-			ulogd_log(ULOGD_FATAL, "error allocating hash\n");
-			nfct_close(cpi->cth);
-			return -1;
-		}
+		nfct_close(cpi->cth);
+		cpi->cth = NULL;
+
+		return -1;
 	}
+
+	ulogd_log(ULOGD_INFO, "%s: hashsize %u\n", upi->id,
+			  cpi->htable->num_buckets);
 	
 	return 0;
 }
@@ -572,13 +567,11 @@ static int constructor_nfct(struct ulogd_pluginstance *upi)
 static int destructor_nfct(struct ulogd_pluginstance *pi)
 {
 	struct nfct_pluginstance *cpi = (void *) pi;
-	int rc;
 	
-	htable_free(cpi->ct_active);
+	nfct_close(cpi->cth);
+	cpi->cth = NULL;
 
-	rc = nfct_close(cpi->cth);
-	if (rc < 0)
-		return rc;
+	htable_free(cpi->htable);
 
 	return 0;
 }
