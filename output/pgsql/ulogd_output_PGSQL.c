@@ -16,11 +16,6 @@
 
 #include <libpq-fe.h>
 
-#ifdef DEBUG_PGSQL
-#define DEBUGP(x, args...)	fprintf(stderr, x, ## args)
-#else
-#define DEBUGP(x, args...)
-#endif
 
 struct pgsql_instance {
 	struct db_instance db_inst;
@@ -185,7 +180,7 @@ static int get_columns_pgsql(struct ulogd_pluginstance *upi)
 		while ((underscore = strchr(buf, '_')))
 			*underscore = '.';
 
-		DEBUGP("field '%s' found: ", buf);
+		pr_debug("field '%s' found: ", buf);
 
 		/* add it to list of input keys */
 		strncpy(upi->input.keys[i].name, buf, ULOGD_MAX_KEYLEN);
