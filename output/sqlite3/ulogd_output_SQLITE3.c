@@ -763,4 +763,6 @@ static void
 init(void) 
 {
 	ulogd_register_plugin(&sqlite3_plugin);
+
+	ulogd_log(ULOGD_INFO, "using Sqlite version %s\n", sqlite3_libversion());
 }
