@@ -212,13 +212,37 @@ static struct ulogd_key output_keys[] = {
 			.field_id = IPFIX_NF_seq_global,
 		},
 	},
+	{
+		.type = ULOGD_RET_UINT32,
+		.flags = ULOGD_RETF_NONE,
+		.name = "oob.logmark",
+	},
 };
+
+enum {
+	K_RAW_MAC = 0,
+	K_RAW_PKT,
+	K_RAW_PKTLEN,
+	K_RAW_PKTCNT,
+	K_OOB_PREFIX,
+	K_OOB_TIME_SEC,
+	K_OOB_TIME_USEC,
+	K_OOB_MARK,
+	K_OOB_IFI_IN,
+	K_OOB_IFI_OUT,
+	K_OOB_HOOK,
+	K_RAW_MAC_LEN,
+	K_OOB_SEQ,
+	K_OOB_SEQ_GLOBAL,
+	K_OOB_LOGMARK,
+	__K_LAST
+};
+
 
 static inline int 
 interp_packet(struct ulogd_pluginstance *upi, struct nflog_data *ldata)
 {
 	struct ulogd_key *ret = upi->output.keys;
-
 	struct nfulnl_msg_packet_hdr *ph = nflog_get_msg_packet_hdr(ldata);
 	struct nfulnl_msg_packet_hw *hw = nflog_get_packet_hw(ldata);
 	char *payload;
@@ -233,66 +257,69 @@ interp_packet(struct ulogd_pluginstance *upi, struct nflog_data *ldata)
 
 	if (ph) {
 		/* FIXME */
-		ret[10].u.value.ui8 = ph->hook;
-		ret[10].flags |= ULOGD_RETF_VALID;
+		ret[K_OOB_HOOK].u.value.ui8 = ph->hook;
+		ret[K_OOB_HOOK].flags |= ULOGD_RETF_VALID;
 	}
 
 	if (hw) {
-		ret[0].u.value.ptr = &hw->hw_addr;
-		ret[0].flags |= ULOGD_RETF_VALID;
-		ret[11].u.value.ui16 = ntohs(hw->hw_addrlen);
-		ret[11].flags |= ULOGD_RETF_VALID;
+		ret[K_RAW_MAC].u.value.ptr = &hw->hw_addr;
+		ret[K_RAW_MAC].flags |= ULOGD_RETF_VALID;
+		ret[K_RAW_MAC_LEN].u.value.ui16 = ntohs(hw->hw_addrlen);
+		ret[K_RAW_MAC_LEN].flags |= ULOGD_RETF_VALID;
 	}
 
 	if (payload_len >= 0) {
 		/* include pointer to raw packet */
-		ret[1].u.value.ptr = payload;
-		ret[1].flags |= ULOGD_RETF_VALID;
+		ret[K_RAW_PKT].u.value.ptr = payload;
+		ret[K_RAW_PKT].flags |= ULOGD_RETF_VALID;
 
-		ret[2].u.value.ui32 = payload_len;
-		ret[2].flags |= ULOGD_RETF_VALID;
+		ret[K_RAW_PKTLEN].u.value.ui32 = payload_len;
+		ret[K_RAW_PKTLEN].flags |= ULOGD_RETF_VALID;
 	}
 
 	/* number of packets */
-	ret[3].u.value.ui32 = 1;
-	ret[3].flags |= ULOGD_RETF_VALID;
+	ret[K_RAW_PKTCNT].u.value.ui32 = 1;
+	ret[K_RAW_PKTCNT].flags |= ULOGD_RETF_VALID;
 
 	if (prefix) {
-		ret[4].u.value.ptr = prefix;
-		ret[4].flags |= ULOGD_RETF_VALID;
+		ret[K_OOB_PREFIX].u.value.ptr = prefix;
+		ret[K_OOB_PREFIX].flags |= ULOGD_RETF_VALID;
 	}
 
 	/* god knows why timestamp_usec contains crap if timestamp_sec
 	 * == 0 if (pkt->timestamp_sec || pkt->timestamp_usec) { */
 	if (nflog_get_timestamp(ldata, &ts) == 0 && ts.tv_sec) {
 		/* FIXME: convert endianness */
-		ret[5].u.value.ui32 = ts.tv_sec & 0xffffffff;
-		ret[5].flags |= ULOGD_RETF_VALID;
-		ret[6].u.value.ui32 = ts.tv_usec & 0xffffffff;
-		ret[6].flags |= ULOGD_RETF_VALID;
+		ret[K_OOB_TIME_SEC].u.value.ui32 = ts.tv_sec & 0xffffffff;
+		ret[K_OOB_TIME_SEC].flags |= ULOGD_RETF_VALID;
+		ret[K_OOB_TIME_USEC].u.value.ui32 = ts.tv_usec & 0xffffffff;
+		ret[K_OOB_TIME_USEC].flags |= ULOGD_RETF_VALID;
 	}
 
-	ret[7].u.value.ui32 = mark;
-	ret[7].flags |= ULOGD_RETF_VALID;
+	ret[K_OOB_MARK].u.value.ui32 = mark;
+	ret[K_OOB_MARK].flags |= ULOGD_RETF_VALID;
 
 	if (indev > 0) {
-		ret[8].u.value.ui32 = indev;
-		ret[8].flags |= ULOGD_RETF_VALID;
+		ret[K_OOB_IFI_IN].u.value.ui32 = indev;
+		ret[K_OOB_IFI_IN].flags |= ULOGD_RETF_VALID;
 	}
 
 	if (outdev > 0) {
-		ret[9].u.value.ui32 = outdev;
-		ret[9].flags |= ULOGD_RETF_VALID;
+		ret[K_OOB_IFI_OUT].u.value.ui32 = outdev;
+		ret[K_OOB_IFI_OUT].flags |= ULOGD_RETF_VALID;
 	}
 
-	if (nflog_get_seq(ldata, &seq)) {
-		ret[10].u.value.ui32 = seq;
-		ret[10].flags |= ULOGD_RETF_VALID;
+	if (nflog_get_seq(ldata, &seq) == 0) {
+		ret[K_OOB_SEQ].u.value.ui32 = seq;
+		ret[K_OOB_SEQ].flags |= ULOGD_RETF_VALID;
 	}
-	if (nflog_get_seq_global(ldata, &seq)) {
-		ret[11].u.value.ui32 = seq;
-		ret[11].flags |= ULOGD_RETF_VALID;
+	if (nflog_get_seq_global(ldata, &seq) == 0) {
+		ret[K_OOB_SEQ_GLOBAL].u.value.ui32 = seq;
+		ret[K_OOB_SEQ_GLOBAL].flags |= ULOGD_RETF_VALID;
 	}
+
+	if (nflog_get_logmark(ldata, &ret[K_OOB_LOGMARK].u.value.ui32) == 0)
+		ret[K_OOB_LOGMARK].flags |= ULOGD_RETF_VALID;
 	
 	ulogd_propagate_results(upi);
 	return 0;
