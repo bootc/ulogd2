@@ -82,8 +82,11 @@ int ulogd_select_main()
  again:
 	i = select(maxfd+1, &readset, &writeset, &exceptset, &tv);
 	if (i < 0) {
-		if (errno == EINTR)
+		if (errno == EINTR) {
+			ulogd_timer_handle();
+
 			goto again;
+		}
 	}
 
 	ulogd_timer_handle();
