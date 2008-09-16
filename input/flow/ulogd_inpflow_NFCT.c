@@ -47,6 +47,13 @@
 						 | NF_NETLINK_CONNTRACK_UPDATE \
 						 | NF_NETLINK_CONNTRACK_DESTROY)
 
+#undef INADDR_LOOPBACK
+#define INADDR_LOOPBACK		0x0100007f /* 127.0.0.1 */
+#define INADDR_CLUSTER		0x00fa13c6 /* 198.19.250.0/24 */
+
+#define CLASS_C_CMP(a,net)	(((a) & 0x00ffffff) == (net))
+
+
 typedef enum TIMES_ { START, STOP, __TIME_MAX } TIMES;
 typedef unsigned conntrack_hash_t;
 
@@ -639,9 +646,21 @@ propagate_ct(struct ulogd_pluginstance *upi, struct nfct_conntrack *ct,
 {
 	struct nfct_pluginstance *priv = (void *)upi->private;
 
-	gettimeofday(&ts->time[STOP], NULL);
-	
-	propagate_ct_flow(upi, ct, flags, NFCT_DIR_ORIGINAL, ts);
+	printf("poing\n");
+	do {
+		if (ct->tuple[NFCT_DIR_ORIGINAL].src.v4 == INADDR_LOOPBACK
+			|| ct->tuple[NFCT_DIR_ORIGINAL].dst.v4 == INADDR_LOOPBACK)
+			break;
+
+		if (CLASS_C_CMP(ct->tuple[NFCT_DIR_ORIGINAL].src.v4, INADDR_CLUSTER)
+			|| CLASS_C_CMP(ct->tuple[NFCT_DIR_ORIGINAL].dst.v4,
+						   INADDR_CLUSTER))
+			break;
+
+		gettimeofday(&ts->time[STOP], NULL);
+		
+		propagate_ct_flow(upi, ct, flags, NFCT_DIR_ORIGINAL, ts);
+	} while (0);
 
 	ct_hash_free(priv->htable, ts);
 
