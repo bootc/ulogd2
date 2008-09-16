@@ -86,10 +86,10 @@ ulogd_timer_handle(void)
 		}
 	}
 
+	expired = 0;
+
 	/* enable again */
 	pthread_sigmask(SIG_UNBLOCK, &ss_alrm, NULL);
-
-	expired = 0;
 
 	return 0;
 }
