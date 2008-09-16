@@ -208,13 +208,13 @@ static int
 pgsql_open_db(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
-	int len;
-	char *connstr;
 	char *server = host_ce(upi->config_kset).u.string;
 	unsigned int port = port_ce(upi->config_kset).u.value;
 	char *user = user_ce(upi->config_kset).u.string;
 	char *pass = pass_ce(upi->config_kset).u.string;
 	char *db = db_ce(upi->config_kset).u.string;
+	char *connstr;
+	int len;
 
 	/* 80 is more than what we need for the fixed parts below */
 	len = 80 + strlen(user) + strlen(db);
@@ -227,17 +227,19 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	if (port)
 		len += 20;
 
-	connstr = (char *) malloc(len);
-	if (!connstr) 
+	if ((connstr = malloc(len)) == NULL)
 		return -ENOMEM;
 
-	if (server) {
-		strcpy(connstr, " host=");
+	*connstr = '\0';
+
+	if (server != NULL) {
+		strcat(connstr, " host=");
 		strcat(connstr, server);
 	}
 
 	if (port) {
-		char portbuf[20];
+		char portbuf[12];
+
 		snprintf(portbuf, sizeof(portbuf), " port=%u", port);
 		strcat(connstr, portbuf);
 	}
@@ -247,7 +249,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	strcat(connstr, " user=");
 	strcat(connstr, user);
 
-	if (pass) {
+	if (pass != NULL) {
 		strcat(connstr, " password=");
 		strcat(connstr, pass);
 	}
