@@ -105,10 +105,10 @@ enum {
 	O_IP_PROTO,
 	O_L4_SPORT,
 	O_L4_DPORT,
-	O_RAW_PKTLEN_IN,
-	O_RAW_PKTCOUNT_IN,
-	O_RAW_PKTLEN_OUT,
-	O_RAW_PKTCOUNT_OUT,
+	O_RAW_IN_PKTLEN,
+	O_RAW_IN_PKTCOUNT,
+	O_RAW_OUT_PKTLEN,
+	O_RAW_OUT_PKTCOUNT,
 	O_ICMP_CODE,
 	O_ICMP_TYPE,
 	O_CT_MARK,
@@ -170,7 +170,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 	{
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.pktlen.in",
+		.name	= "raw.in.pktlen",
 		.ipfix	= { 
 			.vendor 	= IPFIX_VENDOR_IETF,
 			.field_id 	= IPFIX_octetTotalCount,
@@ -180,7 +180,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 	{
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.pktcount.in",
+		.name	= "raw.in.pktcount",
 		.ipfix	= { 
 			.vendor 	= IPFIX_VENDOR_IETF,
 			.field_id 	= IPFIX_packetTotalCount,
@@ -190,7 +190,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 	{
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.pktlen.out",
+		.name	= "raw.out.pktlen",
 		.ipfix	= { 
 			.vendor 	= IPFIX_VENDOR_IETF,
 			.field_id 	= IPFIX_octetTotalCount,
@@ -200,7 +200,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 	{
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.pktcount.out",
+		.name	= "raw.out.pktcount",
 		.ipfix	= { 
 			.vendor 	= IPFIX_VENDOR_IETF,
 			.field_id 	= IPFIX_packetTotalCount,
@@ -280,7 +280,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 		},
 	},
 	{
-		.type = ULOGD_RET_BOOL,
+		.type = ULOGD_RET_UINT32,
 		.flags = ULOGD_RETF_NONE,
 		.name = "flow.duration",
 	},
@@ -431,16 +431,15 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 	}
 
 	if (flags & NFCT_COUNTERS_ORIG) {
-		ret[O_RAW_PKTLEN_IN].u.value.ui32 = ct->counters[0].bytes;
-		ret[O_RAW_PKTLEN_IN].flags |= ULOGD_RETF_VALID;
-		ret[O_RAW_PKTCOUNT_IN].u.value.ui32 = ct->counters[0].packets;
-		ret[O_RAW_PKTCOUNT_IN].flags |= ULOGD_RETF_VALID;
+		ret[O_RAW_IN_PKTLEN].u.value.ui32 = ct->counters[0].bytes;
+		ret[O_RAW_IN_PKTLEN].flags |= ULOGD_RETF_VALID;
+		ret[O_RAW_IN_PKTCOUNT].u.value.ui32 = ct->counters[0].packets;
+		ret[O_RAW_IN_PKTCOUNT].flags |= ULOGD_RETF_VALID;
 
-		ret[O_RAW_PKTLEN_OUT].u.value.ui32 = ct->counters[1].bytes;
-		ret[O_RAW_PKTLEN_OUT].flags |= ULOGD_RETF_VALID;
-
-		ret[O_RAW_PKTCOUNT_OUT].u.value.ui32 = ct->counters[1].packets;
-		ret[O_RAW_PKTCOUNT_OUT].flags |= ULOGD_RETF_VALID;
+		ret[O_RAW_OUT_PKTLEN].u.value.ui32 = ct->counters[1].bytes;
+		ret[O_RAW_OUT_PKTLEN].flags |= ULOGD_RETF_VALID;
+		ret[O_RAW_OUT_PKTCOUNT].u.value.ui32 = ct->counters[1].packets;
+		ret[O_RAW_OUT_PKTCOUNT].flags |= ULOGD_RETF_VALID;
 	}
 
 	if (flags & NFCT_MARK) {
@@ -462,8 +461,8 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 	ret[O_FLOW_END_USEC].u.value.ui32 = ts->time[STOP].tv_usec;
 	ret[O_FLOW_END_USEC].flags |= ULOGD_RETF_VALID;
 
-	if (ts->time[STOP].tv_sec > ts->time[START].tv_sec)
-		ret[O_FLOW_DURATION].u.value.ui32 = tv_diff_sec(ts);
+	ret[O_FLOW_DURATION].u.value.ui32 = tv_diff_sec(ts);
+	ret[O_FLOW_DURATION].flags |= ULOGD_RETF_VALID;
 
 	ulogd_propagate_results(upi);
 
