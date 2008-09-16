@@ -36,6 +36,7 @@
 #include <ulogd/linuxlist.h>
 
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
 #include <ulogd/ipfix_protocol.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -72,7 +73,7 @@ struct nfct_pluginstance {
 #define MAX_ENTRIES	(4 * HTABLE_SIZE)
 
 static struct config_keyset nfct_kset = {
-	.num_ces = 5,
+	.num_ces = 3,
 	.ces = {
 		{
 			.key	 = "pollinterval",
@@ -98,7 +99,29 @@ static struct config_keyset nfct_kset = {
 #define buckets_ce(x)	(x->ces[1])
 #define maxentries_ce(x) (x->ces[2])
 
-static struct ulogd_key nfct_okeys[] = {
+enum {
+	O_IP_SADDR = 0,
+	O_IP_DADDR,
+	O_IP_PROTO,
+	O_L4_SPORT,
+	O_L4_DPORT,
+	O_RAW_PKTLEN_IN,
+	O_RAW_PKTCOUNT_IN,
+	O_RAW_PKTLEN_OUT,
+	O_RAW_PKTCOUNT_OUT,
+	O_ICMP_CODE,
+	O_ICMP_TYPE,
+	O_CT_MARK,
+	O_CT_ID,
+	O_FLOW_START_SEC,
+	O_FLOW_START_USEC,
+	O_FLOW_END_SEC,
+	O_FLOW_END_USEC,
+	O_FLOW_DURATION,
+	__O_MAX
+};
+
+static struct ulogd_key nfct_okeys[__O_MAX] = {
 	{
 		.type 	= ULOGD_RET_IPADDR,
 		.flags 	= ULOGD_RETF_NONE,
@@ -147,7 +170,7 @@ static struct ulogd_key nfct_okeys[] = {
 	{
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.pktlen",
+		.name	= "raw.pktlen.in",
 		.ipfix	= { 
 			.vendor 	= IPFIX_VENDOR_IETF,
 			.field_id 	= IPFIX_octetTotalCount,
@@ -157,7 +180,27 @@ static struct ulogd_key nfct_okeys[] = {
 	{
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.pktcount",
+		.name	= "raw.pktcount.in",
+		.ipfix	= { 
+			.vendor 	= IPFIX_VENDOR_IETF,
+			.field_id 	= IPFIX_packetTotalCount,
+			/* FIXME: this could also be packetDeltaCount */
+		},
+	},
+	{
+		.type	= ULOGD_RET_UINT32,
+		.flags	= ULOGD_RETF_NONE,
+		.name	= "raw.pktlen.out",
+		.ipfix	= { 
+			.vendor 	= IPFIX_VENDOR_IETF,
+			.field_id 	= IPFIX_octetTotalCount,
+			/* FIXME: this could also be octetDeltaCount */
+		},
+	},
+	{
+		.type	= ULOGD_RET_UINT32,
+		.flags	= ULOGD_RETF_NONE,
+		.name	= "raw.pktcount.out",
 		.ipfix	= { 
 			.vendor 	= IPFIX_VENDOR_IETF,
 			.field_id 	= IPFIX_packetTotalCount,
@@ -182,24 +225,24 @@ static struct ulogd_key nfct_okeys[] = {
 			.field_id	= IPFIX_icmpTypeIPv4,
 		},
 	},
-        {
-                .type	= ULOGD_RET_UINT32,
-                .flags	= ULOGD_RETF_NONE,
-                .name	= "ct.mark",
-                .ipfix	= {
-                        .vendor		= IPFIX_VENDOR_NETFILTER,
-                        .field_id	= IPFIX_NF_mark,
-                },
-        },
-        {
-                .type	= ULOGD_RET_UINT32,
-                .flags	= ULOGD_RETF_NONE,
-                .name	= "ct.id",
-                .ipfix	= {
-                        .vendor		= IPFIX_VENDOR_NETFILTER,
-                        .field_id	= IPFIX_NF_conntrack_id,
-                },
-        },
+	{
+		.type	= ULOGD_RET_UINT32,
+		.flags	= ULOGD_RETF_NONE,
+		.name	= "ct.mark",
+		.ipfix	= {
+			.vendor		= IPFIX_VENDOR_NETFILTER,
+			.field_id	= IPFIX_NF_mark,
+		},
+	},
+	{
+		.type	= ULOGD_RET_UINT32,
+		.flags	= ULOGD_RETF_NONE,
+		.name	= "ct.id",
+		.ipfix	= {
+			.vendor		= IPFIX_VENDOR_NETFILTER,
+			.field_id	= IPFIX_NF_conntrack_id,
+		},
+	},
 	{
 		.type 	= ULOGD_RET_UINT32,
 		.flags 	= ULOGD_RETF_NONE,
@@ -239,7 +282,7 @@ static struct ulogd_key nfct_okeys[] = {
 	{
 		.type = ULOGD_RET_BOOL,
 		.flags = ULOGD_RETF_NONE,
-		.name = "dir",
+		.name = "flow.duration",
 	},
 };
 
@@ -335,6 +378,16 @@ ct_hash_find(struct ct_htable *htable, const struct nfct_tuple *t)
 	return NULL;
 }
 
+/* time diff with second resolution */
+static inline unsigned
+tv_diff_sec(const struct ct_timestamp *ts)
+{
+	if (ts->time[STOP].tv_sec >= ts->time[START].tv_sec)
+		return max(ts->time[STOP].tv_sec - ts->time[START].tv_sec, 1);
+
+	return ts->time[START].tv_sec - ts->time[STOP].tv_sec;
+}
+
 static void
 ct_hash_free(struct ct_htable *htable, struct ct_timestamp *ts)
 {
@@ -350,65 +403,67 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 {
 	struct ulogd_key *ret = upi->output.keys;
 
-	ret[0].u.value.ui32 = htonl(ct->tuple[dir].src.v4);
-	ret[0].flags |= ULOGD_RETF_VALID;
+	ret[O_IP_SADDR].u.value.ui32 = htonl(ct->tuple[dir].src.v4);
+	ret[O_IP_SADDR].flags |= ULOGD_RETF_VALID;
 
-	ret[1].u.value.ui32 = htonl(ct->tuple[dir].dst.v4);
-	ret[1].flags |= ULOGD_RETF_VALID;
+	ret[O_IP_DADDR].u.value.ui32 = htonl(ct->tuple[dir].dst.v4);
+	ret[O_IP_DADDR].flags |= ULOGD_RETF_VALID;
 
-	ret[2].u.value.ui8 = ct->tuple[dir].protonum;
-	ret[2].flags |= ULOGD_RETF_VALID;
+	ret[O_IP_PROTO].u.value.ui8 = ct->tuple[dir].protonum;
+	ret[O_IP_PROTO].flags |= ULOGD_RETF_VALID;
 
-	switch (ct->tuple[1].protonum) {
+	switch (ct->tuple[dir].protonum) {
 	case IPPROTO_TCP:
 	case IPPROTO_UDP:
 	case IPPROTO_SCTP:
 		/* FIXME: DCCP */
-		ret[3].u.value.ui16 = htons(ct->tuple[dir].l4src.tcp.port);
-		ret[3].flags |= ULOGD_RETF_VALID;
-		ret[4].u.value.ui16 = htons(ct->tuple[dir].l4dst.tcp.port);
-		ret[4].flags |= ULOGD_RETF_VALID;
+		ret[O_L4_SPORT].u.value.ui16 = htons(ct->tuple[dir].l4src.tcp.port);
+		ret[O_L4_SPORT].flags |= ULOGD_RETF_VALID;
+		ret[O_L4_DPORT].u.value.ui16 = htons(ct->tuple[dir].l4dst.tcp.port);
+		ret[O_L4_DPORT].flags |= ULOGD_RETF_VALID;
 		break;
 	case IPPROTO_ICMP:
-		ret[7].u.value.ui8 = ct->tuple[dir].l4src.icmp.code;
-		ret[7].flags |= ULOGD_RETF_VALID;
-		ret[8].u.value.ui8 = ct->tuple[dir].l4src.icmp.type;
-		ret[8].flags |= ULOGD_RETF_VALID;
+		ret[O_ICMP_CODE].u.value.ui8 = ct->tuple[dir].l4src.icmp.code;
+		ret[O_ICMP_CODE].flags |= ULOGD_RETF_VALID;
+		ret[O_ICMP_TYPE].u.value.ui8 = ct->tuple[dir].l4src.icmp.type;
+		ret[O_ICMP_TYPE].flags |= ULOGD_RETF_VALID;
 		break;
 	}
 
-	if ((dir == NFCT_DIR_ORIGINAL && flags & NFCT_COUNTERS_ORIG) ||
-	    (dir == NFCT_DIR_REPLY && flags & NFCT_COUNTERS_RPLY)) {
-		ret[5].u.value.ui64 = ct->counters[dir].bytes;
-		ret[5].flags |= ULOGD_RETF_VALID;
+	if (flags & NFCT_COUNTERS_ORIG) {
+		ret[O_RAW_PKTLEN_IN].u.value.ui32 = ct->counters[0].bytes;
+		ret[O_RAW_PKTLEN_IN].flags |= ULOGD_RETF_VALID;
+		ret[O_RAW_PKTCOUNT_IN].u.value.ui32 = ct->counters[0].packets;
+		ret[O_RAW_PKTCOUNT_IN].flags |= ULOGD_RETF_VALID;
 
-		ret[6].u.value.ui64 = ct->counters[dir].packets;
-		ret[6].flags |= ULOGD_RETF_VALID;
+		ret[O_RAW_PKTLEN_OUT].u.value.ui32 = ct->counters[1].bytes;
+		ret[O_RAW_PKTLEN_OUT].flags |= ULOGD_RETF_VALID;
+
+		ret[O_RAW_PKTCOUNT_OUT].u.value.ui32 = ct->counters[1].packets;
+		ret[O_RAW_PKTCOUNT_OUT].flags |= ULOGD_RETF_VALID;
 	}
 
 	if (flags & NFCT_MARK) {
-		ret[9].u.value.ui32 = ct->mark;
-		ret[9].flags |= ULOGD_RETF_VALID;
+		ret[O_CT_MARK].u.value.ui32 = ct->mark;
+		ret[O_CT_MARK].flags |= ULOGD_RETF_VALID;
 	}
 
 	if (flags & NFCT_ID) {
-		ret[10].u.value.ui32 = ct->id;
-		ret[10].flags |= ULOGD_RETF_VALID;
+		ret[O_CT_ID].u.value.ui32 = ct->id;
+		ret[O_CT_ID].flags |= ULOGD_RETF_VALID;
 	}
 
-	if (ts) {
-		ret[11].u.value.ui32 = ts->time[START].tv_sec;
-		ret[11].flags |= ULOGD_RETF_VALID;
-		ret[12].u.value.ui32 = ts->time[START].tv_usec;
-		ret[12].flags |= ULOGD_RETF_VALID;
-		ret[13].u.value.ui32 = ts->time[STOP].tv_sec;
-		ret[13].flags |= ULOGD_RETF_VALID;
-		ret[14].u.value.ui32 = ts->time[STOP].tv_usec;
-		ret[14].flags |= ULOGD_RETF_VALID;
-	}
+	ret[O_FLOW_START_SEC].u.value.ui32 = ts->time[START].tv_sec;
+	ret[O_FLOW_START_SEC].flags |= ULOGD_RETF_VALID;
+	ret[O_FLOW_START_USEC].u.value.ui32 = ts->time[START].tv_usec;
+	ret[O_FLOW_START_USEC].flags |= ULOGD_RETF_VALID;
+	ret[O_FLOW_END_SEC].u.value.ui32 = ts->time[STOP].tv_sec;
+	ret[O_FLOW_END_SEC].flags |= ULOGD_RETF_VALID;
+	ret[O_FLOW_END_USEC].u.value.ui32 = ts->time[STOP].tv_usec;
+	ret[O_FLOW_END_USEC].flags |= ULOGD_RETF_VALID;
 
-	ret[15].u.value.b = (dir == NFCT_DIR_ORIGINAL) ? 0 : 1;
-	ret[15].flags |= ULOGD_RETF_VALID;
+	if (ts->time[STOP].tv_sec > ts->time[START].tv_sec)
+		ret[O_FLOW_DURATION].u.value.ui32 = tv_diff_sec(ts);
 
 	ulogd_propagate_results(upi);
 
