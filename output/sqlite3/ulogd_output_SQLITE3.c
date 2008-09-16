@@ -183,71 +183,98 @@ static int
 db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
-	int db_col = 1, ret;
+	int db_col = 1, ret = 0, db_ret;
 
-	do {
-		ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_saddr);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_saddr);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_daddr);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->ip_daddr);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->ip_proto);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->ip_proto);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->l4_dport);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->l4_dport);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_in_pktlen);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_in_pktlen);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_in_pktcount);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_in_pktcount);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_out_pktlen);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->raw_out_pktlen);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_out_pktcount);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int64(priv->p_stmt, db_col++, row->raw_out_pktcount);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_start_day);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_start_day);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_start_sec);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_start_sec);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_duration);
-		if (ret != SQLITE_OK)
-			break;
+	db_ret = sqlite3_bind_int(priv->p_stmt, db_col++, row->flow_duration);
+	if (db_ret != SQLITE_OK)
+		goto err_bind;
 
-		ret = sqlite3_step(priv->p_stmt);
-	} while (0);
+	db_ret = sqlite3_step(priv->p_stmt);
+
+	if (db_ret == SQLITE_DONE) {
+		/* the SQLITE book doesn't say that expclicitely _but_ between
+		   two sqlite_bind_*() calls to the same variable you need to
+		   call sqlite3_reset(). */
+		sqlite3_reset(priv->p_stmt);
+
+		return 0;
+	}
+
+	/* Ok, this is a bit confusing: some errors are reported as return
+	   values, most others are reported through sqlite3_errcode() instead.
+	   I think the only authorative source of information is the sqlite
+	   source code.	*/
+	switch (sqlite3_errcode(priv->dbh)) {
+	case SQLITE_LOCKED:
+	case SQLITE_BUSY:
+		break;
+
+	case SQLITE_SCHEMA:
+		if (priv->stmt) {
+			sqlite3_finalize(priv->p_stmt);
+
+			sqlite3_createstmt(pi);
+		}
+		/* fallthrough */
+
+	case SQLITE_ERROR: /* e.g. constraint violation */
+	case SQLITE_MISUSE:
+		ulogd_error("SQLITE3: step: %s\n", sqlite3_errmsg(priv->dbh));
+		ret = -1;
+		break;
+
+	default:
+		break;
+	}
 
 	sqlite3_reset(priv->p_stmt);
 
-	if (ret == SQLITE_DONE)
-		return 0;
+	return ret;
 
-	if (ret == SQLITE_ERROR) {
-		sqlite3_finalize(priv->p_stmt);
+ err_bind:
+	ulogd_error("SQLITE3: bind: %s\n", sqlite3_errmsg(priv->dbh));
 
-		priv->p_stmt = NULL;
-
-		if (ret == SQLITE_SCHEMA)
-			sqlite3_createstmt(pi);
-		else
-			ulogd_error("SQLITE3: step: %s\n", sqlite3_errmsg(priv->dbh));
-	}
+	sqlite3_reset(priv->p_stmt);
 
 	return -1;
 }
@@ -278,31 +305,34 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 	ret = sqlite3_exec(priv->dbh, "begin immediate transaction", NULL,
 					   NULL, NULL);
 	if (ret != SQLITE_OK) {
-		if (ret == SQLITE_LOCKED)
-			return -1;
-
-		ulogd_error("SQLITE3: sqlite3_exec: %s\n", sqlite3_errmsg(priv->dbh));
+		if (sqlite3_errcode(priv->dbh) == SQLITE_LOCKED)
+			return 0;			/* perform commit later */
+	
+		ulogd_error("SQLITE3: begin transaction: %s\n",
+					sqlite3_errmsg(priv->dbh));
 
 		return -1;
 	}
 
 	TAILQ_FOR_EACH(row, priv->rows, link) {
 		if (db_add_row(pi, row) < 0)
-			goto err;
+			goto err_rollback;
 
 		rows++;
 	}
 
 	ret = sqlite3_exec(priv->dbh, "commit", NULL, NULL, NULL);
 	if (ret == SQLITE_OK) {
+		sqlite3_reset(priv->p_stmt);
+
 		delete_all_rows(pi);
 
 		return 0;
 	}
 
- err:
-	if (ret != SQLITE_LOCKED)
-		ulogd_error("SQLITE3: sqlite3_exec: %s\n", sqlite3_errmsg(priv->dbh));
+ err_rollback:
+	if (sqlite3_errcode(priv->dbh) == SQLITE_LOCKED)
+		return 0;
 
 	sqlite3_exec(priv->dbh, "rollback", NULL, NULL, NULL);
 
