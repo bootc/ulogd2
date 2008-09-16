@@ -721,7 +721,8 @@ read_cb_nfct(int fd, unsigned what, void *param)
 }
 
 
-#define STOP_HERE(h)	(((h)->curr_bucket + (h)->num_buckets / 10) \
+/* choosing powers of two for all values helps here */
+#define STOP_HERE(h)	(((h)->curr_bucket + (h)->num_buckets / 16) \
 								% (h)->num_buckets)
 
 static void
