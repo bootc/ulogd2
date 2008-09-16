@@ -158,6 +158,8 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	return ret;
 }
 
+static int _init_db(struct ulogd_pluginstance *upi);
+
 int
 ulogd_db_start(struct ulogd_pluginstance *upi)
 {
@@ -175,6 +177,8 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 	ret = sql_createstmt(upi);
 	if (ret < 0)
 		di->driver->close_db(upi);
+
+	di->interp = _init_db;
 
 	return ret;
 }
@@ -196,8 +200,6 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 	}
 	return 0;
 }
-
-static int _init_db(struct ulogd_pluginstance *upi);
 
 static int
 _init_reconnect(struct ulogd_pluginstance *upi)
