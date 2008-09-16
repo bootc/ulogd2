@@ -40,6 +40,10 @@ ulogd_db_interp(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *dbi = upi_priv(upi);
 
+	pr_debug("%s: upi=%p\n", __func__, upi);
+
+	assert(dbi->interp != NULL);
+
 	return dbi->interp(upi);
 }
 
@@ -47,6 +51,8 @@ ulogd_db_interp(struct ulogd_pluginstance *upi)
 static int
 disabled_interp_db(struct ulogd_pluginstance *upi)
 {
+	pr_debug("%s: upi=%p\n", __func__, upi);
+
 	return 0;
 }
 
@@ -63,6 +69,8 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 	char *underscore;
 	int i;
 	char *table = table_ce(upi->config_kset).u.string;
+
+	pr_debug("%s: upi=%p\n", __func__, upi);
 
 	if (mi->stmt)
 		free(mi->stmt);
@@ -119,6 +127,8 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	struct db_instance *di = upi_priv(upi);
 	int ret;
 
+	pr_debug("%s: upi=%p\n", __func__, upi);
+
 	ulogd_log(ULOGD_NOTICE, "(re)configuring\n");
 
 	/* First: Parse configuration file section for this instance */
@@ -154,6 +164,8 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 	struct db_instance *di = upi_priv(upi);
 	int ret;
 
+	pr_debug("%s: upi=%p\n", __func__, upi);
+
 	ulogd_log(ULOGD_NOTICE, "starting\n");
 
 	ret = di->driver->open_db(upi);
@@ -171,6 +183,9 @@ int
 ulogd_db_stop(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
+
+	pr_debug("%s: upi=%p\n", __func__, upi);
+
 	ulogd_log(ULOGD_NOTICE, "stopping\n");
 	di->driver->close_db(upi);
 
@@ -188,6 +203,8 @@ static int
 _init_reconnect(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
+
+	pr_debug("%s: upi=%p\n", __func__, upi);
 
 	if (reconnect_ce(upi->config_kset).u.value) {
 		di->reconnect = time(NULL);
@@ -213,6 +230,8 @@ static int __interp_db(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
 	int i;
+
+	pr_debug("%s: upi=%p\n", __func__, upi);
 
 	di->stmt_ins = di->stmt_val;
 
@@ -311,6 +330,8 @@ static int __interp_db(struct ulogd_pluginstance *upi)
 static int _init_db(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
+
+	pr_debug("%s: upi=%p\n", __func__, upi);
 
 	if (di->reconnect && di->reconnect > time(NULL))
 		return 0;
