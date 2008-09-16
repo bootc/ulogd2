@@ -48,6 +48,17 @@
 #define LOG_ID_REJECT		(__LOG_ID_BASE + 3)
 #define LOG_ID_INVAL_PKT	(__LOG_ID_BASE + 4)
 #define LOG_ID_SPOOFING_DROP (__LOG_ID_BASE + 5)
+#define LOG_ID_SYN_FLOOD	(__LOG_ID_BASE + 6)
+#define LOG_ID_ICMP_FLOOD	(__LOG_ID_BASE + 7)
+#define LOG_ID_UDP_FLOOD	(__LOG_ID_BASE + 8)
+#define LOG_ID_ICMP_REDIR	(__LOG_ID_BASE + 9)
+#define LOG_ID_H323_RTP		(__LOG_ID_BASE + 10)
+#define LOG_ID_Q931_GK		(__LOG_ID_BASE + 11)
+#define LOG_ID_STRICT_TCP	(__LOG_ID_BASE + 12)
+#define LOG_ID_FTP_DATA		(__LOG_ID_BASE + 13)
+#define LOG_ID_DNS_REQ		(__LOG_ID_BASE + 14)
+#define LOG_ID_PORTSCAN		(__LOG_ID_BASE + 15)
+#define LOG_ID_SIP_RTP		(__LOG_ID_BASE + 16)
 
 /* logging flags for custom log handler */
 #define LH_F_NOLOG		0x0001
@@ -59,15 +70,29 @@ static struct log_type {
 	char *desc;					/* descriptive text */
 	unsigned id;			 /* Astaro log ID, see Wiki for details */
 	char *action;
+	size_t prefix_len;
 } log_types[] = {
 	/* the first entry is the fallback entry */
-	{ "LOG: ", "Packet logged", LOG_ID_LOG, "log" },
-	{ "DROP: ", "Packet dropped", LOG_ID_DROP, "drop" },
-	{ "ACCEPT: ", "Packet accepted", LOG_ID_ACCEPT, "accept" },
-	{ "REJECT: ", "Packet rejected", LOG_ID_REJECT, "reject" },
-	{ "INVALID_PKT: ", "Invalid packet", LOG_ID_INVAL_PKT, "invalid" },
-	{ "IP-SPOOFING DROP: ", "Spoofed packet dropped", LOG_ID_SPOOFING_DROP,
-		"drop" },
+	{ "LOG:", "Packet logged", LOG_ID_LOG, "log" },
+	{ "DROP:", "Packet dropped", LOG_ID_DROP, "drop" },
+	{ "ACCEPT:", "Packet accepted", LOG_ID_ACCEPT, "accept" },
+	{ "REJECT:", "Packet rejected", LOG_ID_REJECT, "reject" },
+	{ "INVALID_PKT:", "Invalid packet", LOG_ID_INVAL_PKT, "invalid packet" },
+	{ "IP-SPOOFING DROP:", "IP spoofing drop", LOG_ID_SPOOFING_DROP,
+		"IP spoofing drop" },
+	{ "SYN_FLOOD:", "SYN flood detected", LOG_ID_SYN_FLOOD, "SYN flood" },
+	{ "ICMP_FLOOD:", "ICMP flood detected", LOG_ID_ICMP_FLOOD, "ICMP flood" },
+	{ "UDP_FLOOD:", "UDP flood detected", LOG_ID_UDP_FLOOD, "UDP flood" },
+	{ "ICMP_REDIRECT:", "ICMP redirect", LOG_ID_ICMP_REDIR, "ICMP redirect" },
+	{ "H.323  RTP:", "H.323 RTP", LOG_ID_H323_RTP, "H.323 RTP" },
+	{ "Q.931 Gatekeeper connection:", "Q.931 Gatekeeper", LOG_ID_Q931_GK,
+	  "Q.931 Gatekeeper" },
+	{ "STRICT_TCP_STATE:", "strict TCP state", LOG_ID_STRICT_TCP,
+	  "strict TCP state" },
+	{ "FTP_DATA:", "FTP data", LOG_ID_FTP_DATA, "FTP data" },
+	{ "DNS_REQUEST:", "DNS request", LOG_ID_DNS_REQ, "DNS request" },
+	{ "PORTSCAN:", "portscan detected", LOG_ID_PORTSCAN, "portscan" },
+	{ "SIP Call RTP:", "SIP call RTP", LOG_ID_SIP_RTP, "SIP call RTP" },
 	{ NULL, }
 };
 
@@ -200,7 +225,7 @@ log_prefix2type(const struct log_type *t, const char *prefix)
 		return 0;
 
 	for (n = 0; t[n].prefix != NULL; n++) {
-		if (strcmp(t[n].prefix, prefix) == 0)
+		if (strncmp(t[n].prefix, prefix, t[n].prefix_len) == 0)
 			return n;
 	}
 
@@ -450,7 +475,12 @@ astaro_fini(struct ulogd_pluginstance *pi)
 static int
 astaro_start(struct ulogd_pluginstance *pi)
 {
+	int i;
+
 	openlog("ulogd", LOG_NDELAY | LOG_PID, LOG_DAEMON);
+
+	for (i = 0; log_types[i].prefix !=  NULL; i++)
+		log_types[i].prefix_len = strlen(log_types[i].prefix);
 
 	return 0;
 }
