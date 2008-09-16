@@ -96,6 +96,9 @@ static struct config_keyset sqlite3_kset = {
 #define table_ce(pi)	(pi)->config_kset->ces[1].u.string
 #define buffer_ce(pi)	(pi)->config_kset->ces[2].u.value
 
+/* forward declarations */
+static int sqlite3_createstmt(struct ulogd_pluginstance *);
+
 
 static int
 add_row(struct ulogd_pluginstance *pi)
@@ -109,9 +112,16 @@ add_row(struct ulogd_pluginstance *pi)
 	else if (ret == SQLITE_BUSY)
 		ulogd_log(ULOGD_ERROR, "SQLITE3: step: table busy\n");
 	else if (ret == SQLITE_ERROR) {
-		ulogd_log(ULOGD_ERROR, "SQLITE3: step: %s\n",
-				  sqlite3_errmsg(priv->dbh));
-		goto err_reset;
+		ret = sqlite3_finalize(priv->p_stmt);
+		priv->p_stmt = NULL;
+
+		if (ret == SQLITE_SCHEMA)
+			sqlite3_createstmt(pi);
+		else {
+			ulogd_log(ULOGD_ERROR, "SQLITE3: step: %s\n",
+					  sqlite3_errmsg(priv->dbh));
+			goto err_reset;
+		}
 	}
 
 	ret = sqlite3_reset(priv->p_stmt);
@@ -232,38 +242,15 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
 	struct field *f;
-	unsigned size;
 	char buf[ULOGD_MAX_KEYLEN];
 	char *underscore;
 	char *stmt_pos;
-	int col_count, i;
+	int i, cols = 0;
 
-	if (priv->stmt != NULL) {
-		ulogd_log(ULOGD_NOTICE, "createstmt called, but stmt already "
-				  "existing\n");	
-		return -1;
-	}
+	if (priv->stmt != NULL)
+		free(priv->stmt);
 
-	/* calculate the size for the insert statement */
-	size = strlen(_SQLITE3_INSERTTEMPL) + strlen(table_ce(pi));
-
-	DEBUGP("initial size: %u\n", size);
-
-	col_count = 0;
-	tailq_for_each(f, priv->fields, link) {
-		/* we need space for the key and a comma, and a ? */
-		size += strlen(f->name) + 3;
-
-		DEBUGP("size is now %u since adding %s\n",size,f->name);
-		col_count++;
-	}
-
-	DEBUGP("there were %d columns\n",col_count);
-	DEBUGP("after calc name length: %u\n",size);
-
-	ulogd_log(ULOGD_DEBUG, "allocating %u bytes for statement\n", size);
-
-	if ((priv->stmt = calloc(1, size)) == NULL) {
+	if ((priv->stmt = calloc(1, 1024)) == NULL) {
 		ulogd_log(ULOGD_ERROR, "SQLITE3: out of memory\n");
 		return -1;
 	}
@@ -279,6 +266,8 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 
 		sprintf(stmt_pos, "%s,", buf);
 		stmt_pos = priv->stmt + strlen(priv->stmt);
+
+		cols++;
 	}
 
 	*(stmt_pos - 1) = ')';
@@ -286,7 +275,7 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 	sprintf(stmt_pos, " values (");
 	stmt_pos = priv->stmt + strlen(priv->stmt);
 
-	for (i = 0; i < col_count - 1; i++) {
+	for (i = 0; i < cols - 1; i++) {
 		sprintf(stmt_pos,"?,");
 		stmt_pos += 2;
 	}
@@ -439,7 +428,6 @@ static int
 sqlite3_start(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
-	int ret;
 
 	TAILQ_INIT(&priv->fields);
 
