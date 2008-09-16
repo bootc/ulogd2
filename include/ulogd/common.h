@@ -47,4 +47,6 @@
 #define pr_debug(fmt, ...)
 #endif /* DEBUG */
 
+int set_sockbuf_len(int fd, int rcv_len, int snd_len);
+
 #endif /* COMMON_H */

@@ -565,10 +565,6 @@ db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 	return db_err(pi, ret);
 }
 
-#define llist_for_each_prev_safe(pos, n, head) \
-    for (pos = (head)->prev, n = pos->prev; pos != (head); \
-        pos = n, n = pos->prev)
-
 /* delete_rows() - delete rows from the tail of the list */
 static int
 delete_rows(struct ulogd_pluginstance *pi, int rows)

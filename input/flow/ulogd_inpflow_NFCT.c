@@ -43,9 +43,12 @@
 
 /* configuration defaults */
 #define TCACHE_SIZE		8192
-#define SCACHE_SIZE		64
-#define SCACHE_REQ_MAX	100
+#define SCACHE_SIZE	    512
+#define TCACHE_REQ_MAX	100
 #define TIMEOUT			30 SEC
+
+#define RCVBUF_LEN		(1 << 18)
+#define SNDBUF_LEN		RCVBUF_LEN
 
 #define INADDR_CLUSTER		0x00fa13c6 /* 198.19.250.0/24 */
 
@@ -434,7 +437,7 @@ nfct_get_conntrack_x(struct nfct_handle *cth, struct nfct_tuple *t,
 {
 	static char buf[NFNL_BUFFSIZE];
 	struct nfnlhdr *req = (void *)buf;
-	int cta_dir, nbytes;
+	int cta_dir;
 
 	memset(buf, 0, sizeof(buf));
 
@@ -450,9 +453,17 @@ nfct_get_conntrack_x(struct nfct_handle *cth, struct nfct_tuple *t,
 
 	nfct_build_tuple(req, sizeof(buf), t, cta_dir);
 
-	nbytes = nfnl_send(nfct_nfnlh(cth), &req->nlh);
+	return nfnl_send(nfct_nfnlh(cth), &req->nlh);
+}
 
-	return nbytes;
+/* time diff with second resolution */
+static inline unsigned
+tv_diff_sec(const struct timeval *tv1, const struct timeval *tv2)
+{
+	if (tv2->tv_sec >= tv1->tv_sec)
+		return max(tv2->tv_sec - tv1->tv_sec, 1);
+
+	return tv1->tv_sec - tv2->tv_sec;
 }
 
 struct conntrack *
@@ -486,135 +497,6 @@ ct_put(struct conntrack *ct)
 
 		num_conntrack--;
 	}
-}
-
-/* tuple cache */
-static struct conntrack ct_search;		/* used by scache too */
-
-static conntrack_hash_t
-tcache_hash(struct cache *c, struct conntrack *ct)
-{
-	static unsigned rnd;
-	struct nfct_tuple *t = &ct->tuple;
-
-	if (rnd == 0U)
-		rnd = rand();
-
-	return jhash_3words(t->src.v4, t->dst.v4 ^ t->protonum,	t->l4src.all
-						| (t->l4dst.all << 16), rnd) % c->c_num_heads;
-}
-
-static int
-tcache_add(struct cache *c, struct conntrack *ct)
-{
-	conntrack_hash_t h = c->c_hash(c, ct);
-
-	llist_add(&ct->list, &c->c_head[h].link);
-	c->c_head[h].cnt++;
-
-	pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
-			 c->c_head[h].cnt, c->c_cnt);
-
-	return 0;
-}
-
-static int
-tcache_del(struct cache *c, struct conntrack *ct)
-{
-	conntrack_hash_t h = c->c_hash(c, ct);
-
-	assert(c->c_head[h].cnt > 0);
-
-	pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
-			 c->c_head[h].cnt, c->c_cnt);
-
-	llist_del(&ct->list);
-	c->c_head[h].cnt--;
-
-	return 0;
-}
-
-static struct conntrack *
-tcache_find(const struct ulogd_pluginstance *pi,
-			const struct nfct_tuple *tuple)
-{
-	struct nfct_pluginstance *priv = (void *)pi->private;
-	struct cache *c = priv->tcache;
-	struct conntrack *ct;
-	conntrack_hash_t h;
-
-	memcpy(&ct_search.tuple, tuple, sizeof(struct nfct_tuple));
-	h = c->c_hash(c, &ct_search);
-
-	llist_for_each_entry(ct, &c->c_head[h].link, list) {
-		if (memcmp(&ct->tuple, tuple, sizeof(*tuple)) == 0)
-			return ct;
-	}
-
-	return NULL;
-}
-
-/* sequence cache */
-static conntrack_hash_t
-scache_hash(struct cache *c, struct conntrack *ct)
-{
-	static unsigned rnd;
-
-	if (rnd == 0U)
-		rnd = rand();
-
-	return (ct->last_seq ^ rnd) % c->c_num_heads;
-}
-
-static int
-scache_add(struct cache *c, struct conntrack *ct)
-{
-	conntrack_hash_t h = c->c_hash(c, ct);
-
-	llist_add(&ct->seq_link, &c->c_head[h].link);
-	c->c_head[h].cnt++;
-
-	pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
-			 c->c_head[h].cnt, c->c_cnt);
-
-	return 0;
-}
-
-static int
-scache_del(struct cache *c, struct conntrack *ct)
-{
-	conntrack_hash_t h = c->c_hash(c, ct);
-
-	assert(c->c_head[h].cnt > 0);
-
-	pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
-			 c->c_head[h].cnt, c->c_cnt);
-
-	llist_del(&ct->seq_link);
-	ct->last_seq = 0;
-
-	c->c_head[h].cnt--;
-
-	return 0;
-}
-
-static struct conntrack *
-scache_find(const struct ulogd_pluginstance *pi, unsigned seq)
-{
-	struct nfct_pluginstance *priv = (void *)pi->private;
-	struct cache *c = priv->scache;
-	struct conntrack *ct;
-	conntrack_hash_t h;
-
-	ct_search.last_seq = seq;
-	h = c->c_hash(c, &ct_search);
-
-	llist_for_each_entry(ct, &c->c_head[h].link, seq_link) {
-		if (ct->last_seq == ct_search.last_seq)
-			return ct;
-	}
-
-	return NULL;
 }
 
 static struct cache *
@@ -684,14 +566,229 @@ cache_del(struct cache *c, struct conntrack *ct)
 	return 0;
 }
 
-/* time diff with second resolution */
-static inline unsigned
-tv_diff_sec(const struct timeval *tv1, const struct timeval *tv2)
+static inline conntrack_hash_t
+cache_head_next(const struct cache *c)
 {
-	if (tv2->tv_sec >= tv1->tv_sec)
-		return max(tv2->tv_sec - tv1->tv_sec, 1);
+	return (c->c_curr_head + 1) % c->c_num_heads;
+}
 
-	return tv1->tv_sec - tv2->tv_sec;
+static inline conntrack_hash_t
+cache_slice_end(const struct cache *c, unsigned n)
+{
+	return (c->c_curr_head + n) % c->c_num_heads;
+}
+
+/* tuple cache */
+static struct conntrack ct_search;		/* used by scache too */
+
+static conntrack_hash_t
+tcache_hash(struct cache *c, struct conntrack *ct)
+{
+	static unsigned rnd;
+	struct nfct_tuple *t = &ct->tuple;
+
+	if (rnd == 0U)
+		rnd = rand();
+
+	return jhash_3words(t->src.v4, t->dst.v4 ^ t->protonum,	t->l4src.all
+						| (t->l4dst.all << 16), rnd) % c->c_num_heads;
+}
+
+static int
+tcache_add(struct cache *c, struct conntrack *ct)
+{
+	conntrack_hash_t h = c->c_hash(c, ct);
+
+	llist_add(&ct->list, &c->c_head[h].link);
+	c->c_head[h].cnt++;
+
+	pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
+			 c->c_head[h].cnt, c->c_cnt);
+
+	return 0;
+}
+
+static int
+tcache_del(struct cache *c, struct conntrack *ct)
+{
+	conntrack_hash_t h = c->c_hash(c, ct);
+
+	assert(c->c_head[h].cnt > 0);
+
+	pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
+			 c->c_head[h].cnt, c->c_cnt);
+
+	llist_del(&ct->list);
+	c->c_head[h].cnt--;
+
+	return 0;
+}
+
+static struct conntrack *
+tcache_find(const struct ulogd_pluginstance *pi,
+			const struct nfct_tuple *tuple)
+{
+	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct cache *c = priv->tcache;
+	struct conntrack *ct;
+	conntrack_hash_t h;
+
+	memcpy(&ct_search.tuple, tuple, sizeof(struct nfct_tuple));
+	h = c->c_hash(c, &ct_search);
+
+	llist_for_each_entry(ct, &c->c_head[h].link, list) {
+		if (memcmp(&ct->tuple, tuple, sizeof(*tuple)) == 0)
+			return ct;
+	}
+
+	return NULL;
+}
+
+/* check entries in tuple cache */
+static int
+tcache_cleanup(struct ulogd_pluginstance *pi)
+{
+	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct cache *c = priv->tcache;
+	conntrack_hash_t end = cache_slice_end(c, 32);
+	struct conntrack *ct;
+	int ret, req = 0;
+	
+	do {
+		llist_for_each_entry_reverse(ct, &c->c_head[c->c_curr_head].link,
+									 list) {
+			if (tv_diff_sec(&ct->time[UPDATE], &tv_now) < timeout_ce(pi))
+				continue;
+
+			/* check if its still there */
+			ret = nfct_get_conntrack_x(priv->cth, &ct->tuple,
+									   NFCT_DIR_ORIGINAL, &ct->last_seq);
+			if (ret < 0) {
+				if (errno == EWOULDBLOCK)
+					break;
+
+				ulogd_log(ULOGD_ERROR, "nfct_get_conntrack: ct=%p: %m\n",
+						  ct);
+				break;
+			}
+
+			if (&ct->last_seq != 0) {
+				ct->t_req = t_now;
+
+				assert(scache_find(pi, ct->last_seq) == NULL);
+
+				cache_add(priv->scache, ct);
+			}
+
+			if (++req > TCACHE_REQ_MAX)
+				break;
+		}
+
+		c->c_curr_head = cache_head_next(c);
+
+		if (req > TCACHE_REQ_MAX)
+			break;
+	} while (c->c_curr_head != end);
+
+	return req;
+}
+
+/* sequence cache */
+static conntrack_hash_t
+scache_hash(struct cache *c, struct conntrack *ct)
+{
+	static unsigned rnd;
+
+	if (rnd == 0U)
+		rnd = rand();
+
+	return (ct->last_seq ^ rnd) % c->c_num_heads;
+}
+
+static int
+scache_add(struct cache *c, struct conntrack *ct)
+{
+	conntrack_hash_t h = c->c_hash(c, ct);
+
+	llist_add(&ct->seq_link, &c->c_head[h].link);
+	c->c_head[h].cnt++;
+
+	pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
+			 c->c_head[h].cnt, c->c_cnt);
+
+	return 0;
+}
+
+static int
+scache_del(struct cache *c, struct conntrack *ct)
+{
+	conntrack_hash_t h = c->c_hash(c, ct);
+
+	assert(c->c_head[h].cnt > 0);
+
+	pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
+			 c->c_head[h].cnt, c->c_cnt);
+
+	llist_del(&ct->seq_link);
+	ct->last_seq = 0;
+
+	c->c_head[h].cnt--;
+
+	return 0;
+}
+
+static struct conntrack *
+scache_find(const struct ulogd_pluginstance *pi, unsigned seq)
+{
+	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct cache *c = priv->scache;
+	struct conntrack *ct;
+	conntrack_hash_t h;
+
+	ct_search.last_seq = seq;
+	h = c->c_hash(c, &ct_search);
+
+	llist_for_each_entry(ct, &c->c_head[h].link, seq_link) {
+		if (ct->last_seq == ct_search.last_seq)
+			return ct;
+	}
+
+	return NULL;
+}
+
+static int
+scache_cleanup(struct ulogd_pluginstance *pi)
+{
+	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct cache *c = priv->scache;
+	conntrack_hash_t end = cache_slice_end(c, 16);
+	struct conntrack *ct;
+	int del = 0;
+
+	if (c->c_cnt == 0)
+		return 0;
+
+	do {
+		struct llist_head *curr, *tmp;
+
+		assert(c->c_curr_head < c->c_num_heads);
+
+		llist_for_each_prev_safe(curr, tmp, &c->c_head[c->c_curr_head].link) {
+			ct = container_of(curr, struct conntrack, seq_link);
+
+			assert(ct->t_req != 0);
+
+			if ((t_now - ct->t_req) < 5 SEC)
+				break;
+
+			cache_del(priv->scache, ct);
+			del++;
+		}
+
+		c->c_curr_head = cache_head_next(c);
+	} while (c->c_curr_head != end);
+
+	return del;
 }
 
 static int
@@ -884,9 +981,6 @@ read_cb_nfct(int fd, unsigned what, void *param)
 	return nfnl_recv_msgs(nfct_nfnlh(priv->cth), do_nfct_msg, pi);
 }
 
-
-#define STOP_HERE(h)	(((h)->c_curr_head + 32) % (h)->c_num_heads)
-
 /*
   nfct_timer_cb()
 
@@ -897,56 +991,21 @@ nfct_timer_cb(struct ulogd_timer *t)
 {
 	struct ulogd_pluginstance *pi = t->data;
 	struct nfct_pluginstance *priv = (void *)pi->private;
-	struct cache *ht = priv->tcache;
-	int i, req = 0, end = STOP_HERE(ht);
-	struct conntrack *ct;
+	unsigned sc_start, sc_end, tc_start, tc_end;
 
-	/* cleanup stale entries from sequence cache */
-	for (i = 0; i < priv->scache->c_num_heads; i++) {
-		if (llist_empty(&priv->scache->c_head[i].link))
-			continue;
+	sc_start = priv->scache->c_curr_head;
+	tc_start = priv->tcache->c_curr_head;
 
-		ct = container_of(priv->scache->c_head[i].link.prev,
-						  struct conntrack, seq_link);
+	scache_cleanup(pi);
+	tcache_cleanup(pi);
 
-		assert(ct->t_req != 0);
+	sc_end = priv->scache->c_curr_head;
+	tc_end = priv->tcache->c_curr_head;
 
-		if (ct->t_req > 0 && (t_now - ct->t_req) > 5 SEC)
-			cache_del(priv->scache, ct);
-	}
-
-	/* check entries in tuple cache */
-	do {
-		assert(ht->c_curr_head < ht->c_num_heads);
-
-		llist_for_each_entry(ct, &ht->c_head[ht->c_curr_head].link, list) {
-			if (tv_diff_sec(&ct->time[UPDATE], &tv_now) < timeout_ce(pi))
-				continue;
-
-			/* check if its still there */
-			nfct_get_conntrack_x(priv->cth, &ct->tuple, NFCT_DIR_ORIGINAL,
-								 &ct->last_seq);
-
-			if (&ct->last_seq != 0) {
-				ct->t_req = t_now;
-
-				assert(scache_find(pi, ct->last_seq) == NULL);
-
-				cache_add(priv->scache, ct);
-			}
-
-			if (++req > SCACHE_REQ_MAX)
-				break;
-		}
-
-		ht->c_curr_head = (ht->c_curr_head + 1) % ht->c_num_heads;
-
-		if (req > SCACHE_REQ_MAX)
-			break;
-	} while (ht->c_curr_head != end);
-
-	ulogd_log(ULOGD_DEBUG, "%s: ct:%u t:%u s:%u\n", pi->id,
-			  num_conntrack, priv->tcache->c_cnt, priv->scache->c_cnt);
+	ulogd_log(ULOGD_DEBUG, "%s: ct=%u t=%u [%u,%u[ s=%u [%u,%u[\n",
+			  pi->id, num_conntrack,
+			  priv->tcache->c_cnt, tc_start, tc_end,
+			  priv->scache->c_cnt, sc_start, sc_end);
 }
 
 static int
@@ -1022,6 +1081,9 @@ nfct_start(struct ulogd_pluginstance *upi)
 		ulogd_log(ULOGD_FATAL, "error opening ctnetlink\n");
 		goto err_free;
 	}
+
+	if (set_sockbuf_len(nfct_fd(priv->cth), RCVBUF_LEN, SNDBUF_LEN) < 0)
+		goto err_free;
 
 	ulogd_log(ULOGD_DEBUG, "%s: ctnetlink connection opened\n", upi->id);
 
