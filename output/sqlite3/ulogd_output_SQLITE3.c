@@ -30,8 +30,9 @@
  *  	- port to ulogd-2.00
  */
 #include <ulogd/ulogd.h>
-#include <ulogd/conffile.h>
 #include <ulogd/common.h>
+#include <ulogd/conffile.h>
+#include <ulogd/plugin.h>
 #include <ulogd/linuxlist.h>
 #include <sqlite3.h>
 #include <string.h>
@@ -283,20 +284,6 @@ db_createstmt(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-
-static struct ulogd_key *
-ulogd_find_key(struct ulogd_pluginstance *pi, const char *name)
-{
-	int i;
-
-	for (i = 0; i < pi->input.num_keys; i++) {
-		if (strcmp(pi->input.keys[i].name, name) == 0)
-			return &pi->input.keys[i];
-	}
-
-	return NULL;
-}
-
 #define SELECT_ALL_STR			"select * from "
 #define SELECT_ALL_LEN			sizeof(SELECT_ALL_STR)
 
@@ -379,7 +366,7 @@ db_init(struct ulogd_pluginstance *pi)
 		if (strcmp(buf, "flow.count") == 0)
 			continue;
 
-		if ((col->key = ulogd_find_key(pi, buf)) == NULL) {
+		if ((col->key = ulogd_key_find(&pi->input, buf)) == NULL) {
 			printf(PFX "%s: key not found\n", buf);
 			return -1;
 		}
