@@ -39,7 +39,8 @@ static int __interp_db(struct ulogd_pluginstance *upi);
  * interp function */
 int ulogd_db_interp(struct ulogd_pluginstance *upi)
 {
-	struct db_instance *dbi = (struct db_instance *) &upi->private;
+	struct db_instance *dbi = upi_priv(upi);
+
 	return dbi->interp(upi);
 }
 
@@ -55,7 +56,7 @@ static int disabled_interp_db(struct ulogd_pluginstance *upi)
 /* create the static part of our insert statement */
 static int sql_createstmt(struct ulogd_pluginstance *upi)
 {
-	struct db_instance *mi = (struct db_instance *) upi->private;
+	struct db_instance *mi = upi_priv(upi);
 	unsigned int size;
 	char buf[ULOGD_MAX_KEYLEN];
 	char *underscore;
@@ -113,7 +114,7 @@ static int sql_createstmt(struct ulogd_pluginstance *upi)
 int ulogd_db_configure(struct ulogd_pluginstance *upi,
 			struct ulogd_pluginstance_stack *stack)
 {
-	struct db_instance *di = (struct db_instance *) upi->private;
+	struct db_instance *di = upi_priv(upi);
 	int ret;
 
 	ulogd_log(ULOGD_NOTICE, "(re)configuring\n");
@@ -147,7 +148,7 @@ int ulogd_db_configure(struct ulogd_pluginstance *upi,
 
 int ulogd_db_start(struct ulogd_pluginstance *upi)
 {
-	struct db_instance *di = (struct db_instance *) upi->private;
+	struct db_instance *di = upi_priv(upi);
 	int ret;
 
 	ulogd_log(ULOGD_NOTICE, "starting\n");
@@ -165,7 +166,7 @@ int ulogd_db_start(struct ulogd_pluginstance *upi)
 
 int ulogd_db_stop(struct ulogd_pluginstance *upi)
 {
-	struct db_instance *di = (struct db_instance *) upi->private;
+	struct db_instance *di = upi_priv(upi);
 	ulogd_log(ULOGD_NOTICE, "stopping\n");
 	di->driver->close_db(upi);
 
@@ -181,7 +182,7 @@ static int _init_db(struct ulogd_pluginstance *upi);
 
 static int _init_reconnect(struct ulogd_pluginstance *upi)
 {
-	struct db_instance *di = (struct db_instance *) upi->private;
+	struct db_instance *di = upi_priv(upi);
 
 	if (reconnect_ce(upi->config_kset).u.value) {
 		di->reconnect = time(NULL);
@@ -204,7 +205,7 @@ static int _init_reconnect(struct ulogd_pluginstance *upi)
 
 static int _init_db(struct ulogd_pluginstance *upi)
 {
-	struct db_instance *di = (struct db_instance *) upi->private;
+	struct db_instance *di = upi_priv(upi);
 
 	if (di->reconnect && di->reconnect > time(NULL))
 		return 0;
@@ -228,7 +229,7 @@ static int _init_db(struct ulogd_pluginstance *upi)
 /* our main output function, called by ulogd */
 static int __interp_db(struct ulogd_pluginstance *upi)
 {
-	struct db_instance *di = (struct db_instance *) &upi->private;
+	struct db_instance *di = upi_priv(upi);
 	int i;
 
 	di->stmt_ins = di->stmt_val;
