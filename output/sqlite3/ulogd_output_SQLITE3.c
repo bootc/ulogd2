@@ -41,6 +41,9 @@
 
 #define CFG_BUFFER_DEFAULT		10
 
+#define CFG_TIMER_DEFAULT		1 SEC
+
+
 #define SQLITE3_BUSY_TIMEOUT 300
 
 /* number of colums we have (really should be configurable) */
@@ -99,7 +102,7 @@ struct sqlite3_priv {
 
 
 static struct config_keyset sqlite3_kset = {
-	.num_ces = 3,
+	.num_ces = 4,
 	.ces = {
 		{
 			.key = "db",
@@ -117,12 +120,19 @@ static struct config_keyset sqlite3_kset = {
 			.options = CONFIG_OPT_NONE,
 			.u.value = CFG_BUFFER_DEFAULT,
 		},
+		{
+			.key = "timer",
+			.type = CONFIG_TYPE_INT,
+			.options = CONFIG_OPT_NONE,
+			.u.value = CFG_TIMER_DEFAULT,
+		},
 	},
 };
 
 #define db_ce(pi)		(pi)->config_kset->ces[0].u.string
 #define table_ce(pi)	(pi)->config_kset->ces[1].u.string
 #define buffer_ce(pi)	(pi)->config_kset->ces[2].u.value
+#define timer_ce(pi)	(pi)->config_kset->ces[3].u.value
 
 
 #define SQL_CREATE_STR \
@@ -526,11 +536,16 @@ sqlite3_configure(struct ulogd_pluginstance *pi,
 		return -1;
 	}
 
+	if (timer_ce(pi) <= 0) {
+		ulogd_error("SQLITE3: configure: invalid timer value\n");
+		return -1;
+	}
+
 	DEBUGP("%s: db='%s' table='%s'\n", pi->id, db_ce(pi), table_ce(pi));
 
 	/* init timer */
 	priv->timer.cb = timer_cb;
-	priv->timer.ival = 1 SEC;
+	priv->timer.ival = timer_ce(pi);
 	priv->timer.flags = TIMER_F_PERIODIC;
 	priv->timer.data = pi;
 
