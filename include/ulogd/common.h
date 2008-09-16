@@ -49,4 +49,7 @@
 
 int set_sockbuf_len(int fd, int rcv_len, int snd_len);
 
+/* translate characters in string */
+int strntr(char *, char, char);
+
 #endif /* COMMON_H */

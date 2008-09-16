@@ -50,3 +50,27 @@ set_sockbuf_len(int fd, int rcv_len, int snd_len)
 
 	return 0;
 }
+
+/**
+ * Translate character string.
+ * @arg str		The string to translate.
+ * @arg from	The character to translate from.
+ * @arg to		The character to translate to.
+ * @return		0 if succesfull, -1 on error.
+ */
+int
+strntr(char *str, char from, char to)
+{
+	if (str == NULL	|| from == '\0')
+		return -1;
+	if (from == to)
+		return 0;
+
+	while ((str = strchr(str, from)) != NULL) {
+		*str++ = to;
+		if (to == '\0')
+			break;
+	}
+
+	return 0;
+}
