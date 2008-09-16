@@ -36,8 +36,12 @@
 #include <ulogd/ulogd.h>
 #include <ulogd/conffile.h>
 #include <sqlite3.h>
+#include <sys/queue.h>
 
 #define CFG_BUFFER_DEFAULT		10
+
+/* number of colums we have (really should be configurable) */
+#define DB_NUM_COLS	9
 
 #if 0
 #define DEBUGP(x, args...)	fprintf(stderr, x, ## args)
@@ -45,16 +49,21 @@
 #define DEBUGP(x, args...)
 #endif
 
-
 struct field {
+	TAILQ_ENTRY(field) link;
 	char name[ULOGD_MAX_KEYLEN];
 	struct ulogd_key *key;
-	struct field *next;
 };
+
+TAILQ_HEAD(field_lh, field);
+
+#define tailq_for_each(pos, head, link) \
+        for (pos = (head).tqh_first; pos != NULL; pos = pos->link.tqe_next)
+
 
 struct sqlite3_priv {
 	sqlite3 *dbh;				/* database handle we are using */
-	struct field *fields;
+	struct field_lh fields;
 	char *stmt;
 	sqlite3_stmt *p_stmt;
 	int buffer_size;
@@ -93,63 +102,86 @@ sqlite3_interp(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
 	struct field *f;
-	int i, ret;
-	
-	for (i = 0, f = priv->fields; f != NULL; f = f->next, i++) {
+	int ret, i = 1;
+
+	tailq_for_each(f, priv->fields, link) {
 		struct ulogd_key *k_ret = f->key->u.source;
 
 		if (f->key == NULL || !IS_VALID(*k_ret)) {
 			sqlite3_bind_null(priv->p_stmt, i);
-			continue;
+			goto next_field;
 		}
 
 		switch (f->key->type) {
 		case ULOGD_RET_INT8:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.i8);
+			ret = sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.i8);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 
 		case ULOGD_RET_INT16:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.i16);
+			ret = sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.i16);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 
 		case ULOGD_RET_INT32:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.i32);
+			ret = sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.i32);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 
 		case ULOGD_RET_INT64:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.i64);
+			ret = sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.i64);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 			
 		case ULOGD_RET_UINT8:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.ui8);
+			ret = sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.ui8);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 			
 		case ULOGD_RET_UINT16:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.ui16);
+			ret = sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.ui16);
+			if (ret != SQLITE_OK)
+				goto err_bind;
+			break;
+
+		case ULOGD_RET_UINT32:
+			ret = sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.ui32);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 
 		case ULOGD_RET_IPADDR:
-		case ULOGD_RET_UINT32:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.ui32);
-			break;
-
 		case ULOGD_RET_UINT64:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.ui64);
+			ret = sqlite3_bind_int64(priv->p_stmt, i, k_ret->u.value.ui64);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 
 		case ULOGD_RET_BOOL:
-			sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.b);
+			ret = sqlite3_bind_int(priv->p_stmt, i, k_ret->u.value.b);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 
 		case ULOGD_RET_STRING:
-			sqlite3_bind_text(priv->p_stmt, i, k_ret->u.value.ptr,
-							  strlen(k_ret->u.value.ptr), SQLITE_STATIC);
+			ret = sqlite3_bind_text(priv->p_stmt, i, k_ret->u.value.ptr,
+									strlen(k_ret->u.value.ptr), SQLITE_STATIC);
+			if (ret != SQLITE_OK)
+				goto err_bind;
 			break;
 
 		default:
 			ulogd_log(ULOGD_NOTICE, "unknown type %d for %s\n",
 					  f->key->type, f->key->name);
 		}
+
+	next_field:
+		i++;
 	}
 
 	/* add row */
@@ -159,10 +191,12 @@ sqlite3_interp(struct ulogd_pluginstance *pi)
 	} else {
 		ulogd_log(ULOGD_ERROR, "SQL error during insert: %s\n",
 				  sqlite3_errmsg(priv->dbh));
-		return 1;
+		return ULOGD_IRET_ERR;
 	}
 
-	if (priv->buffer_curr > priv->buffer_size) {
+	if (priv->buffer_curr >= priv->buffer_size) {
+		int ret;
+
 		ret = sqlite3_exec(priv->dbh, "commit", NULL, NULL, NULL);
 		if (ret != SQLITE_OK)
 			ulogd_log(ULOGD_ERROR, "unable to commit rows to DB\n");
@@ -174,7 +208,12 @@ sqlite3_interp(struct ulogd_pluginstance *pi)
 		priv->buffer_curr = 0;
 	}
 
-	return 0;
+	return ULOGD_IRET_OK;
+
+ err_bind:
+	ulogd_log(ULOGD_ERROR, "%d: %s\n", i, sqlite3_errmsg(priv->dbh));
+	
+	return ULOGD_IRET_ERR;
 }
 
 #define _SQLITE3_INSERTTEMPL   "insert into X (Y) values (Z)"
@@ -189,13 +228,12 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 	char buf[ULOGD_MAX_KEYLEN];
 	char *underscore;
 	char *stmt_pos;
-	int col_count;
-	int i;
+	int col_count, i;
 
 	if (priv->stmt != NULL) {
 		ulogd_log(ULOGD_NOTICE, "createstmt called, but stmt already "
 				  "existing\n");	
-		return 1;
+		return -1;
 	}
 
 	/* calculate the size for the insert statement */
@@ -203,7 +241,8 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 
 	DEBUGP("initial size: %u\n", size);
 
-	for (col_count = 0, f = priv->fields; f != NULL; f = f->next) {
+	col_count = 0;
+	tailq_for_each(f, priv->fields, link) {
 		/* we need space for the key and a comma, and a ? */
 		size += strlen(f->name) + 3;
 
@@ -218,13 +257,13 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 
 	if ((priv->stmt = calloc(1, size)) == NULL) {
 		ulogd_log(ULOGD_ERROR, "OOM!\n");
-		return 1;
+		return -1;
 	}
 
 	sprintf(priv->stmt, "insert into %s (", table_ce(pi));
 	stmt_pos = priv->stmt + strlen(priv->stmt);
 
-	for (f = priv->fields; f != NULL; f = f->next) {
+	tailq_for_each(f, priv->fields, link) {
 		strncpy(buf, f->name, ULOGD_MAX_KEYLEN);
 
 		while ((underscore = strchr(buf, '.')))
@@ -275,30 +314,74 @@ ulogd_find_key(struct ulogd_pluginstance *pi, const char *name)
 	return NULL;
 }
 
-/* length of "select * from \0" */
-#define SQLITE_SELECT_LEN 14
+#define SELECT_ALL_STR			"select * from "
+#define SELECT_ALL_LEN			sizeof(SELECT_ALL_STR)
 
-/* find out which columns the table has */
 static int
-sqlite3_get_columns(struct ulogd_pluginstance *pi)
+db_count_cols(struct ulogd_pluginstance *pi, sqlite3_stmt **stmt)
+{
+	struct sqlite3_priv *priv = (void *)pi->private;
+	char query[SELECT_ALL_LEN + CONFIG_VAL_STRING_LEN] = SELECT_ALL_STR;
+
+	strncat(query, table_ce(pi), LINE_LEN);
+
+	if (sqlite3_prepare(priv->dbh, query, -1, stmt, 0) != SQLITE_OK)
+		return -1;
+
+	return sqlite3_column_count(*stmt);
+}
+
+
+/* FIXME make this configurable */
+#define SQL_CREATE_STR \
+		"create table daily(ip_saddr integer, ip_daddr integer, " \
+		"ip_protocol integer, l4_dport integer, raw_in_pktlen integer, " \
+		"raw_in_pktcount integer, raw_out_pktlen integer, " \
+		"raw_out_pktcount integer, flow_duration integer)"
+
+static int
+db_create_tbl(struct ulogd_pluginstance *pi)
+{
+	struct sqlite3_priv *priv = (void *)pi->private;
+	char *errmsg;
+	int ret;
+
+	ret = sqlite3_exec(priv->dbh, SQL_CREATE_STR, NULL, NULL, &errmsg);
+	if (ret != SQLITE_OK) {
+		ulogd_log(ULOGD_ERROR, "%s: create table: %s\n", pi->id, errmsg);
+		sqlite3_free(errmsg);
+
+		return -1;
+	}
+
+	return 0;
+}
+
+
+
+/* initialize DB, possibly creating it */
+static int
+sqlite3_init_db(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
 	char buf[ULOGD_MAX_KEYLEN];
-	char query[SQLITE_SELECT_LEN + CONFIG_VAL_STRING_LEN] = "select * from ";
 	char *underscore;
 	struct field *f;
 	sqlite3_stmt *schema_stmt;
-	int col;
+	int col, num_cols;
 
 	if (priv->dbh == NULL)
 		return 1;
 
-	strncat(query, table_ce(pi), LINE_LEN);
-	
-	if (sqlite3_prepare(priv->dbh, query, -1, &schema_stmt, 0) != SQLITE_OK)
-		return 1;
+	num_cols = db_count_cols(pi, &schema_stmt);
+	if (num_cols != DB_NUM_COLS) {
+		if (db_create_tbl(pi) < 0)
+			return -1;
 
-	for (col = 0; col < sqlite3_column_count(schema_stmt); col++) {
+		num_cols = db_count_cols(pi, &schema_stmt);
+	}
+
+	for (col = 0; col < num_cols; col++) {
 		strncpy(buf, sqlite3_column_name(schema_stmt, col), ULOGD_MAX_KEYLEN);
 
 		/* replace all underscores with dots */
@@ -317,8 +400,7 @@ sqlite3_get_columns(struct ulogd_pluginstance *pi)
 		if ((f->key = ulogd_find_key(pi, buf)) == NULL)
 			return -1;
 
-		f->next = priv->fields;
-		priv->fields = f;	
+		TAILQ_INSERT_TAIL(&priv->fields, f, link);
 	}
 
 	sqlite3_finalize(schema_stmt);
@@ -332,14 +414,14 @@ static int
 sqlite3_configure(struct ulogd_pluginstance *pi,
 				  struct ulogd_pluginstance_stack *stack)
 {
-	struct sqlite_priv *priv = (void *)pi->private;
+	/* struct sqlite_priv *priv = (void *)pi->private; */
+
+	config_parse_file(pi->id, pi->config_kset);
 
 	if (ulogd_wildcard_inputkeys(pi) < 0)
 		return -1;
 
-	config_parse_file(pi->id, pi->config_kset);
-
-	DEBUGP("sqlite3: db='%s' table='%s'\n", db_ce(pi), table_ce(pi));
+	DEBUGP("%s: db='%s' table='%s'\n", pi->id, db_ce(pi), table_ce(pi));
 
 	return 0;
 }
@@ -349,6 +431,8 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
 	int ret;
+
+	TAILQ_INIT(&priv->fields);
 
 	if (sqlite3_open(db_ce(pi), &priv->dbh) != SQLITE_OK) {
 		ulogd_log(ULOGD_ERROR, "can't open the database file\n");
@@ -360,7 +444,7 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 	sqlite3_busy_timeout(priv->dbh, SQLITE3_BUSY_TIMEOUT);
 
 	/* read the fieldnames to know which values to insert */
-	if (sqlite3_get_columns(pi) < 0) {
+	if (sqlite3_init_db(pi) < 0) {
 		ulogd_log(ULOGD_ERROR, "unable to get sqlite columns\n");
 		return 1;
 	}
