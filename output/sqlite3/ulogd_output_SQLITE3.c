@@ -544,11 +544,13 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 	ret = sqlite3_exec(priv->dbh, "begin immediate transaction", NULL,
 					   NULL, NULL);
 	if (ret != SQLITE_OK) {
-		if (ret == SQLITE_BUSY || sqlite3_errcode(priv->dbh) == SQLITE_LOCKED)
+		if (ret == SQLITE_BUSY)
+			goto err_rollback;
+
+		if (sqlite3_errcode(priv->dbh) == SQLITE_LOCKED)
 			return 0;			/* perform commit later */
 	
-		ulogd_error(PFX "begin transaction: %s\n",
-					sqlite3_errmsg(priv->dbh));
+		ulogd_error(PFX "begin transaction: %s\n", sqlite3_errmsg(priv->dbh));
 
 		return -1;
 	}
