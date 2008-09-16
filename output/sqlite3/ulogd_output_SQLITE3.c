@@ -372,7 +372,7 @@ sqlite3_init_db(struct ulogd_pluginstance *pi)
 	int col, num_cols;
 
 	if (priv->dbh == NULL)
-		return 1;
+		return -1;
 
 	num_cols = db_count_cols(pi, &schema_stmt);
 	if (num_cols != DB_NUM_COLS) {
@@ -394,7 +394,7 @@ sqlite3_init_db(struct ulogd_pluginstance *pi)
 		/* prepend it to the linked list */
 		if ((f = calloc(1, sizeof(struct field))) == NULL) {
 			ulogd_log(ULOGD_ERROR, "OOM!\n");
-			return 1;
+			return -1;
 		}
 		strncpy(f->name, buf, ULOGD_MAX_KEYLEN);
 
@@ -437,7 +437,7 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 
 	if (sqlite3_open(db_ce(pi), &priv->dbh) != SQLITE_OK) {
 		ulogd_log(ULOGD_ERROR, "can't open the database file\n");
-		return 1;
+		return -1;
 	}
 
 	/* set the timeout so that we don't automatically fail
@@ -447,7 +447,7 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 	/* read the fieldnames to know which values to insert */
 	if (sqlite3_init_db(pi) < 0) {
 		ulogd_log(ULOGD_ERROR, "unable to get sqlite columns\n");
-		return 1;
+		return -1;
 	}
 
 	/* initialize our buffer size and counter */
@@ -457,7 +457,7 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 	ret = sqlite3_exec(priv->dbh, "begin deferred", NULL, NULL, NULL);
 	if (ret != SQLITE_OK) {
 		ulogd_log(ULOGD_ERROR, "can't create a new transaction\n");
-		return 1;
+		return -1;
 	}
 
 	/* create and prepare the actual insert statement */
