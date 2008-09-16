@@ -245,7 +245,7 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 	}
 
 	sprintf(stmt_pos, "?)");
-	ulogd_log(ULOGD_DEBUG, "stmt='%s'\n", priv->stmt);
+	ulogd_log(ULOGD_DEBUG, "%s: stmt='%s'\n", pi->id, priv->stmt);
 
 	DEBUGP("about to prepare statement.\n");
 
@@ -253,8 +253,8 @@ sqlite3_createstmt(struct ulogd_pluginstance *pi)
 
 	DEBUGP("statement prepared.\n");
 
-	if (priv->p_stmt != NULL) {
-		ulogd_log(ULOGD_ERROR, "unable to prepare statement");
+	if (priv->p_stmt == NULL) {
+		ulogd_log(ULOGD_ERROR, "%s: unable to prepare statement\n", pi->id);
 		return 1;
 	}
 
