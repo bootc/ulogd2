@@ -27,6 +27,8 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/ifi.h>
 #include <ulogd/conffile.h>
 
 #define HIPQUAD(addr) \
@@ -64,6 +66,19 @@
 #define LH_F_NOLOG		0x0001
 #define LH_F_NOTNULL	0x0002
 
+
+/* one entry for each entry in astaro_in_keys */
+struct log_handler {
+	/* alternative logging prefix (instead of ulogd_key name) */
+	char *name;
+
+	/* custom log handler */
+	int (* fn)(const struct ulogd_pluginstance *, unsigned, char *, size_t);
+
+	unsigned flags;
+};
+
+
 /* map log prefix to descriptive text and ID */
 static struct log_type {
 	char *prefix;				/* same as LOG target --log-prefix */
@@ -100,8 +115,8 @@ struct ulogd_key astaro_in_keys[] = {
 	{ .type = ULOGD_RET_STRING, .name = "oob.prefix", },
 	{ .type = ULOGD_RET_UINT32, .name = "oob.logmark", },
 	{ .type = ULOGD_RET_UINT32, .name = "oob.seq.local" },
-	{ .type = ULOGD_RET_STRING, .name = "oob.in" },
-	{ .type = ULOGD_RET_STRING, .name = "oob.out" },
+	{ .type = ULOGD_RET_UINT32, .name = "oob.ifindex_in" },
+	{ .type = ULOGD_RET_UINT32, .name = "oob.ifindex_out" },
 	{ .type = ULOGD_RET_RAW, .name = "raw.mac",	},
 	{ .type = ULOGD_RET_IPADDR, .name = "ip.saddr",	},
 	{ .type = ULOGD_RET_IPADDR, .name = "ip.daddr",	},
@@ -122,9 +137,16 @@ struct ulogd_key astaro_in_keys[] = {
 	{ .type = ULOGD_RET_UINT8, .name = "icmp.code", },
 };
 
+/* indexes into tables */
+#define KEY_IDX_ITFIN			3
+#define KEY_IDX_ITFOUT			4
+
+/* ret-value accessors */
 #define KEY_RET(pi, idx)		((pi)->input.keys[(idx)].u.source)
 
 #define KEY_PREFIX(pi)			KEY_RET(pi, 0)
+#define KEY_ITFIN(pi)			KEY_RET(pi, KEY_IDX_ITFIN)
+#define KEY_ITFOUT(pi)			KEY_RET(pi, KEY_IDX_ITFOUT)
 #define KEY_PROTO(pi)			KEY_RET(pi, 8)
 #define KEY_TCP_ACK(pi)			KEY_RET(pi, 16)
 #define KEY_TCP_PSH(pi)			KEY_RET(pi, 17)
@@ -143,37 +165,66 @@ avail(const char *buf, const char *pch, size_t max_len)
 
 /* mac address log helper */
 static int
-lh_log_mac(const struct ulogd_key *k, char *buf, size_t len)
+lh_log_mac(const struct ulogd_pluginstance *pi, unsigned idx,
+		   char *buf, size_t len)
 {
-	unsigned char *mac = k->u.value.ptr;
+	const struct ulogd_key *k = pi->input.keys[idx].u.source;
+	static unsigned char mac_unknown[6];
+	struct ifi *ifi;
+	unsigned char *src, *dst;
 
+	if (KEY_ITFIN(pi)->u.value.ui32 > 0) {
+		ifi = ifi_find_by_idx(KEY_ITFIN(pi)->u.value.i32);
+		dst = (ifi != NULL) ? ifi->lladdr : mac_unknown;
+
+		src = (unsigned char *)k->u.value.ptr;
+	} else if (KEY_ITFOUT(pi)->u.value.ui32 > 0) {
+		ifi = ifi_find_by_idx(KEY_ITFOUT(pi)->u.value.i32);
+		src = (ifi != NULL) ? ifi->lladdr : mac_unknown;
+		
+		dst = (unsigned char *)k->u.value.ptr;
+	} else {
+		ulogd_log(ULOGD_ERROR, "%s: srcmac = dstmac = 0!\n", __func__);
+		return 0;
+	}
+	
 	return snprintf(buf, len, "dstmac=\"%02x:%02x:%02x:%02x:%02x:%02x\" "
-					"srcmac=\"00:00:00:00:00:00\" ",
-					PRINT_MAC(mac));
+					"srcmac=\"%02x:%02x:%02x:%02x:%02x:%02x\" ",
+					PRINT_MAC(dst), PRINT_MAC(src));
 }
 
+
 static int
-lh_log_tos(const struct ulogd_key *k, char *buf, size_t len)
+lh_log_tos(const struct ulogd_pluginstance *pi, unsigned idx,
+		   char *buf, size_t len)
 {
+	const struct ulogd_key *k = pi->input.keys[idx].u.source;
+	
 	return snprintf(buf, len, "tos=\"0x%02x\" prec=\"0x%02x\" ",
 					IPTOS_TOS(k->u.value.ui8), IPTOS_PREC(k->u.value.ui8));
 }
 
-/* one entry for each entry in astaro_in_keys */
-struct log_handler {
-	/* alternative logging prefix (instead of ulogd_key name) */
-	char *name;
 
-	/* custom log handler */
-	int (* fn)(const struct ulogd_key *, char *, size_t);
+static struct log_handler log_handler[];
 
-	unsigned flags;
-} log_handler[ARRAY_SIZE(astaro_in_keys)] = {
+static int
+lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
+		   char *buf, size_t len)
+{
+	const struct ulogd_key *k = pi->input.keys[idx].u.source;
+	struct ifi *ifi = ifi_find_by_idx(k->u.value.ui32);
+	char *key_name = log_handler[idx].name ? log_handler[idx].name : "itf";
+
+	return snprintf(buf, len, "%s=\"%s\" ", key_name, ifi ? ifi->name
+					: "unknown");
+}
+
+static struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
 	{ NULL, NULL, LH_F_NOLOG },	/* oob.prefix */
 	{ "fwrule", },
 	{ "seq", },					/* oob.seq.local */
-	{ "initf", },
-	{ "outitf", },
+	{ "initf", lh_log_itf, },
+	{ "outitf", lh_log_itf, },
 	{ NULL, lh_log_mac },		/* mac address */
 	{ "srcip", },
 	{ "dstip", },
@@ -350,7 +401,7 @@ print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 
 		/* custom logging handler? */
 		if (log_handler[i].fn != NULL) {
-			pch += (log_handler[i].fn)(k, pch, avail(buf, pch, max_len));
+			pch += (log_handler[i].fn)(pi, i, pch, avail(buf, pch, max_len));
 			continue;
 		}
 

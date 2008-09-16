@@ -63,6 +63,9 @@
 #include <syslog.h>
 #include <ulogd/conffile.h>
 #include <ulogd/ulogd.h>
+#include <ulogd/ifi.h>
+
+
 #ifdef DEBUG
 #define DEBUGP(format, args...) fprintf(stderr, format, ## args)
 #else
@@ -974,6 +977,9 @@ int main(int argc, char* argv[])
 
 	ulogd_log(ULOGD_INFO, 
 		  "initialization finished, entering main loop\n");
+
+	if (ifi_init() < 0)
+		exit(EXIT_FAILURE);
 
 	ulogd_main_loop();
 

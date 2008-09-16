@@ -1,5 +1,7 @@
 /*
- * common.h
+ * ifi.h
+ *
+ * Maintain a list of network interfaces.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2
@@ -17,29 +19,26 @@
  *
  * Holger Eitzenberger, 2006.
  */
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef IFI_H
+#define IFI_H
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include <errno.h>
-
-#define min(x, y) ({ \
-        typeof(x) _x = (x);  typeof(y) _y = (y); \
-        _x < _y ? _x : _y; })
-#define max(x, y) ({ \
-        typeof(x) _x = (x);  typeof(y) _y = (y); \
-        _x > _y ? _x : _y; })
+#include <net/if.h>
+#include <sys/queue.h>
 
 
-#define SEC		* 1
-#define MIN		* 60 SEC
-#define HOUR	* 60 MIN
-#define DAY		* 24 HOUR
+struct ifi {
+	TAILQ_ENTRY(ifi) link;
+	unsigned idx;			/* interface index */
+	unsigned flags;
+	char name[IFNAMSIZ];
+	unsigned char lladdr[6];
+};
 
 
-#define unused		__attribute__((unused))
+int ifi_init(void);
+void ifi_fini(void);
 
-#endif /* COMMON_H */
+struct ifi *ifi_find_by_idx(unsigned);
+
+
+#endif /* IFI_H */
