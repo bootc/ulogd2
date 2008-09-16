@@ -416,13 +416,10 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 }
 
 static int
-propagate_ct(struct ulogd_pluginstance *upi,
-			 struct nfct_conntrack *ct, unsigned int flags)
+propagate_ct(struct ulogd_pluginstance *upi, struct nfct_conntrack *ct,
+			 struct ct_timestamp *ts, unsigned int flags)
 {
 	struct nfct_pluginstance *priv = (void *)upi->private;
-	struct ct_timestamp *ts;
-
-	ts = ct_hash_find(priv->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
 
 	gettimeofday(&ts->time[STOP], NULL);
 	
@@ -459,13 +456,14 @@ static int event_handler(void *arg, unsigned int flags, int type,
 		   hash with many TIME_WAIT connections */
 		if (ct->tuple[NFCT_DIR_ORIGINAL].protonum == IPPROTO_TCP) {
 			if (ct->protoinfo.tcp.state == TCP_CONNTRACK_TIME_WAIT)
-				return propagate_ct(upi, ct, flags);
+				return propagate_ct(upi, ct, ts, flags);
 		}
 		break;
 		
 	case NFCT_MSG_DESTROY:
-		if (ct->tuple[NFCT_DIR_ORIGINAL].protonum != IPPROTO_TCP)
-			return propagate_ct(upi, ct, flags);
+		ts = ct_hash_find(cpi->htable, &ct->tuple[NFCT_DIR_ORIGINAL]);
+		if (ts != NULL)
+			return propagate_ct(upi, ct, ts, flags);
 		break;
 		
 	default:
