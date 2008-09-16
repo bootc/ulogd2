@@ -5,5 +5,5 @@ AM_CPPFLAGS = $(all_includes) -I$(top_srcdir)/include \
 
 sbin_PROGRAMS = ulogd
 
-ulogd_SOURCES = ulogd.c ifi.c select.c timer.c signal.c conffile.c
+ulogd_SOURCES = ulogd.c ifi.c select.c timer.c signal.c common.c conffile.c
 ulogd_LDFLAGS = -export-dynamic -lpthread
