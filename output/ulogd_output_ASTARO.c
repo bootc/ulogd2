@@ -58,6 +58,9 @@
 #define LOG_ID_FTP_DATA		(__PF_BASE + 13)
 #define LOG_ID_DNS_REQ		(__PF_BASE + 14)
 #define LOG_ID_SIP_RTP		(__PF_BASE + 16)
+#define LOG_ID_AFC_ALERT	(__PF_BASE + 17)
+#define LOG_ID_AFC_FT_BLOCK	(__PF_BASE + 18)
+#define LOG_ID_AFC_BLOCK	(__PF_BASE + 19)
 
 /* IPS range */
 #define __IPS_BASE	2100
@@ -112,6 +115,10 @@ static struct log_type {
 	{ "DNS_REQUEST:", "DNS request", LOG_ID_DNS_REQ, "DNS request" },
 	{ "PORTSCAN:", "portscan detected", LOG_ID_PORTSCAN, "portscan" },
 	{ "SIP Call RTP:", "SIP call RTP", LOG_ID_SIP_RTP, "SIP call RTP" },
+	{ "AFC_ALERT ", "AFC Alert", LOG_ID_AFC_ALERT, "log" },
+	/* the '-' is correct */
+	{ "AFC_FT-BLOCK ", "AFC FT Block", LOG_ID_AFC_FT_BLOCK, "drop" },
+	{ "AFC_BLOCK ", "AFC Block", LOG_ID_AFC_BLOCK, "drop" },
 	{ NULL, }
 };
 
