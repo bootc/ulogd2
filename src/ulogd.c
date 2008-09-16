@@ -721,32 +721,6 @@ out_buf:
 	return ret;
 }
 	
-
-static int ulogd_main_loop(void)
-{
-	sigset_t curr;
-	int ret = 0;
-
-	ulogd_get_sigset(&curr);
-
-	pthread_sigmask(SIG_UNBLOCK, &curr, NULL);
-
-	for (;;) {
-		ret = ulogd_select_main();
-		if (ret == 0) 
-			continue;
-
-		if (ret < 0) {
-			ulogd_log(ULOGD_ERROR, "select returned %s\n",
-					  strerror(errno));
-			break;
-		}
-	}
-
-	return ret;
-}
-
-/* open the logfile */
 static int logfile_open(const char *name)
 {
 	if (name)
@@ -1106,7 +1080,7 @@ main(int argc, char* argv[])
 
 	ulogd_log(ULOGD_INFO, "entering main loop\n");
 
-	ulogd_main_loop();
+	ulogd_dispatch();
 
 	return 0;
 }
