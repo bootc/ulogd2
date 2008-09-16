@@ -646,7 +646,6 @@ propagate_ct(struct ulogd_pluginstance *upi, struct nfct_conntrack *ct,
 {
 	struct nfct_pluginstance *priv = (void *)upi->private;
 
-	printf("poing\n");
 	do {
 		if (ct->tuple[NFCT_DIR_ORIGINAL].src.v4 == INADDR_LOOPBACK
 			|| ct->tuple[NFCT_DIR_ORIGINAL].dst.v4 == INADDR_LOOPBACK)
