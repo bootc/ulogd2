@@ -164,7 +164,7 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	char pgbuf[strlen(PGSQL_GETCOLUMN_TEMPLATE_SCHEMA)
 		   + strlen(table_ce(upi->config_kset).u.string) 
 		   + strlen(pi->db_inst.schema) + 2];
-	int i;
+	int i, k;
 
 	pr_fn_debug("pi=%p\n", pi);
 
@@ -190,7 +190,22 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 		free(upi->input.keys);
 
 	upi->input.num_keys = PQntuples(pi->pgres);
-	ulogd_log(ULOGD_DEBUG, "%u fields in table\n", upi->input.num_keys);
+
+	/* ignore columns with leading underscore */
+	for (i = 0; i < PQntuples(pi->pgres); i++) {
+		char *val = PQgetvalue(pi->pgres, i, 0);
+
+		if (val == NULL) {
+			ulogd_log(ULOGD_ERROR, "%s: error fetching tuples\n", upi->id);
+			return -1;
+		}
+
+		if (val[0] == '_')
+			upi->input.num_keys--;
+	}
+
+	ulogd_log(ULOGD_DEBUG, "%s: using %d/%d columns of table\n",
+			  upi->id, upi->input.num_keys, PQntuples(pi->pgres));
 
 	upi->input.keys = ulogd_alloc_keyset(upi->input.num_keys, 0);
 	if (upi->input.keys == NULL) {
@@ -202,13 +217,22 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 		return -ENOMEM;
 	}
 
-	for (i = 0; i < PQntuples(pi->pgres); i++) {
-		/* replace all underscores with dots */
-		strncpy(upi->input.keys[i].name, PQgetvalue(pi->pgres, i, 0),
+	/* skip columns with leading underscore */
+	for (i = 0, k = 0; i < upi->input.num_keys; i++) {
+		strncpy(upi->input.keys[k].name, PQgetvalue(pi->pgres, i, 0),
 				ULOGD_MAX_KEYLEN);
-		strntr(upi->input.keys[i].name, '_', '.');
 
-		pr_fn_debug("field '%s' found: ", upi->input.keys[i].name);
+		if (upi->input.keys[k].name[0] == '_') {
+			pr_fn_debug("ignoring column '%s'\n", upi->input.keys[k].name);
+			continue;
+		}
+
+		/* replace all underscores with dots */
+		strntr(upi->input.keys[k].name, '_', '.');
+
+		pr_fn_debug("field '%s' found: ", upi->input.keys[k].name);
+
+		k++;
 	}
 
 	PQclear(pi->pgres);
@@ -216,6 +240,17 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
+/**
+ * The prepared insert statement has the form
+ *
+ *   INSERT INTO mytable (col_1,col_2,...) VALUES ($1,$2,...);
+ *
+ * where $1,$2,... are the placeholders for the actual values which
+ * are inserted.
+ *
+ * Columns with leading underscore are skipped, which is currently used
+ * to ignore AUTOFILL columns at INSERT time.
+ */
 static int
 pgsql_prepare(struct ulogd_pluginstance *pi)
 {
@@ -231,18 +266,24 @@ pgsql_prepare(struct ulogd_pluginstance *pi)
 		return -1;
 
 	if (di->schema != NULL)
-		pch += sprintf(pch, "INSERT INTO %s.%s VALUES (",
+		pch += sprintf(pch, "INSERT INTO %s.%s (",
 				di->schema, table);
 	else
-		pch += sprintf(pch, "INSERT INTO %s VALUES (", table);
+		pch += sprintf(pch, "INSERT INTO %s (", table);
 
-	/* the prepared insert statement has the form
-	 *
-	 *   INSERT INTO mytable VALUES ($1,$2,...);
-	 *
-	 * where $1,$2,... are the placeholders for the actual values which
-	 * are inserted.
-	 */
+	for (i = 0; i < pi->input.num_keys; i++) {
+		char name[ULOGD_MAX_KEYLEN + 1];
+
+		strncpy(name, pi->input.keys[i].name, ULOGD_MAX_KEYLEN);
+		strntr(name, '.', '_');
+
+		pch += sprintf(pch, "%s", name);
+		if (i + 1 < pi->input.num_keys)
+			*pch++ = ',';
+	}
+
+	pch += sprintf(pch, ") VALUES (");
+
 	for (i = 0; i < pi->input.num_keys; i++) {
 		pch += sprintf(pch, "$%d", i + 1);
 		if (i + 1 < pi->input.num_keys)
