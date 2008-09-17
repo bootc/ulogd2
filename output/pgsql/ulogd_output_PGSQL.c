@@ -79,12 +79,15 @@ __pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
 
 	if (priv->pgres == NULL) {
 		ulogd_log(ULOGD_FATAL, "%s: command failed\n", pi->id);
-		abort();
+		return -1;
 	}
 
 	__pgret = PQresultStatus(priv->pgres);
 	if (pgret != NULL)
 		*pgret = __pgret;
+
+	if (__pgret != PGRES_COMMAND_OK && __pgret != PGRES_TUPLES_OK)
+		ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
 
 	switch (__pgret) {
 	case PGRES_COMMAND_OK:
@@ -97,14 +100,12 @@ __pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
 	case PGRES_NONFATAL_ERROR:
 	case PGRES_BAD_RESPONSE:
 	case PGRES_FATAL_ERROR:
-		ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
 		PQclear(priv->pgres);
 		return -1;
 
 	case PGRES_COPY_OUT:
 	case PGRES_COPY_IN:
 	default:
-		ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
 		PQclear(priv->pgres);
 		abort();					/* unsupported */
 	}
