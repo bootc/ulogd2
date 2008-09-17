@@ -34,8 +34,7 @@
 #include <ulogd/conffile.h>
 
 #ifndef HOST_NAME_MAX
-#warning this libc does not define HOST_NAME_MAX
-#define HOST_NAME_MAX	(255+1)
+#define HOST_NAME_MAX	256
 #endif
 
 #ifndef ULOGD_LOGEMU_DEFAULT
@@ -102,7 +101,7 @@ static int _output_logemu(struct ulogd_pluginstance *upi)
 			*tmp = '\0';
 
 		fprintf(li->of, "%.15s %s %s", timestr, hostname,
-				res[0].u.source->u.value.ptr);
+				res[0].u.source->u.value.str);
 
 		if (upi->config_kset->ces[1].u.value)
 			fflush(li->of);
