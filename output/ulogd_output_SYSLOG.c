@@ -77,7 +77,7 @@ static int _output_syslog(struct ulogd_pluginstance *upi)
 
 	if (res[0].u.source->flags & ULOGD_RETF_VALID)
 		syslog(li->syslog_level | li->syslog_facility, "%s",
-				res[0].u.source->u.value.ptr);
+				res[0].u.source->u.value.str);
 
 	return 0;
 }
