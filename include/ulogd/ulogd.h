@@ -152,19 +152,21 @@ struct ulogd_plugin {
 	struct ulogd_keyset input;
 	struct ulogd_keyset output;
 
-	/* function to call for each packet */
-	int (*interp)(struct ulogd_pluginstance *instance);
+	/* called per packet, may return ULOGD_IRET_AGAIN */
+	int (* interp)(struct ulogd_pluginstance *pi);
 
-	int (*configure)(struct ulogd_pluginstance *instance,
-			 struct ulogd_pluginstance_stack *stack);
+	/* any return value <0 stops daemon */
+	int (* configure)(struct ulogd_pluginstance *pi,
+					  struct ulogd_pluginstance_stack *stack);
 
-	/* function to construct a new pluginstance */
-	int (*start)(struct ulogd_pluginstance *pi);
+	/* may return ULOGD_IRET_AGAIN */
+	int (* start)(struct ulogd_pluginstance *pi);
+
 	/* function to destruct an existing pluginstance */
-	int (*stop)(struct ulogd_pluginstance *pi);
+	int (* stop)(struct ulogd_pluginstance *pi);
 
-	/* function to receive a signal */
-	void (*signal)(struct ulogd_pluginstance *pi, int signal);
+	/* function to receive a signal (only if in state PsStarted) */
+	void (* signal)(struct ulogd_pluginstance *pi, int signal);
 
 	/* configuration parameters */
 	struct config_keyset *config_kset;
@@ -175,12 +177,16 @@ struct ulogd_plugin {
 
 #define ULOGD_IRET_ERR		-1
 #define ULOGD_IRET_STOP		-2
+#define ULOGD_IRET_AGAIN    -3	/* try again later */
 #define ULOGD_IRET_OK		0
 
 /* an instance of a plugin, element in a stack */
 struct ulogd_pluginstance {
 	/* local list of plugins in this stack */
 	struct llist_head list;
+	/* state dependant usage (e. g. restart handling) */
+	struct llist_head state_link;
+	unsigned state;
 	/* plugin */
 	struct ulogd_plugin *plugin;
 	/* stack that we're part of */

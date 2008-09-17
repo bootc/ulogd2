@@ -20,12 +20,30 @@
 #ifndef PLUGIN_H
 #define PLUGIN_H
 
+/**
+ * Plugin instance state handling
+ *
+ * PsInit		Plugin initialized.
+ * PsConfigured	Plugin configured, if this step fails the daemon is stopped.
+ * PsStarting	Plugin is in the process of starting.  If the start() fails
+ *				there is a chance to restart if start() returns
+ *				%ULOGD_IRET_AGAIN.
+ * PsStart		Plugin up and running.
+ */
+enum UpiState {
+	PsInit = 0,
+	PsConfigured,
+	PsStarting,
+	PsStarted,
+};
+
 int ulogd_upi_configure(struct ulogd_pluginstance *,
 						struct ulogd_pluginstance_stack *);
 int ulogd_upi_start(struct ulogd_pluginstance *);
 int ulogd_upi_stop(struct ulogd_pluginstance *);
 int ulogd_upi_interp(struct ulogd_pluginstance *);
 void ulogd_upi_signal(struct ulogd_pluginstance *, int);
+void ulogd_upi_set_state(struct ulogd_pluginstance *, enum UpiState);
 
 /* set key values */
 void key_i8(struct ulogd_key *, int);

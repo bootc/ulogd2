@@ -64,6 +64,7 @@
 
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <ulogd/conffile.h>
 #include <ulogd/signal.h>
 #include <ulogd/ifi.h>
@@ -441,6 +442,7 @@ pluginstance_alloc_init(struct ulogd_plugin *pl, char *pi_id,
 	/* initialize */
 	memset(pi, 0, size);
 	INIT_LLIST_HEAD(&pi->list);
+	INIT_LLIST_HEAD(&pi->state_link);
 	pi->plugin = pl;
 	pi->stack = stack;
 	memcpy(pi->id, pi_id, sizeof(pi->id));
@@ -479,6 +481,8 @@ pluginstance_alloc_init(struct ulogd_plugin *pl, char *pi_id,
 		memcpy(pi->output.keys, pl->output.keys, 
 		       pl->output.num_keys * sizeof(struct ulogd_key));
 	}
+
+	ulogd_upi_set_state(pi, PsInit);
 
 	return pi;
 }
@@ -624,8 +628,10 @@ static int create_stack_start_instances(struct ulogd_pluginstance_stack *stack)
 
 	/* start from input to output plugin */
 	llist_for_each_entry(pi, &stack->list, list) {
-		if ((ret = ulogd_upi_start(pi)) < 0) {
-			ulogd_log(ULOGD_ERROR, "error during start of `%s'\n", pi->id);
+		ret = ulogd_upi_start(pi);
+		if (ret < 0 && ret != ULOGD_IRET_AGAIN) {
+			ulogd_log(ULOGD_ERROR, "%s: start failed\n", pi->id);
+
 			return ret;
 		}
 	}
@@ -870,7 +876,8 @@ _do_reconf(struct ulogd_pluginstance *pi,
 		break;
 
 	case START:
-		ret = ulogd_upi_start(pi);
+		if ((ret = ulogd_upi_start(pi)) == ULOGD_IRET_AGAIN)
+			ret = 0;
 		break;
 
 	default:

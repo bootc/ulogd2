@@ -20,44 +20,207 @@
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
 
+/**
+ * The notion P>start means "call function 'start' of plugin P".
+ *
+ * STATE DIAGRAM
+ *
+ *      ^        PsInit
+ *      |             |
+ *      |             | configure()
+ *      | fail        <
+ *      |------  PsConfigured
+ *      |             |
+ *      |             | start()
+ *      |             <
+ *      |          PsStarting <---
+ *      |             |          |  %ULOGD_IRET_AGAIN
+ *      |             | P>start --
+ *      | fail        <
+ *      ---------  PsStarted
+ *                    |
+ *                    | close()
+ *                    |
+ *           ^---------
+ *              to PsInit
+ *
+ * TRANSITIONS
+ *
+ *   T: <state>
+ *   T_fail: <state_fail>
+ *   A: <action>
+ *
+ * Conceptually <state> is happening after successfully doing
+ * <action>. <state_fail> is reached if an error occurs.
+ *
+ *  I       the plugin instance
+ *  P       the plugin
+ *
+ *
+ *              PsInit          PsConfigured    PsStarting		PsStarted
+ *
+ * configure()  A: P>config     ---             ---            ---
+ *              T: PsConfigured
+ *
+ * start()      ---             T: PsStarting   ---            ---
+ *
+ *              ---             ---             A: P>start     ---
+ *                                              T: PsStarted
+ *                                              T_fail: PsInit
+                                                  or PsStarting
+ *
+ * I>interp     ---             ---             ---            A: P>interp
+ *                                                             T_fail: PsInit
+ */
+static void restart_timer_cb(struct ulogd_timer *);
+
+static LLIST_HEAD(restart_list);
+static struct ulogd_timer restart_timer = {
+	.cb = restart_timer_cb,
+	.ival = 5 SEC,
+	.flags = TIMER_F_PERIODIC,
+};
+
+static void
+restart_timer_cb(struct ulogd_timer *t)
+{
+	struct llist_head *curr, *tmp;
+
+	pr_fn_debug("timer=%p\n", t);
+
+	llist_for_each_safe(curr, tmp, &restart_list) {
+		struct ulogd_pluginstance *pi
+			= llist_entry(curr, struct ulogd_pluginstance, state_link);
+
+		if (ulogd_upi_start(pi) == 0) {
+			llist_del(&pi->state_link);
+
+			if (llist_empty(&restart_list))
+				ulogd_unregister_timer(&restart_timer);
+		}
+	}
+}
+
+/**
+ * Start/restart a plugin.
+ */
+int
+ulogd_upi_restart(struct ulogd_pluginstance *pi)
+{
+	llist_add_tail(&pi->state_link, &restart_list);
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	if (restart_timer.expires == 0) {
+		ulogd_register_timer(&restart_timer);
+	}
+
+	return 0;
+}
+
+/**
+ * Configure a plugin.
+ *
+ * This is the static initialization part.  If it fails the daemon is
+ * stopped.
+ */
 int
 ulogd_upi_configure(struct ulogd_pluginstance *pi,
 					struct ulogd_pluginstance_stack *stack)
 {
-	if (pi->plugin->configure == NULL)
-		return 0;
+	assert(pi->state == PsInit);
 
-	return pi->plugin->configure(pi, stack);
+	if (pi->plugin->configure == NULL)
+		goto done;
+
+	if (pi->plugin->configure(pi, stack) < 0)
+		return -1;
+
+done:
+	ulogd_upi_set_state(pi, PsConfigured);
+
+	return 0;
 }
 
+/**
+ * Start a plugin instance.
+ *
+ * An instance might return %ULOGD_IRET_AGAIN, in which case a restart
+ * is triggerd later.
+ */
 int
 ulogd_upi_start(struct ulogd_pluginstance *pi)
 {
-	if (pi->plugin->start == NULL)
-		return 0;
+	int ret;
 
-	return pi->plugin->start(pi);
+	assert(pi->state & (PsConfigured | PsStarting));
+
+	if (pi->plugin->start == NULL)
+		goto done;
+
+	ulogd_upi_set_state(pi, PsStarting);
+
+	if ((ret = pi->plugin->start(pi)) < 0) {
+		if (ret == ULOGD_IRET_AGAIN)
+			ulogd_upi_restart(pi);
+
+		return ret;
+	}
+
+done:
+	ulogd_upi_set_state(pi, PsStarted);
+
+	return 0;
 }
 
 int
 ulogd_upi_stop(struct ulogd_pluginstance *pi)
 {
-	return pi->plugin->stop(pi);
+	assert(pi->state == PsStarted);
+
+	/* there may be a problem of this takes too long.  So maybe
+	   put ulogd out of GS_RUNNING if this happens? */
+	pi->plugin->stop(pi);
+
+	ulogd_upi_set_state(pi, PsInit);
+
+	return 0;
 }
 
 int
 ulogd_upi_interp(struct ulogd_pluginstance *pi)
 {
-	return pi->plugin->interp(pi);
+	int ret;
+
+	if (pi->state != PsStarted)
+		return 0;
+
+	if ((ret = pi->plugin->interp(pi)) < 0) {
+		if (ret == ULOGD_IRET_AGAIN) {
+			ulogd_upi_restart(pi);
+			return 0;
+		}
+	}
+
+	return 0;
 }
 
 void
 ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
 {
-	if (pi->plugin->signal == NULL)
+	if (pi->plugin->signal == NULL || pi->state != PsStarted)
 		return;
 
 	pi->plugin->signal(pi, signo);
+}
+
+void
+ulogd_upi_set_state(struct ulogd_pluginstance *pi, enum UpiState state)
+{
+	if (pi->state == state)
+		return;
+
+	pi->state = state;
 }
 
 /* key API */

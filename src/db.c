@@ -164,11 +164,13 @@ db_timer_cb(struct ulogd_timer *t)
 
 	pr_fn_debug("timer=%p\n", t);
 
-	if (di->num_rows == 0)
-		return;
+	if (pi->state == PsStarted) {
+		if (di->num_rows == 0)
+			return;
 
-	if ((rows = __db_commit(pi)) < 0)
-		return;
+		if ((rows = __db_commit(pi)) < 0)
+			return;
+	}
 }
 
 /* this is a wrapper that just calls the current real interp function */
@@ -334,12 +336,12 @@ int
 ulogd_db_start(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
+	int ret;
 
-	pr_debug("%s: upi=%p\n", __func__, upi);
-	ulogd_log(ULOGD_NOTICE, "starting\n");
+	pr_fn_debug("pi=%p\n", upi);
 
-	if (di->driver->open_db(upi) < 0)
-		return -1;
+	if ((ret = di->driver->open_db(upi)) < 0)
+		return ret;
 
 	if (db_has_prepare(di)) {
 		di->driver->prepare(upi); /* TODO check retval */
