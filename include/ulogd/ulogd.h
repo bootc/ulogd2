@@ -136,6 +136,7 @@ struct ulogd_pluginstance;
 
 /* plugin flags */
 #define ULOGD_PF_RECONF			0x00000001
+#define ULOGD_PF_FSM			0x00000002 /* stack FSM running */
 
 struct ulogd_plugin {
 	/* global list of plugins */
@@ -155,7 +156,7 @@ struct ulogd_plugin {
 	/* called per packet, may return ULOGD_IRET_AGAIN */
 	int (* interp)(struct ulogd_pluginstance *pi);
 
-	/* any return value <0 stops daemon */
+	/* may return ULOGD_IRET_AGAIN */
 	int (* configure)(struct ulogd_pluginstance *pi,
 					  struct ulogd_pluginstance_stack *stack);
 
@@ -180,13 +181,32 @@ struct ulogd_plugin {
 #define ULOGD_IRET_AGAIN    -3	/* try again later */
 #define ULOGD_IRET_OK		0
 
+/**
+ * Plugin instance state handling
+ *
+ * PsInit		Plugin initialized.
+ * PsConfigured	Plugin configured, if this step fails the daemon is stopped.
+ * PsStarting	Plugin is in the process of starting.  If the start() fails
+ *				there is a chance to restart if start() returns
+ *				%ULOGD_IRET_AGAIN.
+ * PsStart		Plugin up and running.
+ */
+enum UpiState {
+	PsInit = 0,
+	PsConfiguring,
+	PsConfigured,
+	PsStarting,
+	PsStarted,
+	__PsMax = PsStarted
+};
+
 /* an instance of a plugin, element in a stack */
 struct ulogd_pluginstance {
 	/* local list of plugins in this stack */
 	struct llist_head list;
 	/* state dependant usage (e. g. restart handling) */
 	struct llist_head state_link;
-	unsigned state;
+	enum UpiState state;
 	/* plugin */
 	struct ulogd_plugin *plugin;
 	/* stack that we're part of */
@@ -217,8 +237,11 @@ struct ulogd_pluginstance_stack {
 	struct llist_head stack_list;
 	/* list of plugins in this stack */
 	struct llist_head list;
-	char *name;
 	unsigned flags;
+	enum UpiState state;
+	/* for state handling */
+	struct llist_head state_link;
+	char *name;
 };
 
 /***********************************************************************

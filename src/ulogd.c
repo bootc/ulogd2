@@ -423,8 +423,10 @@ pluginstance_alloc_init(struct ulogd_plugin *pl, char *pi_id,
 
 	/* initialize */
 	memset(pi, 0, size);
+
 	INIT_LLIST_HEAD(&pi->list);
 	INIT_LLIST_HEAD(&pi->state_link);
+
 	pi->plugin = pl;
 	pi->stack = stack;
 	memcpy(pi->id, pi_id, sizeof(pi->id));
@@ -509,11 +511,13 @@ find_okey_in_stack(char *name,
 }
 
 /* resolve key connections from bottom to top of stack */
-static int
-create_stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
+int
+stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
 {
 	struct ulogd_pluginstance *pi_cur;
-	int ret, i = 0;
+	int i = 0;
+
+	assert(stack->state == PsConfigured);
 
 	/* PASS 2: */
 	ulogd_log(ULOGD_DEBUG, "connecting input/output keys of stack:\n");
@@ -525,13 +529,6 @@ create_stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
 		i++;
 		ulogd_log(ULOGD_DEBUG, "traversing plugin `%s'\n", 
 			  pi_cur->plugin->name);
-
-		/* call plugin to tell us which keys it requires in
-		 * given configuration */
-		if ((ret = ulogd_upi_configure(pi_cur, stack)) < 0) {
-			ulogd_log(ULOGD_ERROR, "%s: configuration error\n", pi_cur->id);
-			return ret;
-		}
 
 		if (i == 1) {
 			/* first round: output plugin */
@@ -603,26 +600,22 @@ create_stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
 	return 0;
 }
 
-static int create_stack_start_instances(struct ulogd_pluginstance_stack *stack)
+static int
+ulogd_stack_set_state(struct ulogd_pluginstance_stack *stack,
+					  enum UpiState state)
 {
-	int ret;
-	struct ulogd_pluginstance *pi;
+	if (stack->state == state)
+		return 0;
 
-	/* start from input to output plugin */
-	llist_for_each_entry(pi, &stack->list, list) {
-		ret = ulogd_upi_start(pi);
-		if (ret < 0 && ret != ULOGD_IRET_AGAIN) {
-			ulogd_log(ULOGD_ERROR, "%s: start failed\n", pi->id);
+	/* TODO check plugin state */
 
-			return ret;
-		}
-	}
+	stack->state = state;
 
 	return 0;
 }
 
-/* create a new stack of plugins */
-static int create_stack(const char *option)
+static int
+create_stack(const char *option)
 {
 	struct ulogd_pluginstance_stack *stack;
 	char *buf = strdup(option);
@@ -699,23 +692,16 @@ static int create_stack(const char *option)
 			stack->flags &= ~ULOGD_SF_RECONF;
 	}
 
-	/* PASS 2: resolve key connections from bottom to top of stack */
-	ret = create_stack_resolve_keys(stack);
-	if (ret < 0) {
-		ulogd_log(ULOGD_DEBUG, "destroying stack\n");
-		goto out;
-	}
+	ulogd_stack_set_state(stack, PsInit);
 
-	/* PASS 3: start each plugin in stack */
-	ret = create_stack_start_instances(stack);
-	if (ret < 0) {
-		ulogd_log(ULOGD_DEBUG, "destroying stack\n");
+	if (stack_fsm(stack) < 0)
 		goto out;
-	}
 
 	/* add head of pluginstance stack to list of stacks */
 	llist_add(&stack->stack_list, &ulogd_pi_stacks);
+
 	free(buf);
+
 	return 0;
 
 out:
@@ -725,7 +711,7 @@ out_stack:
 out_buf:
 	return ret;
 }
-	
+
 static int logfile_open(const char *name)
 {
 	if (name)
@@ -894,7 +880,7 @@ reconfigure_plugins(void)
 		if ((stack->flags & ULOGD_SF_RECONF) == 0)
 			continue;
 
-		if (create_stack_resolve_keys(stack) < 0)
+		if (stack_resolve_keys(stack) < 0)
 			abort();
 	}
 
@@ -1032,6 +1018,7 @@ main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 
 	ulogd_timer_init();
+	ulogd_plugin_init();
 
 	if (config_register_file(ulogd_configfile)) {
 		ulogd_log(ULOGD_FATAL, "error registering configfile \"%s\"\n",
@@ -1112,3 +1099,4 @@ main(int argc, char* argv[])
 
 	return 0;
 }
+

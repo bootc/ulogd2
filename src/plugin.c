@@ -20,23 +20,31 @@
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
 
+static struct ulogd_timer stack_fsm_timer;
+static LLIST_HEAD(stack_fsm_list);
+
 /**
+ * State handling
+ *
  * The notion P>start means "call function 'start' of plugin P".
  *
  * STATE DIAGRAM
  *
  *      ^        PsInit
  *      |             |
- *      |             | configure()
- *      | fail        <
- *      |------  PsConfigured
  *      |             |
- *      |             | start()
+ *      |             <
+ *      |        PsConfiguring <------
+ *      | fail        |              | %ULOGD_IRET_AGAIN
+ *      |<----------- | configure() --
+ *      |             <
+ *      |        PsConfigured
+ *      |             |
  *      |             <
  *      |          PsStarting <---
- *      |             |          |  %ULOGD_IRET_AGAIN
- *      |             | P>start --
- *      | fail        <
+ *      |  fail       |          |  %ULOGD_IRET_AGAIN
+ *      |<----------- | start() --
+ *      |             <
  *      ---------  PsStarted
  *                    |
  *                    | close()
@@ -50,8 +58,8 @@
  *   T_fail: <state_fail>
  *   A: <action>
  *
- * Conceptually <state> is happening after successfully doing
- * <action>. <state_fail> is reached if an error occurs.
+ * Conceptually <state> is reached after successfully doing
+ * <action>.  <state_fail> is reached if an error occurs.
  *
  *  I       the plugin instance
  *  P       the plugin
@@ -72,69 +80,168 @@
  * I>interp     ---             ---             ---            A: P>interp
  *                                                             T_fail: PsInit
  */
-static void restart_timer_cb(struct ulogd_timer *);
-
-static LLIST_HEAD(restart_list);
-static struct ulogd_timer restart_timer = {
-	.cb = restart_timer_cb,
-	.ival = 5 SEC,
-	.flags = TIMER_F_PERIODIC,
+static const enum UpiState next_state[__PsMax + 1] = {
+	[PsInit] = PsConfigured,
+	[PsConfiguring] = PsConfigured,
+	[PsConfigured] = PsStarted,
+	[PsStarting] = PsStarted,
+	[PsStarted] = PsInit,
 };
 
-static void
-restart_timer_cb(struct ulogd_timer *t)
+/**
+ * The actual finite state machine.
+ */
+static int
+stack_fsm_move(struct ulogd_pluginstance_stack *stack)
 {
-	struct llist_head *curr, *tmp;
+	struct ulogd_pluginstance *pi;
+	int ret;
 
-	pr_fn_debug("timer=%p\n", t);
+	llist_for_each_entry_reverse(pi, &stack->list, list) {
+		if (pi->state == next_state[stack->state])
+			continue;
 
-	llist_for_each_safe(curr, tmp, &restart_list) {
-		struct ulogd_pluginstance *pi
-			= llist_entry(curr, struct ulogd_pluginstance, state_link);
+		pr_fn_debug("stack=%p pi='%s'\n", stack, pi->id);
 
-		if (ulogd_upi_start(pi) == 0) {
-			llist_del(&pi->state_link);
+		switch (pi->state) {
+		case PsInit:
+		case PsConfiguring:
+			if ((ret = ulogd_upi_configure(pi, stack)) < 0) {
+				if (ret != ULOGD_IRET_AGAIN)
+					goto err;
+			}
+			break;
 
-			if (llist_empty(&restart_list))
-				ulogd_unregister_timer(&restart_timer);
-		}
-	}
+		case PsConfigured:
+		case PsStarting:
+			if ((ret = ulogd_upi_start(pi)) < 0) {
+				if (ret != ULOGD_IRET_AGAIN)
+					goto err;
+			}
+			break;
+
+		case PsStarted:
+			break;
+        }
+    }
+
+	return 0;
+
+err:
+	return -1;
 }
 
 /**
- * Start/restart a plugin.
+ * Add to finite state machinery, start timer if necessary.
  */
 int
-ulogd_upi_restart(struct ulogd_pluginstance *pi)
+stack_fsm_add(struct ulogd_pluginstance_stack *stack)
 {
-	llist_add_tail(&pi->state_link, &restart_list);
+	bool need_start = !!llist_empty(&stack_fsm_list);
 
-	pr_fn_debug("pi=%p\n", pi);
+	if (stack->flags & ULOGD_PF_FSM)
+		return 0;
 
-	if (restart_timer.expires == 0) {
-		ulogd_register_timer(&restart_timer);
+	pr_fn_debug("stack=%p\n", stack);
+
+	llist_add_tail(&stack->state_link, &stack_fsm_list);
+
+	stack->flags |= ULOGD_PF_FSM;
+
+	if (!need_start)
+		return 0;
+
+	if (ulogd_register_timer(&stack_fsm_timer) < 0)
+        return -1;
+
+    return 0;
+}
+
+/**
+ * Finite state machine loop.  Continue until stack reaches PsStarted
+ * or until there is no progress.
+ *
+ * It is called after a stack is created initially and possibly later
+ * from the periodic FSM timer.
+ */
+int
+stack_fsm(struct ulogd_pluginstance_stack *stack)
+{
+	for (;;) {
+		enum UpiState oldstate = stack->state;
+
+		if (stack_fsm_move(stack) < 0)
+			break;
+
+		if (stack->state == oldstate)
+			break;
+
+		if (stack->state == PsConfigured) {
+			if (stack_resolve_keys(stack) < 0)
+				return -1;
+		} else if (stack->state == PsStarted)
+			break;
 	}
 
 	return 0;
 }
 
 /**
+ * Periodic timer for stack state management, removes itself when
+ * done.
+ */
+static void
+stack_fsm_timer_cb(struct ulogd_timer *t)
+{
+  struct ulogd_pluginstance_stack *stack, *tmp;
+
+  pr_fn_debug("timer=%p\n", t);
+
+  llist_for_each_entry_safe(stack, tmp, &stack_fsm_list, state_link) {
+	  if (stack_fsm(stack) < 0) {
+		  ulogd_log(ULOGD_ERROR, "%s: error\n", __func__);
+		  return;
+	  }
+
+	  if (stack->state == PsStarted) {
+		  llist_del(&stack->state_link);
+		  stack->flags &= ~ULOGD_PF_FSM;
+
+		  if (llist_empty(&stack_fsm_list))
+			  ulogd_unregister_timer(&stack_fsm_timer);
+      }
+  }
+}
+
+/**
  * Configure a plugin.
  *
- * This is the static initialization part.  If it fails the daemon is
- * stopped.
+ * An instance might return %ULOGD_IRET_AGAIN, in which case a configure
+ * is retried later.
  */
 int
 ulogd_upi_configure(struct ulogd_pluginstance *pi,
 					struct ulogd_pluginstance_stack *stack)
 {
-	assert(pi->state == PsInit);
+	int ret;
+
+	assert(pi->state == PsInit || pi->state == PsConfiguring);
+
+	ulogd_log(ULOGD_DEBUG, "configuring '%s'\n", pi->id);
 
 	if (pi->plugin->configure == NULL)
 		goto done;
 
-	if (pi->plugin->configure(pi, stack) < 0)
-		return -1;
+	ulogd_upi_set_state(pi, PsConfiguring);
+
+	if ((ret = pi->plugin->configure(pi, stack)) < 0) {
+		if (ret == ULOGD_IRET_AGAIN)
+			stack_fsm_add(pi->stack);
+
+		ulogd_upi_reset_cfg(pi);
+
+		return ret;
+	}
 
 done:
 	ulogd_upi_set_state(pi, PsConfigured);
@@ -145,15 +252,17 @@ done:
 /**
  * Start a plugin instance.
  *
- * An instance might return %ULOGD_IRET_AGAIN, in which case a restart
- * is triggerd later.
+ * An instance might return %ULOGD_IRET_AGAIN, in which case a start
+ * is retried later.
  */
 int
 ulogd_upi_start(struct ulogd_pluginstance *pi)
 {
 	int ret;
 
-	assert(pi->state & (PsConfigured | PsStarting));
+	assert(pi->state == PsConfigured || pi->state == PsStarting);
+
+	ulogd_log(ULOGD_DEBUG, "starting '%s'\n", pi->id);
 
 	if (pi->plugin->start == NULL)
 		goto done;
@@ -162,7 +271,7 @@ ulogd_upi_start(struct ulogd_pluginstance *pi)
 
 	if ((ret = pi->plugin->start(pi)) < 0) {
 		if (ret == ULOGD_IRET_AGAIN)
-			ulogd_upi_restart(pi);
+			stack_fsm_add(pi->stack);
 
 		return ret;
 	}
@@ -178,10 +287,14 @@ ulogd_upi_stop(struct ulogd_pluginstance *pi)
 {
 	assert(pi->state == PsStarted);
 
-	/* there may be a problem of this takes too long.  So maybe
-	   put ulogd out of GS_RUNNING if this happens? */
+	ulogd_log(ULOGD_DEBUG, "stopping '%s'\n", pi->id);
+
+	if (pi->plugin->stop == NULL)
+		goto done;
+
 	pi->plugin->stop(pi);
 
+done:
 	ulogd_upi_set_state(pi, PsInit);
 
 	return 0;
@@ -197,7 +310,9 @@ ulogd_upi_interp(struct ulogd_pluginstance *pi)
 
 	if ((ret = pi->plugin->interp(pi)) < 0) {
 		if (ret == ULOGD_IRET_AGAIN) {
-			ulogd_upi_restart(pi);
+			ulogd_upi_set_state(pi, PsConfigured);
+			stack_fsm_add(pi->stack);
+
 			return 0;
 		}
 	}
@@ -217,10 +332,30 @@ ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
 void
 ulogd_upi_set_state(struct ulogd_pluginstance *pi, enum UpiState state)
 {
+	struct ulogd_pluginstance *curr;
+	struct ulogd_pluginstance_stack *stack = pi->stack;
+#ifdef DEBUG
+	enum UpiState old_sstate;
+#endif /* DEBUG */
+
 	if (pi->state == state)
 		return;
 
-	pi->state = state;
+#ifdef DEBUG
+	old_sstate = stack->state;
+#endif /* DEBUG */
+
+	stack->state = pi->state = state;
+
+	llist_for_each_entry_reverse(curr, &stack->list, list) {
+		if (curr->state < stack->state)
+			stack->state = curr->state;
+	}
+
+#ifdef DEBUG
+	if (stack->state != old_sstate)
+		pr_fn_debug("%d -> %d\n", old_sstate, stack->state);
+#endif /* DEBUG */
 }
 
 /**
@@ -474,3 +609,14 @@ ulogd_key_find(const struct ulogd_keyset *set, const char *name)
 	return NULL;
 }
 
+int
+ulogd_plugin_init(void)
+{
+	INIT_LLIST_HEAD(&stack_fsm_list);
+
+	stack_fsm_timer.cb = &stack_fsm_timer_cb;
+	stack_fsm_timer.ival = 5 SEC;
+	stack_fsm_timer.flags = TIMER_F_PERIODIC;
+
+	return 0;
+}
