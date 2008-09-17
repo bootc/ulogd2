@@ -20,6 +20,33 @@
 #ifndef PLUGIN_H
 #define PLUGIN_H
 
+/* set key values */
+void key_i8(struct ulogd_key *, int);
+void key_i16(struct ulogd_key *, int);
+void key_i32(struct ulogd_key *, int);
+void key_u8(struct ulogd_key *, unsigned);
+void key_u16(struct ulogd_key *, unsigned);
+void key_u32(struct ulogd_key *, unsigned);
+void key_bool(struct ulogd_key *, bool);
+void key_ptr(struct ulogd_key *, void *);
+void key_str(struct ulogd_key *, char *);
+
+/* get key values */
+int key_get_i8(const struct ulogd_key *);
+int key_get_i16(const struct ulogd_key *);
+int key_get_i32(const struct ulogd_key *);
+unsigned key_get_u8(const struct ulogd_key *);
+unsigned key_get_u16(const struct ulogd_key *);
+unsigned key_get_u32(const struct ulogd_key *);
+bool key_get_bool(const struct ulogd_key *);
+void *key_get_ptr(const struct ulogd_key *);
+char *key_get_str(const struct ulogd_key *);
+
+static inline bool
+key_valid(const struct ulogd_key *key)
+{
+	return key != NULL && (key->flags & ULOGD_RETF_VALID);
+}
 
 static inline void *
 upi_key_priv(const struct ulogd_key *key)

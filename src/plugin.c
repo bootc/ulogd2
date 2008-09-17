@@ -21,6 +21,191 @@
 #include <ulogd/plugin.h>
 
 
+static void
+__check_get(const struct ulogd_key *key, unsigned type)
+{
+#ifdef DEBUG
+	if (key == NULL || key->u.source == NULL)
+		abort();
+
+	if ((key->u.source->type & type) == 0) {
+		pr_fn_debug("%s: type check failed (%d <-> %d)\n",
+					key->name, key->type, type);
+		abort();
+	}
+#endif /* DEBUG */
+}
+
+static void
+__check(const struct ulogd_key *key, unsigned type)
+{
+#ifdef DEBUG
+	if (key == NULL)
+		abort();
+
+	if ((key->type & type) == 0) {
+		pr_fn_debug("%s: type check failed (%d <-> %d)\n",
+					key->name, key->type, type);
+		abort();
+	}
+#endif /* DEBUG */
+}
+
+void
+key_i8(struct ulogd_key *key, int v)
+{
+	__check(key, ULOGD_RET_INT8);
+
+	key->u.value.i8 = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_i16(struct ulogd_key *key, int v)
+{
+	__check(key, ULOGD_RET_INT16);
+
+	key->u.value.i16 = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_i32(struct ulogd_key *key, int v)
+{
+	__check(key, ULOGD_RET_INT32);
+
+	key->u.value.i32 = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_u8(struct ulogd_key *key, unsigned v)
+{
+	__check(key, ULOGD_RET_UINT8);
+
+	key->u.value.ui8 = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_u16(struct ulogd_key *key, unsigned v)
+{
+	__check(key, ULOGD_RET_UINT16);
+
+	key->u.value.ui16 = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_u32(struct ulogd_key *key, unsigned v)
+{
+	__check(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
+
+	key->u.value.ui32 = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_bool(struct ulogd_key *key, bool v)
+{
+	__check(key, ULOGD_RET_BOOL);
+
+	key->u.value.b = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_ptr(struct ulogd_key *key, void *ptr)
+{
+	__check(key, ULOGD_RET_RAW);
+
+	key->u.value.ptr = ptr;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_str(struct ulogd_key *key, char *str)
+{
+	__check(key, ULOGD_RET_STRING);
+
+	key->u.value.str = str;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+int
+key_get_i8(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_INT8);
+
+	return key->u.source->u.value.i8;
+}
+
+int
+key_get_i16(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_INT16);
+
+	return key->u.source->u.value.i16;
+}
+
+int
+key_get_i32(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_INT32);
+
+	return key->u.source->u.value.i32;
+}
+
+unsigned
+key_get_u8(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_UINT8);
+
+	return key->u.source->u.value.ui8;
+}
+
+unsigned
+key_get_u16(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_UINT16);
+
+	return key->u.source->u.value.ui16;
+}
+
+unsigned
+key_get_u32(const struct ulogd_key *key)
+{
+	/* currently, IP addresses are encoded as u32.  A strong typesafety
+	   might require to add key_get_ipaddr() as well. */
+	__check_get(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
+
+	return key->u.source->u.value.ui32;
+}
+
+bool
+key_get_bool(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_BOOL);
+
+	return !!key->u.source->u.value.b;
+}
+
+void *
+key_get_ptr(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_RAW);
+
+	return key->u.source->u.value.ptr;
+}
+
+char *
+key_get_str(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_STRING);
+
+	return key->u.source->u.value.str;
+}
+
 /**
  * Allocate a keyset for use with ulogd_pluginstance.  The keys are
  * optionally setup with private data.
