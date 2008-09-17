@@ -544,9 +544,8 @@ create_stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
 			int ret = pi_cur->plugin->configure(pi_cur, 
 							    stack);
 			if (ret < 0) {
-				ulogd_log(ULOGD_ERROR, "error during "
-					  "configure of plugin %s\n",
-					  pi_cur->plugin->name);
+				ulogd_log(ULOGD_ERROR, "%s: configuration error\n",
+					  pi_cur->id);
 				return ret;
 			}
 		}
