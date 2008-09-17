@@ -71,7 +71,7 @@ ulogd_unregister_timer(struct ulogd_timer *timer)
 int
 ulogd_timer_handle(void)
 {
-	struct ulogd_timer *t;
+	struct ulogd_timer *t, *tmp;
 
 	t_now = time(NULL);			/* UTC */
 
@@ -83,7 +83,7 @@ ulogd_timer_handle(void)
 
 	t_now_local = t_now + tm_local.tm_gmtoff;
 
-	llist_for_each_entry(t, &ulogd_timers, list) {
+	llist_for_each_entry_safe(t, tmp, &ulogd_timers, list) {
 		if (t->expires <= t_now) {
 			(t->cb)(t);
 			
