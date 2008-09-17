@@ -223,6 +223,24 @@ ulogd_upi_set_state(struct ulogd_pluginstance *pi, enum UpiState state)
 	pi->state = state;
 }
 
+/**
+ * Reset configuration data.
+ */
+int
+ulogd_upi_reset_cfg(struct ulogd_pluginstance *pi)
+{
+	size_t size;
+
+	assert(pi->plugin != NULL);
+
+	size = sizeof(struct config_keyset)
+		+ pi->plugin->config_kset->num_ces * sizeof(struct config_entry);
+
+	memcpy(pi->config_kset, pi->plugin->config_kset, size);
+
+	return 0;
+}
+
 /* key API */
 static void
 __check_get(const struct ulogd_key *key, unsigned type)

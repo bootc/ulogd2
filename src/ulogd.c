@@ -238,24 +238,6 @@ int ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-/*
-  ulogd_pluginstance_reset_cfg() - reset to default config
-*/
-int
-ulogd_pluginstance_reset_cfg(const struct ulogd_pluginstance *pi)
-{
-	size_t size;
-
-	assert(pi->plugin != NULL);
-
-	size = sizeof(struct config_keyset)
-		+ pi->plugin->config_kset->num_ces * sizeof(struct config_entry);
-
-	memcpy(pi->config_kset, pi->plugin->config_kset, size);
-
-	return 0;
-}
-
 /***********************************************************************
  * PLUGIN MANAGEMENT 
  ***********************************************************************/
@@ -871,7 +853,7 @@ _do_reconf(struct ulogd_pluginstance *pi,
 		break;
 
 	case CONFIGURE:
-		ulogd_pluginstance_reset_cfg(pi);
+		ulogd_upi_reset_cfg(pi);
 		ret = ulogd_upi_configure(pi, stack);
 		break;
 

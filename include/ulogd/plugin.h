@@ -44,6 +44,7 @@ int ulogd_upi_stop(struct ulogd_pluginstance *);
 int ulogd_upi_interp(struct ulogd_pluginstance *);
 void ulogd_upi_signal(struct ulogd_pluginstance *, int);
 void ulogd_upi_set_state(struct ulogd_pluginstance *, enum UpiState);
+int ulogd_upi_reset_cfg(struct ulogd_pluginstance *);
 
 /* set key values */
 void key_i8(struct ulogd_key *, int);
