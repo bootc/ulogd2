@@ -265,7 +265,7 @@ pgsql_prepare(struct ulogd_pluginstance *pi)
 	if (priv->pgres == NULL
 		|| PQresultStatus(priv->pgres) != PGRES_COMMAND_OK) {
 		ulogd_log(ULOGD_ERROR, "%s: prepare: %s\n",
-				  PQerrorMessage(priv->dbh));
+				  pi->id, PQerrorMessage(priv->dbh));
 		goto err_free;
 	}
 
