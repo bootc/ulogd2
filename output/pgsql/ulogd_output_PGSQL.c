@@ -74,6 +74,48 @@ static struct config_keyset pgsql_kset = {
 #define PGSQL_HAVE_NAMESPACE_TEMPLATE 			\
 	"SELECT nspname FROM pg_namespace n WHERE n.nspname='%s'"
 
+/**
+ * Execute a simple SQL command on the database.  If the command fails
+ * or does not have any result tuples clear the PGresult afterwards,
+ * otherwise leave the result as is and return %PGRES_TUPLES_OK.  The
+ * result has then to be cleared by caller.
+ *
+ * An empty command is considered an error and reported as such.
+ *
+ * @arg pi     Plugin instance to use.
+ * @arg cmd    SQL command to execute.
+ * @return >=0 if OK, <0 on error.
+ */
+static int
+__pgsql_exec(struct ulogd_pluginstance *pi, const char *cmd)
+{
+   struct pgsql_priv *priv = upi_priv(pi);
+   int ret;
+
+   if (cmd == NULL)
+       return -1;
+
+   if ((priv->pgres = PQexec(priv->dbh, cmd)) == NULL) {
+	   ulogd_log(ULOGD_ERROR, "%s: %s: command failed\n", pi->id, cmd);
+	   return -1;
+   }
+
+   if ((ret = PQresultStatus(priv->pgres)) == PGRES_COMMAND_OK)
+	   PQclear(priv->pgres);
+   else if (ret == PGRES_TUPLES_OK) {
+	   return PGRES_TUPLES_OK;
+   } else {
+	   ulogd_log(ULOGD_ERROR, "%s: %s: %s\n", pi->id, cmd,
+				 PQerrorMessage(priv->dbh));
+
+	   PQclear(priv->pgres);
+
+	   return -1;
+   }
+
+   return 0;
+}
+
 /* Determine if server support schemas */
 static int
 pgsql_namespace(struct ulogd_pluginstance *upi)
@@ -90,22 +132,16 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 	sprintf(pgbuf, PGSQL_HAVE_NAMESPACE_TEMPLATE,
 		schema_ce(upi->config_kset).u.string);
 	ulogd_log(ULOGD_DEBUG, "%s\n", pgbuf);
-	
-	pi->pgres = PQexec(pi->dbh, pgbuf);
-	if (!pi->pgres) {
-		ulogd_log(ULOGD_DEBUG, "\n result false");
-		return 1;
-	}
 
-	if (PQresultStatus(pi->pgres) == PGRES_TUPLES_OK) {
-		ulogd_log(ULOGD_DEBUG, "using schema %s\n",
-			  schema_ce(upi->config_kset).u.string);
-		pi->db_inst.schema = schema_ce(upi->config_kset).u.string;
-	} else {
-		pi->db_inst.schema = NULL;
-	}
+	if (__pgsql_exec(upi, pgbuf) != PGRES_TUPLES_OK)
+		return 1;
 
 	PQclear(pi->pgres);
+
+	pi->db_inst.schema = schema_ce(upi->config_kset).u.string;
+
+	ulogd_log(ULOGD_DEBUG, "using schema %s\n",
+			  schema_ce(upi->config_kset).u.string);
 	
 	return 0;
 }
@@ -143,21 +179,8 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 			 table_ce(upi->config_kset).u.string);
 	}
 
-	ulogd_log(ULOGD_DEBUG, "%s\n", pgbuf);
-
-	pi->pgres = PQexec(pi->dbh, pgbuf);
-	if (!pi->pgres) {
-		ulogd_log(ULOGD_DEBUG, "result false (%s)",
-			  PQerrorMessage(pi->dbh));
+	if (__pgsql_exec(upi, pgbuf) != PGRES_TUPLES_OK)
 		return -1;
-	}
-
-	if (PQresultStatus(pi->pgres) != PGRES_TUPLES_OK) {
-		ulogd_log(ULOGD_DEBUG, "pres_command_not_ok (%s)",
-			  PQerrorMessage(pi->dbh));
-		PQclear(pi->pgres);
-		return -1;
-	}
 
 	if (upi->input.keys)
 		free(upi->input.keys);
@@ -423,22 +446,16 @@ err_clear:
 }
 
 static int
-pgsql_execute(struct ulogd_pluginstance *upi,
-			  const char *stmt, unsigned int len)
+pgsql_execute(struct ulogd_pluginstance *upi, const char *stmt,
+			  unsigned int len)
 {
 	struct pgsql_priv *priv = upi_priv(upi);
+	int ret;
 
-	priv->pgres = PQexec(priv->dbh, stmt);
-	if (priv->pgres == NULL
-		|| PQresultStatus(priv->pgres) != PGRES_COMMAND_OK) {
-		ulogd_log(ULOGD_ERROR, "execute: %s\n",
-				  PQerrorMessage(priv->dbh));
-		return -1;
-	}
+	if ((ret = __pgsql_exec(upi, stmt)) == PGRES_TUPLES_OK)
+		PQclear(priv->pgres);
 
-	PQclear(priv->pgres);
-
-	return 0;
+	return ret;
 }
 
 static struct db_driver db_driver_pgsql = {
