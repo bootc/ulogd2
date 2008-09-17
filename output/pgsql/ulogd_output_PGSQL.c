@@ -74,42 +74,42 @@ static struct config_keyset pgsql_kset = {
 static int
 __pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
 {
-   struct pgsql_priv *priv = upi_priv(pi);
-   int __pgret;
+	struct pgsql_priv *priv = upi_priv(pi);
+	int __pgret;
 
-   if (priv->pgres == NULL) {
-	   ulogd_log(ULOGD_FATAL, "%s: command failed\n", pi->id);
-	   abort();
-   }
+	if (priv->pgres == NULL) {
+		ulogd_log(ULOGD_FATAL, "%s: command failed\n", pi->id);
+		abort();
+	}
 
-   __pgret = PQresultStatus(priv->pgres);
-   if (pgret != NULL)
-	   *pgret = __pgret;
+	__pgret = PQresultStatus(priv->pgres);
+	if (pgret != NULL)
+		*pgret = __pgret;
 
-   switch (__pgret) {
-   case PGRES_COMMAND_OK:
-	   PQclear(priv->pgres);
-	   /* fall-through */
-   case PGRES_TUPLES_OK:
-	   break;					/* caller has to call PQclear() */
+	switch (__pgret) {
+	case PGRES_COMMAND_OK:
+		PQclear(priv->pgres);
+		/* fall-through */
+	case PGRES_TUPLES_OK:
+		break;					/* caller has to call PQclear() */
 
-   case PGRES_EMPTY_QUERY:
-   case PGRES_NONFATAL_ERROR:
-   case PGRES_BAD_RESPONSE:
-   case PGRES_FATAL_ERROR:
-	   ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
-	   PQclear(priv->pgres);
-	   return -1;
+	case PGRES_EMPTY_QUERY:
+	case PGRES_NONFATAL_ERROR:
+	case PGRES_BAD_RESPONSE:
+	case PGRES_FATAL_ERROR:
+		ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
+		PQclear(priv->pgres);
+		return -1;
 
-   case PGRES_COPY_OUT:
-   case PGRES_COPY_IN:
-   default:
-	   ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
-	   PQclear(priv->pgres);
-	   abort();					/* unsupported */
-   }
+	case PGRES_COPY_OUT:
+	case PGRES_COPY_IN:
+	default:
+		ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
+		PQclear(priv->pgres);
+		abort();					/* unsupported */
+	}
 
-   return 0;
+	return 0;
 }
 
 #define PGSQL_HAVE_NAMESPACE_TEMPLATE 			\
@@ -129,14 +129,14 @@ __pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
 static int
 __pgsql_exec(struct ulogd_pluginstance *pi, const char *cmd, int *pgret)
 {
-   struct pgsql_priv *priv = upi_priv(pi);
+	struct pgsql_priv *priv = upi_priv(pi);
 
-   if (cmd == NULL)
-       return -1;
+	if (cmd == NULL)
+		return -1;
 
-   priv->pgres = PQexec(priv->dbh, cmd);
+	priv->pgres = PQexec(priv->dbh, cmd);
 
-   return __pgsql_err(pi, pgret);
+	return __pgsql_err(pi, pgret);
 }
 
 /* Determine if server support schemas */
@@ -145,7 +145,7 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 	char pgbuf[strlen(PGSQL_HAVE_NAMESPACE_TEMPLATE) + 
-		   strlen(schema_ce(upi->config_kset).u.string) + 1];
+			   strlen(schema_ce(upi->config_kset).u.string) + 1];
 
 	pr_fn_debug("pi=%p\n", pi);
 
@@ -153,7 +153,7 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 		return -1;
 
 	sprintf(pgbuf, PGSQL_HAVE_NAMESPACE_TEMPLATE,
-		schema_ce(upi->config_kset).u.string);
+			schema_ce(upi->config_kset).u.string);
 	ulogd_log(ULOGD_DEBUG, "%s\n", pgbuf);
 
 	if (__pgsql_exec(upi, pgbuf, NULL) < 0)
@@ -169,14 +169,14 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-#define PGSQL_GETCOLUMN_TEMPLATE \
-	"SELECT  a.attname FROM pg_class c, pg_attribute a WHERE " \
+#define PGSQL_GETCOLUMN_TEMPLATE							   \
+	"SELECT  a.attname FROM pg_class c, pg_attribute a WHERE "			\
 	"c.relname ='%s' AND a.attnum>0 AND a.attrelid=c.oid ORDER BY a.attnum"
 
-#define PGSQL_GETCOLUMN_TEMPLATE_SCHEMA \
-	"SELECT a.attname FROM pg_attribute a, pg_class c LEFT JOIN " \
+#define PGSQL_GETCOLUMN_TEMPLATE_SCHEMA							  \
+	"SELECT a.attname FROM pg_attribute a, pg_class c LEFT JOIN "	\
 	"pg_namespace n ON c.relnamespace=n.oid WHERE c.relname ='%s' " \
-	"AND n.nspname='%s' AND a.attnum>0 AND a.attrelid=c.oid " \
+	"AND n.nspname='%s' AND a.attnum>0 AND a.attrelid=c.oid "		\
 	"AND a.attisdropped=FALSE ORDER BY a.attnum"
 
 /* find out which columns the table has */
@@ -185,8 +185,8 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 	char pgbuf[strlen(PGSQL_GETCOLUMN_TEMPLATE_SCHEMA)
-		   + strlen(table_ce(upi->config_kset).u.string) 
-		   + strlen(pi->db_inst.schema) + 2];
+			   + strlen(table_ce(upi->config_kset).u.string)
+			   + strlen(pi->db_inst.schema) + 2];
 	int i, k;
 
 	pr_fn_debug("pi=%p\n", pi);
@@ -198,12 +198,12 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 
 	if (pi->db_inst.schema) {
 		snprintf(pgbuf, sizeof(pgbuf)-1,
-			 PGSQL_GETCOLUMN_TEMPLATE_SCHEMA,
-			 table_ce(upi->config_kset).u.string,
-			 pi->db_inst.schema);
+				 PGSQL_GETCOLUMN_TEMPLATE_SCHEMA,
+				 table_ce(upi->config_kset).u.string,
+				 pi->db_inst.schema);
 	} else {
 		snprintf(pgbuf, sizeof(pgbuf)-1, PGSQL_GETCOLUMN_TEMPLATE,
-			 table_ce(upi->config_kset).u.string);
+				 table_ce(upi->config_kset).u.string);
 	}
 
 	if (__pgsql_exec(upi, pgbuf, NULL) < 0)
