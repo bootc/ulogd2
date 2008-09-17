@@ -178,23 +178,31 @@ int
 ulogd_db_start(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
-	int ret;
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
-
 	ulogd_log(ULOGD_NOTICE, "starting\n");
 
-	ret = di->driver->open_db(upi);
-	if (ret < 0)
-		return ret;
+	if (di->driver->open_db(upi) < 0)
+		return -1;
 
-	ret = sql_createstmt(upi);
-	if (ret < 0)
-		di->driver->close_db(upi);
+	if (sql_createstmt(upi) < 0)
+		goto err_close;
 
+	if (db_has_prepare(di)) {
+		di->driver->prepare(upi); /* TODO check retval */
+	}
+
+	/* note that this handler is only used for those DB plugins which
+	   use ulogd_db_interp(), others use their own handler (such
+	   as pgsql). */
 	di->interp = _init_db;
 
-	return ret;
+	return 0;
+
+err_close:
+	di->driver->close_db(upi);
+
+	return -1;
 }
 
 int
@@ -241,7 +249,8 @@ _init_reconnect(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-/* our main output function, called by ulogd */
+/* our main output function, called by ulogd if ulogd_db_interp() is
+   set as interpreter function in the plugin. */
 static int
 __interp_db(struct ulogd_pluginstance *upi)
 {
@@ -359,14 +368,16 @@ _init_db(struct ulogd_pluginstance *upi)
 		return _init_reconnect(upi);
 	}
 
-	/* enable 'real' logging */
-	di->interp = &__interp_db;
+	/* The di->interp hook function is only called from ulogd_db_interp()
+	 * nowadays.  Plugins with more advanced commit logic (prepared
+	 * statements, batching, ...) have their own handler. */
+	di->interp = __interp_db;
 
 	di->reconnect = 0;
 
 	/* call the interpreter function to actually write the
 	 * log line that we wanted to write */
-	return __interp_db(upi);
+	return di->interp(upi);
 }
 
 void

@@ -19,11 +19,12 @@
 
 
 struct pgsql_priv {
-	struct db_instance db_inst;
-
-	PGconn *dbh;
+	struct db_instance db_inst;	/* must come first */
+	PGconn *dbh;				/* database handle */
 	PGresult *pgres;
 	unsigned char pgsql_have_schemas;
+
+	char *param_val[20];
 };
 
 
@@ -83,6 +84,8 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 	char pgbuf[strlen(PGSQL_HAVE_NAMESPACE_TEMPLATE) + 
 		   strlen(schema_ce(upi->config_kset).u.string) + 1];
 
+	pr_fn_debug("pi=%p\n", pi);
+
 	if (!pi->dbh)
 		return 1;
 
@@ -124,6 +127,8 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 		   + strlen(table_ce(upi->config_kset).u.string) 
 		   + strlen(pi->db_inst.schema) + 2];
 	int i;
+
+	pr_fn_debug("pi=%p\n", pi);
 
 	if (!pi->dbh) {
 		ulogd_log(ULOGD_ERROR, "no database handle\n");
@@ -173,24 +178,81 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 
 	for (i = 0; i < PQntuples(pi->pgres); i++) {
 		char buf[ULOGD_MAX_KEYLEN+1];
-		char *underscore;
-		int id;
 
 		/* replace all underscores with dots */
 		strncpy(buf, PQgetvalue(pi->pgres, i, 0), ULOGD_MAX_KEYLEN);
-		while ((underscore = strchr(buf, '_')))
-			*underscore = '.';
+		strntr(buf, '_', '.');
 
-		pr_debug("field '%s' found: ", buf);
+		pr_fn_debug("field '%s' found: ", buf);
 
 		/* add it to list of input keys */
 		strncpy(upi->input.keys[i].name, buf, ULOGD_MAX_KEYLEN);
 	}
 
-	/* FIXME: id? */
-
 	PQclear(pi->pgres);
 	return 0;
+}
+
+static int
+pgsql_prepare(struct ulogd_pluginstance *pi)
+{
+	struct pgsql_priv *priv = upi_priv(pi);
+	struct db_instance *di = &priv->db_inst;
+	char *table = table_ce(pi->config_kset).u.string;
+	char *query, *pch;
+	int i;
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	if ((pch = query = malloc(1024)) == NULL)
+		return -1;
+
+	if (di->schema != NULL)
+		pch += sprintf(pch, "INSERT INTO %s.%s VALUES (",
+				di->schema, table);
+	else
+		pch += sprintf(pch, "INSERT INTO %s VALUES (", table);
+
+	/* the prepared insert statement has the form
+	 *
+	 *   INSERT INTO mytable VALUES ($1,$2,...);
+	 *
+	 * where $1,$2,... are the placeholders for the actual values which
+	 * are inserted.
+	 */
+	for (i = 0; i < pi->input.num_keys; i++) {
+		pch += sprintf(pch, "$%d", i + 1);
+		if (i + 1 < pi->input.num_keys)
+			*pch++ = ',';
+
+		priv->param_val[i] = malloc(32);
+	}
+
+	*pch = '\0';
+	strcat(pch, ");");
+
+	pr_fn_debug("%s: prepare-stmt: %s\n", pi->id, query);
+
+	priv->pgres = PQprepare(priv->dbh, "insert", query,
+							pi->input.num_keys, NULL /* paramTypes */);
+	if (priv->pgres == NULL
+		|| PQresultStatus(priv->pgres) != PGRES_COMMAND_OK) {
+		ulogd_log(ULOGD_ERROR, "%s: prepare: %s\n",
+				  PQerrorMessage(priv->dbh));
+		goto err_free;
+	}
+
+	PQclear(priv->pgres);
+	free(query);
+
+	ulogd_log(ULOGD_DEBUG, "%s: statement prepared\n", pi->id);
+
+	return 0;
+
+err_free:
+	free(query);
+
+	return -1;
 }
 
 static int
@@ -198,7 +260,10 @@ pgsql_close_db(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 
+	pr_fn_debug("pi=%p\n", upi);
+
 	PQfinish(pi->dbh);
+	pi->dbh = NULL;
 
 	return 0;
 }
@@ -215,6 +280,8 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	char *db = db_ce(upi->config_kset).u.string;
 	char *connstr;
 	int len;
+
+	pr_fn_debug("pi=%p\n", upi);
 
 	/* 80 is more than what we need for the fixed parts below */
 	len = 80 + strlen(user) + strlen(db);
@@ -282,30 +349,100 @@ static int
 pgsql_escape_string(struct ulogd_pluginstance *upi,
 					char *dst, const char *src, unsigned int len)
 {
+	pr_fn_debug("pi=%p\n", upi);
+
 	PQescapeString(dst, src, strlen(src)); 
+
 	return 0;
+}
+
+static int
+pgsql_interp(struct ulogd_pluginstance *pi)
+{
+	struct pgsql_priv *priv = upi_priv(pi);
+	struct db_instance *di = &priv->db_inst;
+	int i;
+
+	assert(priv->dbh != NULL);
+	pr_fn_debug("pi=%p\n", pi);
+
+	for (i = 0; i < pi->input.num_keys; i++) {
+		struct ulogd_key *key = pi->input.keys[i].u.source;
+
+		if (key->flags & ULOGD_KEYF_INACTIVE)
+			continue;
+
+		switch (key->type) {
+		case ULOGD_RET_INT32:
+			sprintf(priv->param_val[i], "%hhd", IS_VALID(*key) ?
+				key->u.value.i32 : 0);
+			break;
+
+		case ULOGD_RET_UINT8:
+			sprintf(priv->param_val[i], "%hhu", IS_VALID(*key) ?
+				key->u.value.ui8 : 0U);
+			break;
+
+		case ULOGD_RET_UINT16:
+			sprintf(priv->param_val[i], "%hu", IS_VALID(*key) ?
+				key->u.value.ui16 : 0U);
+			break;
+
+		case ULOGD_RET_IPADDR:
+		case ULOGD_RET_UINT32:
+			sprintf(priv->param_val[i], "%u", IS_VALID(*key) ?
+				key->u.value.ui32 : 0U);
+			break;
+
+		default:
+			ulogd_log(ULOGD_ERROR, "%s: key type %d not supported\n",
+					  pi->id, key->type);
+		}
+	}
+
+	priv->pgres = PQexecPrepared(priv->dbh, "insert",
+								 pi->input.num_keys,
+								 (const char * const *)priv->param_val,
+								 NULL, NULL /* param_fmts */,
+								 0 /* want result in text format */);
+	if (priv->pgres == NULL
+		|| PQresultStatus(priv->pgres) != PGRES_COMMAND_OK) {
+		ulogd_log(ULOGD_ERROR, "execute: %s\n",
+				  PQerrorMessage(priv->dbh));
+		goto err_clear;
+	}
+
+	PQclear(priv->pgres);
+
+	return 0;
+
+err_clear:
+	PQclear(priv->pgres);
+	return -1;
 }
 
 static int
 pgsql_execute(struct ulogd_pluginstance *upi,
 			  const char *stmt, unsigned int len)
 {
-	struct pgsql_priv *pi = upi_priv(upi);
+	struct pgsql_priv *priv = upi_priv(upi);
 
-	pi->pgres = PQexec(pi->dbh, stmt);
-	if (!pi->pgres || PQresultStatus(pi->pgres) != PGRES_COMMAND_OK) {
-		ulogd_log(ULOGD_ERROR, "execute failed (%s)\n",
-			  PQerrorMessage(pi->dbh));
+	priv->pgres = PQexec(priv->dbh, stmt);
+	if (priv->pgres == NULL
+		|| PQresultStatus(priv->pgres) != PGRES_COMMAND_OK) {
+		ulogd_log(ULOGD_ERROR, "execute: %s\n",
+				  PQerrorMessage(priv->dbh));
 		return -1;
 	}
 
-	PQclear(pi->pgres);
+	PQclear(priv->pgres);
 
 	return 0;
 }
 
 static struct db_driver db_driver_pgsql = {
 	.get_columns = &pgsql_get_columns,
+	.prepare = &pgsql_prepare,
 	.open_db = &pgsql_open_db,
 	.close_db = &pgsql_close_db,
 	.escape_string = &pgsql_escape_string,
@@ -339,7 +476,7 @@ static struct ulogd_plugin pgsql_plugin = {
 	.start		= &ulogd_db_start,
 	.stop		= &ulogd_db_stop,
 	.signal		= &ulogd_db_signal,
-	.interp		= &ulogd_db_interp,
+	.interp		= &pgsql_interp,
 	.version	= ULOGD_VERSION,
 };
 

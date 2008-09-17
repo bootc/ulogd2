@@ -1,13 +1,21 @@
 #ifndef _ULOGD_DB_H
 #define _ULOGD_DB_H
 
+#include <stdbool.h>
 #include <ulogd/ulogd.h>
 
 struct db_driver {
-	int (*get_columns)(struct ulogd_pluginstance *upi);
-	int (*open_db)(struct ulogd_pluginstance *upi);
-	int (*close_db)(struct ulogd_pluginstance *upi);
-	int (*escape_string)(struct ulogd_pluginstance *upi,
+	/* set input keys depending on database shema (required) */
+	int (* get_columns)(struct ulogd_pluginstance *upi);
+
+	/* prepare SQL statement (optional) */
+	int (* prepare)(struct ulogd_pluginstance *);
+
+	int (* interp)(struct ulogd_pluginstance *);
+
+	int (* open_db)(struct ulogd_pluginstance *upi);
+	int (* close_db)(struct ulogd_pluginstance *upi);
+	int (* escape_string)(struct ulogd_pluginstance *upi,
 			     char *dst, const char *src, unsigned int len);
 	int (*execute)(struct ulogd_pluginstance *upi,
 			const char *stmt, unsigned int len);
@@ -22,6 +30,13 @@ struct db_instance {
 	int (*interp)(struct ulogd_pluginstance *upi);
 	struct db_driver *driver;
 };
+
+static inline bool
+db_has_prepare(const struct db_instance *di)
+{
+	return di->driver->prepare != NULL;
+}
+
 #define TIME_ERR		((time_t)-1)	/* Be paranoid */
 
 #define DB_CES							\
