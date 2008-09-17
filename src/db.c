@@ -29,10 +29,122 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-/* generic db layer */
 
-/* this is a wrapper that just calls the current real
- * interp function */
+/* generic row handling */
+
+struct db_row *
+db_row_new(struct ulogd_pluginstance *pi)
+{
+	struct db_row *row;
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	if ((row = calloc(1, sizeof(struct db_row))) == NULL) {
+		ulogd_log(ULOGD_FATAL, "db: out of memory\n");
+		return NULL;
+	}
+
+	return row;
+}
+
+static void
+__db_row_del(struct ulogd_pluginstance *pi, struct db_row *row)
+{
+	pr_fn_debug("pi=%p row=%p\n", pi, row);
+
+	if (row != NULL) {
+		struct db_instance *di = upi_priv(pi);
+
+		free(row);
+
+		di->num_rows--;
+	}
+}
+
+void
+db_row_del(struct ulogd_pluginstance *pi, struct db_row *row)
+{
+	pr_fn_debug("pi=%p row=%p\n", pi, row);
+
+	llist_del(&row->link);
+
+	__db_row_del(pi, row);
+}
+
+int
+db_row_add(struct ulogd_pluginstance *pi, struct db_row *row)
+{
+	struct db_instance *di = upi_priv(pi);
+
+	pr_fn_debug("pi=%p row=%p\n", pi, row);
+
+	if (di->max_backlog && di->num_rows >= di->max_backlog) {
+		if (!di->overlimit_msg) {
+			ulogd_log(ULOGD_ERROR, "db: over backlog limit, dropping rows\n");
+			di->overlimit_msg = 1;
+		}
+
+		__db_row_del(pi, row);
+
+		return -1;
+	}
+
+	llist_add(&row->link, &di->rows);
+
+	di->num_rows++;
+
+	return 0;
+}
+
+static int
+__db_commit(struct ulogd_pluginstance *pi)
+{
+	struct db_instance *di = upi_priv(pi);
+	int max_commit, rows;
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	if (llist_empty(&di->rows))
+		return 0;
+
+	/* Limit number of rows to commit.  Note that currently three times
+	   buffer_size is a bit arbitrary and therefore might be adjusted in
+	   the future. */
+	max_commit = max(3 * di->buffer_size, 1024);
+
+	if ((rows = di->driver->commit(pi, max_commit)) < 0) {
+		ulogd_log(ULOGD_ERROR, "%s: commit failed\n", pi->id);
+		return -1;
+	}
+
+	ulogd_log(ULOGD_DEBUG, "%s: rows=%d commited=%d\n", pi->id,
+			  di->num_rows, rows);
+
+	return rows;
+}
+
+/**
+ * Periodic database timer, reponsible for committing database rows.
+ *
+ * @arg t		Timer to use.
+ */
+static void
+db_timer_cb(struct ulogd_timer *t)
+{
+	struct ulogd_pluginstance *pi = t->data;
+	struct db_instance *di = upi_priv(pi);
+	int rows;
+
+	pr_fn_debug("timer=%p\n", t);
+
+	if (di->num_rows == 0)
+		return;
+
+	if ((rows = __db_commit(pi)) < 0)
+		return;
+}
+
+/* this is a wrapper that just calls the current real interp function */
 int
 ulogd_db_interp(struct ulogd_pluginstance *upi)
 {
@@ -156,7 +268,7 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	}
 
 	/* TODO make configurable */
-	di->buffer_size = 1;
+	di->buffer_size = 1024;
 	di->max_backlog = 1024 * 1024;
 
 	/* Second: Open Database */
@@ -175,6 +287,17 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	 * but abort during input key resolving routines.  configure
 	 * doesn't have a destructor... */
 	di->driver->close_db(upi);
+
+	/* init timer */
+	di->timer.cb = db_timer_cb;
+	di->timer.ival = 1 SEC;		/* TODO make configurable? */
+	di->timer.flags = TIMER_F_PERIODIC;
+	di->timer.data = upi;
+
+	if (ulogd_register_timer(&di->timer) < 0) {
+		ulogd_log(ULOGD_FATAL, "%s: database timer: %m\n", upi->id);
+		return -1;
+	}
 
 	return ret;
 }
@@ -401,94 +524,6 @@ ulogd_db_signal(struct ulogd_pluginstance *upi, int signal)
 	default:
 		break;
 	}
-}
-
-struct db_row *
-db_row_new(struct ulogd_pluginstance *pi)
-{
-	struct db_instance *di = upi_priv(pi);
-	struct db_row *row;
-
-	pr_fn_debug("pi=%p\n", pi);
-
-	if ((row = calloc(1, sizeof(struct db_row))) == NULL) {
-		ulogd_log(ULOGD_FATAL, "db: out of memory\n");
-		return NULL;
-	}
-
-	di->num_rows++;
-
-	return row;
-}
-
-static void
-__db_row_del(struct ulogd_pluginstance *pi, struct db_row *row)
-{
-	pr_fn_debug("pi=%p row=%p\n", pi, row);
-
-	if (row != NULL) {
-		struct db_instance *di = upi_priv(pi);
-
-		free(row);
-
-		di->num_rows--;
-	}
-}
-
-void
-db_row_del(struct ulogd_pluginstance *pi, struct db_row *row)
-{
-	pr_fn_debug("pi=%p row=%p\n", pi, row);
-
-	llist_del(&row->link);
-
-	__db_row_del(pi, row);
-}
-
-int
-db_row_add(struct ulogd_pluginstance *pi, struct db_row *row)
-{
-	struct db_instance *di = upi_priv(pi);
-
-	pr_fn_debug("pi=%p row=%p\n", pi, row);
-
-	if (di->max_backlog && di->num_rows >= di->max_backlog) {
-		if (!di->overlimit_msg) {
-			ulogd_log(ULOGD_ERROR, "db: over backlog limit, dropping rows\n");
-			di->overlimit_msg = 1;
-		}
-
-		__db_row_del(pi, row);
-
-		return -1;
-	}
-
-	llist_add(&row->link, &di->rows);
-
-	di->num_rows++;
-
-	return 0;
-}
-
-static int
-__db_commit(struct ulogd_pluginstance *pi)
-{
-	struct db_instance *di = upi_priv(pi);
-	int max_commit;
-
-	pr_fn_debug("pi=%p\n", pi);
-
-	/* Limit number of rows to commit.  Note that currently three times
-	   buffer_size is a bit arbitrary and therefore might be adjusted in
-	   the future. */
-	max_commit = max(3 * di->buffer_size, 1024);
-
-	if (di->driver->commit(pi, max_commit) < 0) {
-		ulogd_log(ULOGD_ERROR, "%s: commit failed\n", pi->id);
-		return -1;
-	}
-
-	return 0;
 }
 
 int

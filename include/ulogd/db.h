@@ -1,8 +1,8 @@
 #ifndef _ULOGD_DB_H
 #define _ULOGD_DB_H
 
-#include <stdbool.h>
 #include <ulogd/ulogd.h>
+#include <stdbool.h>
 
 struct db_driver {
 	/* set input keys depending on database shema (required) */
@@ -49,6 +49,8 @@ struct db_instance {
 	time_t reconnect;
 	int (*interp)(struct ulogd_pluginstance *upi);
 	struct db_driver *driver;
+
+	struct ulogd_timer timer;
 
 	/* batching */
 	struct llist_head rows;
