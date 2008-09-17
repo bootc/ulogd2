@@ -140,7 +140,7 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 
 	pi->db_inst.schema = schema_ce(upi->config_kset).u.string;
 
-	ulogd_log(ULOGD_DEBUG, "using schema %s\n",
+	ulogd_log(ULOGD_DEBUG, "%s: using schema %s\n", upi->id,
 			  schema_ce(upi->config_kset).u.string);
 	
 	return 0;
@@ -191,8 +191,9 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	upi->input.keys = calloc(upi->input.num_keys, sizeof(struct ulogd_key));
 	if (upi->input.keys == NULL) {
 		upi->input.num_keys = 0;
-		ulogd_log(ULOGD_ERROR, "ENOMEM\n");
 		PQclear(pi->pgres);
+
+		ulogd_log(ULOGD_ERROR, "%s: out of memory\n", upi->id);
 
 		return -ENOMEM;
 	}
@@ -211,6 +212,7 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	}
 
 	PQclear(pi->pgres);
+
 	return 0;
 }
 
@@ -381,48 +383,24 @@ pgsql_escape_string(struct ulogd_pluginstance *upi,
 }
 
 static int
-pgsql_interp(struct ulogd_pluginstance *pi)
+__pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 {
 	struct pgsql_priv *priv = upi_priv(pi);
-	struct db_instance *di = &priv->db_inst;
-	int i;
 
-	assert(priv->dbh != NULL);
 	pr_fn_debug("pi=%p\n", pi);
 
-	for (i = 0; i < pi->input.num_keys; i++) {
-		struct ulogd_key *key = pi->input.keys[i].u.source;
-
-		if (key->flags & ULOGD_KEYF_INACTIVE)
-			continue;
-
-		switch (key->type) {
-		case ULOGD_RET_INT32:
-			sprintf(priv->param_val[i], "%hhd", IS_VALID(*key) ?
-				key->u.value.i32 : 0);
-			break;
-
-		case ULOGD_RET_UINT8:
-			sprintf(priv->param_val[i], "%hhu", IS_VALID(*key) ?
-				key->u.value.ui8 : 0U);
-			break;
-
-		case ULOGD_RET_UINT16:
-			sprintf(priv->param_val[i], "%hu", IS_VALID(*key) ?
-				key->u.value.ui16 : 0U);
-			break;
-
-		case ULOGD_RET_IPADDR:
-		case ULOGD_RET_UINT32:
-			sprintf(priv->param_val[i], "%u", IS_VALID(*key) ?
-				key->u.value.ui32 : 0U);
-			break;
-
-		default:
-			ulogd_log(ULOGD_ERROR, "%s: key type %d not supported\n",
-					  pi->id, key->type);
-		}
-	}
+	sprintf(priv->param_val[0], "%u", row->ip_saddr);
+	sprintf(priv->param_val[1], "%u", row->ip_daddr);
+	sprintf(priv->param_val[2], "%u", row->ip_proto);
+	sprintf(priv->param_val[3], "%u", row->l4_dport);
+	sprintf(priv->param_val[4], "%u", row->raw_in_pktlen);
+	sprintf(priv->param_val[5], "%u", row->raw_in_pktcount);
+	sprintf(priv->param_val[6], "%u", row->raw_out_pktlen);
+	sprintf(priv->param_val[7], "%u", row->raw_out_pktcount);
+	sprintf(priv->param_val[8], "%u", row->flow_start_day);
+	sprintf(priv->param_val[9], "%u", row->flow_start_sec);
+	sprintf(priv->param_val[10], "%u", row->flow_duration);
+	sprintf(priv->param_val[11], "%u", 1 /* flow_count */);
 
 	priv->pgres = PQexecPrepared(priv->dbh, "insert",
 								 pi->input.num_keys,
@@ -442,6 +420,58 @@ pgsql_interp(struct ulogd_pluginstance *pi)
 
 err_clear:
 	PQclear(priv->pgres);
+
+	return -1;
+}
+
+/**
+ * Commits a maximum of %max_commit rows to database as part of a
+ * transaction.
+ *
+ * @arg pi        Plugin instance to use.
+ * @arg max_commit        Maximum number of rows to commit.
+ */
+static int
+pgsql_commit(struct ulogd_pluginstance *pi, int max_commit)
+{
+	struct pgsql_priv *priv = upi_priv(pi);
+	struct db_instance *di = &priv->db_inst;
+	struct llist_head *curr, *tmp;
+	struct db_row *row;
+	int rows = 0;
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	if (__pgsql_exec(pi, "start transaction") < 0)
+		return -1;
+
+	llist_for_each_prev_safe(curr, tmp, &di->rows) {
+		if (++rows > max_commit)
+			break;
+
+		row = llist_entry(curr, struct db_row, link);
+
+		if (__pgsql_commit_row(pi, row) < 0)
+			goto err_rollback;
+
+		llist_move(&row->link, &di->rows_committed);
+    }
+
+	if (__pgsql_exec(pi, "commit") < 0)
+		goto err_rollback;
+
+	llist_for_each_safe(curr, tmp, &di->rows_committed) {
+		row = llist_entry(curr, struct db_row, link);
+
+		db_row_del(pi, row);
+	}
+
+	return rows;
+
+err_rollback:
+	llist_for_each_prev_safe(curr, tmp, &di->rows_committed)
+		llist_move_tail(curr, &di->rows);
+
 	return -1;
 }
 
@@ -461,6 +491,7 @@ pgsql_execute(struct ulogd_pluginstance *upi, const char *stmt,
 static struct db_driver db_driver_pgsql = {
 	.get_columns = &pgsql_get_columns,
 	.prepare = &pgsql_prepare,
+	.commit = &pgsql_commit,
 	.open_db = &pgsql_open_db,
 	.close_db = &pgsql_close_db,
 	.escape_string = &pgsql_escape_string,
@@ -494,7 +525,7 @@ static struct ulogd_plugin pgsql_plugin = {
 	.start		= &ulogd_db_start,
 	.stop		= &ulogd_db_stop,
 	.signal		= &ulogd_db_signal,
-	.interp		= &pgsql_interp,
+	.interp		= &ulogd_db_interp_batch,
 	.version	= ULOGD_VERSION,
 };
 
