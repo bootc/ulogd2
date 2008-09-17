@@ -441,7 +441,6 @@ __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 	utoa(row->flow_start_day, priv->param_val[8], 32);
 	utoa(row->flow_start_sec, priv->param_val[9], 32);
 	utoa(row->flow_duration, priv->param_val[10], 32);
-	utoa(1, priv->param_val[11], 32);
 
 	priv->pgres = PQexecPrepared(priv->dbh, "insert",
 								 pi->input.num_keys,
