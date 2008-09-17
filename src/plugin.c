@@ -309,12 +309,15 @@ ulogd_upi_interp(struct ulogd_pluginstance *pi)
 		return 0;
 
 	if ((ret = pi->plugin->interp(pi)) < 0) {
+		ulogd_upi_stop(pi);
+
 		if (ret == ULOGD_IRET_AGAIN) {
-			ulogd_upi_set_state(pi, PsConfigured);
 			stack_fsm_add(pi->stack);
 
 			return 0;
 		}
+
+		return -1;
 	}
 
 	return 0;
@@ -323,7 +326,7 @@ ulogd_upi_interp(struct ulogd_pluginstance *pi)
 void
 ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
 {
-	if (pi->plugin->signal == NULL || pi->state != PsStarted)
+	if (pi->plugin->signal == NULL)
 		return;
 
 	pi->plugin->signal(pi, signo);

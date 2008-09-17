@@ -166,7 +166,7 @@ struct ulogd_plugin {
 	/* function to destruct an existing pluginstance */
 	int (* stop)(struct ulogd_pluginstance *pi);
 
-	/* function to receive a signal (only if in state PsStarted) */
+	/* function to receive a signal */
 	void (* signal)(struct ulogd_pluginstance *pi, int signal);
 
 	/* configuration parameters */
