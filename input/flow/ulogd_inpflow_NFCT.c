@@ -793,68 +793,46 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 {
 	struct ulogd_key *ret = upi->output.keys;
 
-	ret[O_IP_SADDR].u.value.ui32 = htonl(nfct->tuple[0].src.v4);
-	ret[O_IP_SADDR].flags |= ULOGD_RETF_VALID;
-
-	ret[O_IP_DADDR].u.value.ui32 = htonl(nfct->tuple[1].src.v4);
-	ret[O_IP_DADDR].flags |= ULOGD_RETF_VALID;
-
-	ret[O_IP_PROTO].u.value.ui8 = nfct->tuple[dir].protonum;
-	ret[O_IP_PROTO].flags |= ULOGD_RETF_VALID;
+	key_u32(&ret[O_IP_SADDR], htonl(nfct->tuple[0].src.v4));
+	key_u32(&ret[O_IP_DADDR], htonl(nfct->tuple[1].src.v4));
+	key_u8(&ret[O_IP_PROTO], nfct->tuple[dir].protonum);
 
 	switch (nfct->tuple[dir].protonum) {
 	case IPPROTO_TCP:
 	case IPPROTO_UDP:
 	case IPPROTO_SCTP:
 		/* FIXME: DCCP */
-		ret[O_L4_SPORT].u.value.ui16 = htons(nfct->tuple[0].l4src.tcp.port);
-		ret[O_L4_SPORT].flags |= ULOGD_RETF_VALID;
-		ret[O_L4_DPORT].u.value.ui16 = htons(nfct->tuple[1].l4src.tcp.port);
-		ret[O_L4_DPORT].flags |= ULOGD_RETF_VALID;
+		key_u16(&ret[O_L4_SPORT], htons(nfct->tuple[0].l4src.tcp.port));
+		key_u16(&ret[O_L4_DPORT], htons(nfct->tuple[1].l4src.tcp.port));
 		break;
 	case IPPROTO_ICMP:
-		ret[O_ICMP_CODE].u.value.ui8 = nfct->tuple[dir].l4src.icmp.code;
-		ret[O_ICMP_CODE].flags |= ULOGD_RETF_VALID;
-		ret[O_ICMP_TYPE].u.value.ui8 = nfct->tuple[dir].l4src.icmp.type;
-		ret[O_ICMP_TYPE].flags |= ULOGD_RETF_VALID;
+		key_u8(&ret[O_ICMP_CODE], nfct->tuple[dir].l4src.icmp.code);
+		key_u8(&ret[O_ICMP_TYPE], nfct->tuple[dir].l4src.icmp.type);
 		break;
 	}
 
 	if (flags & NFCT_COUNTERS_ORIG) {
-		ret[O_RAW_IN_PKTLEN].u.value.ui32 = nfct->counters[0].bytes;
-		ret[O_RAW_IN_PKTLEN].flags |= ULOGD_RETF_VALID;
-		ret[O_RAW_IN_PKTCOUNT].u.value.ui32 = nfct->counters[0].packets;
-		ret[O_RAW_IN_PKTCOUNT].flags |= ULOGD_RETF_VALID;
+		key_u32(&ret[O_RAW_IN_PKTLEN], nfct->counters[0].bytes);
+		key_u32(&ret[O_RAW_IN_PKTCOUNT], nfct->counters[0].packets);
 
-		ret[O_RAW_OUT_PKTLEN].u.value.ui32 = nfct->counters[1].bytes;
-		ret[O_RAW_OUT_PKTLEN].flags |= ULOGD_RETF_VALID;
-		ret[O_RAW_OUT_PKTCOUNT].u.value.ui32 = nfct->counters[1].packets;
-		ret[O_RAW_OUT_PKTCOUNT].flags |= ULOGD_RETF_VALID;
+		key_u32(&ret[O_RAW_OUT_PKTLEN], nfct->counters[1].bytes);
+		key_u32(&ret[O_RAW_OUT_PKTCOUNT], nfct->counters[1].packets);
 	}
 
-	if (flags & NFCT_MARK) {
-		ret[O_CT_MARK].u.value.ui32 = nfct->mark;
-		ret[O_CT_MARK].flags |= ULOGD_RETF_VALID;
-	}
+	if (flags & NFCT_MARK)
+		key_u32(&ret[O_CT_MARK], nfct->mark);
 
-	if (flags & NFCT_ID) {
-		ret[O_CT_ID].u.value.ui32 = nfct->id;
-		ret[O_CT_ID].flags |= ULOGD_RETF_VALID;
-	}
+	if (flags & NFCT_ID)
+		key_u32(&ret[O_CT_ID], nfct->id);
 
-	ret[O_FLOW_START_SEC].u.value.ui32 = ct->time[START].tv_sec;
-	ret[O_FLOW_START_SEC].flags |= ULOGD_RETF_VALID;
-	ret[O_FLOW_START_USEC].u.value.ui32 = ct->time[START].tv_usec;
-	ret[O_FLOW_START_USEC].flags |= ULOGD_RETF_VALID;
+	key_u32(&ret[O_FLOW_START_SEC], ct->time[START].tv_sec);
+	key_u32(&ret[O_FLOW_START_USEC], ct->time[START].tv_usec);
 
-	ret[O_FLOW_END_SEC].u.value.ui32 = ct->time[STOP].tv_sec;
-	ret[O_FLOW_END_SEC].flags |= ULOGD_RETF_VALID;
-	ret[O_FLOW_END_USEC].u.value.ui32 = ct->time[STOP].tv_usec;
-	ret[O_FLOW_END_USEC].flags |= ULOGD_RETF_VALID;
+	key_u32(&ret[O_FLOW_END_SEC], ct->time[STOP].tv_sec);
+	key_u32(&ret[O_FLOW_END_USEC], ct->time[STOP].tv_usec);
 
-	ret[O_FLOW_DURATION].u.value.ui32 = tv_diff_sec(&ct->time[START],
-													&ct->time[STOP]);
-	ret[O_FLOW_DURATION].flags |= ULOGD_RETF_VALID;
+	key_u32(&ret[O_FLOW_DURATION], tv_diff_sec(&ct->time[START],
+											   &ct->time[STOP]));
 
 	ulogd_propagate_results(upi);
 

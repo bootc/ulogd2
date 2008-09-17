@@ -21,9 +21,9 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
 
 #include "rtnl.h"
 #include "iftable.h"
@@ -57,10 +57,8 @@ static int interp_ifindex(struct ulogd_pluginstance *pi)
 	struct ulogd_key *ret = pi->output.keys;
 	struct ulogd_key *inp = pi->input.keys;
 
-	ret[0].u.value.ptr = ifindex_2name(inp[0].u.source->u.value.ui32);
-	ret[0].flags |= ULOGD_RETF_VALID;
-	ret[1].u.value.ptr = ifindex_2name(inp[1].u.source->u.value.ui32);
-	ret[1].flags |= ULOGD_RETF_VALID;
+	key_str(&ret[0], ifindex_2name(key_get_u32(&inp[0])));
+	key_str(&ret[1], ifindex_2name(key_get_u32(&inp[1])));
 
 	return 0;
 }

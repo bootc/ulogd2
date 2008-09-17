@@ -20,6 +20,8 @@
  */
 
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <ulogd/printflow.h>
 
 static struct ulogd_key printflow_outp[] = {

@@ -635,17 +635,17 @@ sqlite3_interp(struct ulogd_pluginstance *pi)
 	if ((row = row_new()) == NULL)
 		return ULOGD_IRET_ERR;
 
-	row->ip_saddr = RKEY(cols[0].key)->u.value.ui32;
-	row->ip_daddr = RKEY(cols[1].key)->u.value.ui32;
-	row->ip_proto = RKEY(cols[2].key)->u.value.ui8;
-	row->l4_dport = RKEY(cols[3].key)->u.value.ui16;
-	row->raw_in_pktlen = RKEY(cols[4].key)->u.value.ui32;
-	row->raw_in_pktcount = RKEY(cols[5].key)->u.value.ui32;
-	row->raw_out_pktlen = RKEY(cols[6].key)->u.value.ui32;
-	row->raw_out_pktcount = RKEY(cols[7].key)->u.value.ui32;
-	row->flow_start_day = RKEY(cols[8].key)->u.value.ui32;
-	row->flow_start_sec = RKEY(cols[9].key)->u.value.ui32;
-	row->flow_duration = RKEY(cols[10].key)->u.value.ui32;
+	row->ip_saddr = key_get_u32(cols[0].key);
+	row->ip_daddr = key_get_u32(cols[1].key);
+	row->ip_proto = key_get_u8(cols[2].key);
+	row->l4_dport = key_get_u16(cols[3].key);
+	row->raw_in_pktlen = key_get_u32(cols[4].key);
+	row->raw_in_pktcount = key_get_u32(cols[5].key);
+	row->raw_out_pktlen = key_get_u32(cols[6].key);
+	row->raw_out_pktcount = key_get_u32(cols[7].key);
+	row->flow_start_day = key_get_u32(cols[8].key);
+	row->flow_start_sec = key_get_u32(cols[9].key);
+	row->flow_duration = key_get_u32(cols[10].key);
 
 	if (row_add(priv, row) < 0)
 		return ULOGD_IRET_OK;

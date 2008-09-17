@@ -24,6 +24,7 @@
  */
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <ulogd/db.h>
 #include <time.h>
 #include <netinet/in.h>
@@ -562,17 +563,17 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi)
 	if ((row = db_row_new(pi)) == NULL)
 		return ULOGD_IRET_ERR;
 
-	row->ip_saddr = pi->input.keys[0].u.source->u.value.ui32;
-	row->ip_daddr = pi->input.keys[1].u.source->u.value.ui32;
-	row->ip_proto = pi->input.keys[2].u.source->u.value.ui8;
-	row->l4_dport = pi->input.keys[3].u.source->u.value.ui16;
-	row->raw_in_pktlen = pi->input.keys[4].u.source->u.value.ui32;
-	row->raw_in_pktcount = pi->input.keys[5].u.source->u.value.ui32;
-	row->raw_out_pktlen = pi->input.keys[6].u.source->u.value.ui32;
-	row->raw_out_pktlen = pi->input.keys[7].u.source->u.value.ui32;
-	row->flow_start_day = pi->input.keys[8].u.source->u.value.ui32;
-	row->flow_start_sec = pi->input.keys[9].u.source->u.value.ui32;
-	row->flow_duration = pi->input.keys[10].u.source->u.value.ui32;
+	row->ip_saddr = key_get_u32(&pi->input.keys[0]);
+	row->ip_daddr = key_get_u32(&pi->input.keys[1]);
+	row->ip_proto = key_get_u8(&pi->input.keys[2]);
+	row->l4_dport = key_get_u16(&pi->input.keys[3]);
+	row->raw_in_pktlen = key_get_u32(&pi->input.keys[4]);
+	row->raw_in_pktcount = key_get_u32(&pi->input.keys[5]);
+	row->raw_out_pktlen = key_get_u32(&pi->input.keys[6]);
+	row->raw_out_pktcount = key_get_u32(&pi->input.keys[7]);
+	row->flow_start_day = key_get_u32(&pi->input.keys[8]);
+	row->flow_start_sec = key_get_u32(&pi->input.keys[9]);
+	row->flow_duration = key_get_u32(&pi->input.keys[10]);
 
 	if (db_row_add(pi, row) < 0)
 		return ULOGD_IRET_OK;

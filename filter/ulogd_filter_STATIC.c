@@ -20,6 +20,7 @@
  */
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/plugin.h>
 
 /* days from Jan. 1 1970 to Jan 1 01 */
 #define DAY_OFFSET		719163
@@ -63,12 +64,9 @@ static_interp(struct ulogd_pluginstance *pi)
 
 	pr_debug("%s: pi=%p\n", __func__, pi);
 
-	out[OutFlowCount].u.value.i32 = 1;
-	out[OutFlowCount].flags |= ULOGD_RETF_VALID;
-
-	out[OutFlowStartDay].u.value.ui32
-		= in[InFlowStartSec].u.source->u.value.ui32 / (1 DAY) + DAY_OFFSET;
-	out[OutFlowStartDay].flags |= ULOGD_RETF_VALID;
+	key_i32(&out[OutFlowCount], 1);
+	key_u32(&out[OutFlowStartDay], key_get_u32(&in[InFlowStartSec])
+			/ (1 DAY) + DAY_OFFSET);
 
 	return 0;
 }

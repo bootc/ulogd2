@@ -28,6 +28,7 @@
 #include <netinet/ip.h>
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <ulogd/ifi.h>
 #include <ulogd/conffile.h>
 
@@ -315,36 +316,41 @@ str_append(char **pch, const char *append, int len, int *delim)
 
 /* print key in standard logging format */
 static int
-print_key(char *buf, size_t len, const struct ulogd_key *k, const char *name)
+print_key(char *buf, size_t len, const struct ulogd_key *key,
+		  const char *name)
 {
 	char *pch = buf;
 
-	switch (k->type) {
+	switch (key->type) {
 	case ULOGD_RET_STRING:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ", name,
-						(char *)k->u.value.ptr);
+						key_get_str(key));
 		break;
 		
 	case ULOGD_RET_IPADDR:
-		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u.%u.%u.%u\" ", name,
-						HIPQUAD(k->u.value.ui32));
+	{
+		unsigned long addr = key_get_u32(key);
+
+		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u.%u.%u.%u\" ",
+						name, HIPQUAD(addr));
 		break;
+	}
 		
 	case ULOGD_RET_UINT8:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-						k->u.value.ui8);
+						key_get_u8(key));
 		break;
 		
 	case ULOGD_RET_UINT16:
-		if (k->u.value.ui16 != 0)
+		if (key->u.value.ui16 != 0)
 			pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-							k->u.value.ui16);
+							key_get_u16(key));
 		break;
 		
 	case ULOGD_RET_UINT32:
-		if (k->u.value.ui32 != 0)
+		if (key->u.value.ui32 != 0)
 			pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-							k->u.value.ui32);
+							key_get_u32(key));
 		break;
 		
 	default:
@@ -398,17 +404,17 @@ print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 	int i;
 
 	for (i = 0; i < pi->input.num_keys; i++) {
-		struct ulogd_key *k = pi->input.keys[i].u.source;
+		struct ulogd_key *key = &pi->input.keys[i];
 		char *name;
 
- 		if (k == NULL || (k->flags & ULOGD_RETF_VALID) == 0)
+ 		if (key == NULL || !key_valid(key->u.source))
 			continue;
 
 		if (log_handler[i].flags & LH_F_NOLOG)
 			continue;
 
 		/* log handler name takes precedence */
-		name = log_handler[i].name ? log_handler[i].name : k->name;
+		name = log_handler[i].name ? log_handler[i].name : key->name;
 
 		/* custom logging handler? */
 		if (log_handler[i].fn != NULL) {
@@ -416,7 +422,7 @@ print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 			continue;
 		}
 
-		pch += print_key(pch, avail(buf, pch, max_len), k, name);
+		pch += print_key(pch, avail(buf, pch, max_len), key, name);
 	}
 
 	/* print proto specific part */
