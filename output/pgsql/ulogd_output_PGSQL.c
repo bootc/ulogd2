@@ -332,7 +332,10 @@ pgsql_close_db(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-/* make connection and select database */
+/**
+ * Make connection and select database.  Return %ULOGD_IRET_AGAIN if
+ * there is a chance to connect later.
+ */
 static int
 pgsql_open_db(struct ulogd_pluginstance *upi)
 {
@@ -343,6 +346,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	char *pass = pass_ce(upi->config_kset).u.string;
 	char *db = db_ce(upi->config_kset).u.string;
 	char *connstr;
+	int errret = ULOGD_IRET_ERR;
 	int len;
 
 	pr_fn_debug("pi=%p\n", upi);
@@ -359,7 +363,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 		len += 20;
 
 	if ((connstr = malloc(len)) == NULL)
-		return -ENOMEM;
+		return ULOGD_IRET_ERR;
 
 	*connstr = '\0';
 
@@ -393,6 +397,9 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 		ulogd_log(ULOGD_ERROR, "unable to connect to db (%s): %s\n",
 			  connstr, PQerrorMessage(pi->dbh));
 		pgsql_close_db(upi);
+
+		errret = ULOGD_IRET_AGAIN;
+
 		goto err_free;
 	}
 
@@ -409,7 +416,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 err_free:
 	free(connstr);
 
-	return -1;
+	return errret;
 }
 
 static int
