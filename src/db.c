@@ -119,13 +119,16 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 }
 
 static int
-check_driver(const struct ulogd_pluginstance *pi)
+check_driver(struct ulogd_pluginstance *pi)
 {
 	const struct db_instance *di = upi_priv(pi);
 	const struct db_driver *drv = di->driver;
 
 	if (drv->open_db == NULL || drv->close_db == NULL
 		|| drv->get_columns == NULL)
+		return -1;
+
+	if (drv->commit == NULL)
 		return -1;
 
 	return 0;
@@ -151,6 +154,10 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 		ulogd_log(ULOGD_ERROR, "error parsing config file\n");
 		return ret;
 	}
+
+	/* TODO make configurable */
+	di->buffer_size = 1;
+	di->max_backlog = 1024 * 1024;
 
 	/* Second: Open Database */
 	ret = di->driver->open_db(upi);
@@ -189,6 +196,10 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 		di->driver->prepare(upi); /* TODO check retval */
 	} else if (sql_createstmt(upi) < 0)
 		goto err_close;
+
+	INIT_LLIST_HEAD(&di->rows);
+	INIT_LLIST_HEAD(&di->rows_committed);
+	di->num_rows = 0;
 
 	/* note that this handler is only used for those DB plugins which
 	   use ulogd_db_interp(), others use their own handler (such
@@ -390,4 +401,124 @@ ulogd_db_signal(struct ulogd_pluginstance *upi, int signal)
 	default:
 		break;
 	}
+}
+
+struct db_row *
+db_row_new(struct ulogd_pluginstance *pi)
+{
+	struct db_instance *di = upi_priv(pi);
+	struct db_row *row;
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	if ((row = calloc(1, sizeof(struct db_row))) == NULL) {
+		ulogd_log(ULOGD_FATAL, "db: out of memory\n");
+		return NULL;
+	}
+
+	di->num_rows++;
+
+	return row;
+}
+
+static void
+__db_row_del(struct ulogd_pluginstance *pi, struct db_row *row)
+{
+	pr_fn_debug("pi=%p row=%p\n", pi, row);
+
+	if (row != NULL) {
+		struct db_instance *di = upi_priv(pi);
+
+		free(row);
+
+		di->num_rows--;
+	}
+}
+
+void
+db_row_del(struct ulogd_pluginstance *pi, struct db_row *row)
+{
+	pr_fn_debug("pi=%p row=%p\n", pi, row);
+
+	llist_del(&row->link);
+
+	__db_row_del(pi, row);
+}
+
+int
+db_row_add(struct ulogd_pluginstance *pi, struct db_row *row)
+{
+	struct db_instance *di = upi_priv(pi);
+
+	pr_fn_debug("pi=%p row=%p\n", pi, row);
+
+	if (di->max_backlog && di->num_rows >= di->max_backlog) {
+		if (!di->overlimit_msg) {
+			ulogd_log(ULOGD_ERROR, "db: over backlog limit, dropping rows\n");
+			di->overlimit_msg = 1;
+		}
+
+		__db_row_del(pi, row);
+
+		return -1;
+	}
+
+	llist_add(&row->link, &di->rows);
+
+	di->num_rows++;
+
+	return 0;
+}
+
+static int
+__db_commit(struct ulogd_pluginstance *pi)
+{
+	struct db_instance *di = upi_priv(pi);
+	int max_commit;
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	/* Limit number of rows to commit.  Note that currently three times
+	   buffer_size is a bit arbitrary and therefore might be adjusted in
+	   the future. */
+	max_commit = max(3 * di->buffer_size, 1024);
+
+	if (di->driver->commit(pi, max_commit) < 0) {
+		ulogd_log(ULOGD_ERROR, "%s: commit failed\n", pi->id);
+		return -1;
+	}
+
+	return 0;
+}
+
+int
+ulogd_db_interp_batch(struct ulogd_pluginstance *pi)
+{
+	struct db_instance *di = upi_priv(pi);
+	struct db_row *row;
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	if ((row = db_row_new(pi)) == NULL)
+		return ULOGD_IRET_ERR;
+
+	row->ip_saddr = pi->input.keys[0].u.source->u.value.ui32;
+	row->ip_daddr = pi->input.keys[1].u.source->u.value.ui32;
+	row->ip_proto = pi->input.keys[2].u.source->u.value.ui8;
+	row->l4_dport = pi->input.keys[3].u.source->u.value.ui16;
+	row->raw_in_pktlen = pi->input.keys[4].u.source->u.value.ui32;
+	row->raw_in_pktcount = pi->input.keys[5].u.source->u.value.ui32;
+	row->raw_out_pktlen = pi->input.keys[6].u.source->u.value.ui32;
+	row->raw_out_pktlen = pi->input.keys[7].u.source->u.value.ui32;
+	row->flow_start_day = pi->input.keys[8].u.source->u.value.ui32;
+	row->flow_start_sec = pi->input.keys[9].u.source->u.value.ui32;
+	row->flow_duration = pi->input.keys[10].u.source->u.value.ui32;
+
+	if (db_row_add(pi, row) < 0)
+		return ULOGD_IRET_OK;
+
+	if (di->num_rows >= di->buffer_size)
+		__db_commit(pi);
+
+	return ULOGD_IRET_OK;
 }
