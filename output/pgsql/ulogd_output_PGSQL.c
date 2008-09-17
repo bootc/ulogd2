@@ -393,18 +393,18 @@ __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 
 	pr_fn_debug("pi=%p\n", pi);
 
-	sprintf(priv->param_val[0], "%u", row->ip_saddr);
-	sprintf(priv->param_val[1], "%u", row->ip_daddr);
-	sprintf(priv->param_val[2], "%u", row->ip_proto);
-	sprintf(priv->param_val[3], "%u", row->l4_dport);
-	sprintf(priv->param_val[4], "%u", row->raw_in_pktlen);
-	sprintf(priv->param_val[5], "%u", row->raw_in_pktcount);
-	sprintf(priv->param_val[6], "%u", row->raw_out_pktlen);
-	sprintf(priv->param_val[7], "%u", row->raw_out_pktcount);
-	sprintf(priv->param_val[8], "%u", row->flow_start_day);
-	sprintf(priv->param_val[9], "%u", row->flow_start_sec);
-	sprintf(priv->param_val[10], "%u", row->flow_duration);
-	sprintf(priv->param_val[11], "%u", 1 /* flow_count */);
+	utoa(row->ip_saddr, priv->param_val[0], 32);
+	utoa(row->ip_daddr, priv->param_val[1], 32);
+	utoa(row->ip_proto, priv->param_val[2], 32);
+	utoa(row->l4_dport, priv->param_val[3], 32);
+	utoa(row->raw_in_pktlen, priv->param_val[4], 32);
+	utoa(row->raw_in_pktcount, priv->param_val[5], 32);
+	utoa(row->raw_out_pktlen, priv->param_val[6], 32);
+	utoa(row->raw_out_pktcount, priv->param_val[7], 32);
+	utoa(row->flow_start_day, priv->param_val[8], 32);
+	utoa(row->flow_start_sec, priv->param_val[9], 32);
+	utoa(row->flow_duration, priv->param_val[10], 32);
+	utoa(1, priv->param_val[11], 32);
 
 	priv->pgres = PQexecPrepared(priv->dbh, "insert",
 								 pi->input.num_keys,
