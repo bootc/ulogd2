@@ -462,19 +462,15 @@ pgsql_commit(struct ulogd_pluginstance *pi, int max_commit)
     }
 
 	if (__pgsql_exec(pi, "commit") < 0)
-		goto err_rollback;
+		return -1;
 
-	llist_for_each_safe(curr, tmp, &di->rows_committed) {
-		row = llist_entry(curr, struct db_row, link);
-
-		db_row_del(pi, row);
-	}
+	/* rows are deleted by generic DB layer */
 
 	return rows;
 
 err_rollback:
-	llist_for_each_prev_safe(curr, tmp, &di->rows_committed)
-		llist_move_tail(curr, &di->rows);
+	if (__pgsql_exec(pi, "rollback") < 0)
+		abort();
 
 	return -1;
 }

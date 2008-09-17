@@ -100,6 +100,8 @@ static int
 __db_commit(struct ulogd_pluginstance *pi)
 {
 	struct db_instance *di = upi_priv(pi);
+	struct llist_head *curr, *tmp;
+	struct db_row *row;
 	int max_commit, rows;
 
 	pr_fn_debug("pi=%p\n", pi);
@@ -114,13 +116,27 @@ __db_commit(struct ulogd_pluginstance *pi)
 
 	if ((rows = di->driver->commit(pi, max_commit)) < 0) {
 		ulogd_log(ULOGD_ERROR, "%s: commit failed\n", pi->id);
-		return -1;
+
+		goto err_rollback;
+	}
+
+	llist_for_each_safe(curr, tmp, &di->rows_committed) {
+		row = llist_entry(curr, struct db_row, link);
+
+		db_row_del(pi, row);
 	}
 
 	ulogd_log(ULOGD_DEBUG, "%s: rows=%d commited=%d\n", pi->id,
 			  di->num_rows, rows);
 
 	return rows;
+
+
+err_rollback:
+	llist_for_each_prev_safe(curr, tmp, &di->rows_committed)
+		llist_move_tail(curr, &di->rows);
+
+	return -1;
 }
 
 /**
