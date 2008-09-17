@@ -46,12 +46,10 @@ static struct config_keyset pgsql_kset = {
 		{ 
 			.key = "user", 
 			.type = CONFIG_TYPE_STRING,
-			.options = CONFIG_OPT_MANDATORY,
 		},
 		{
 			.key = "pass", 
 			.type = CONFIG_TYPE_STRING,
-			.options = CONFIG_OPT_NONE,
 		},
 		{
 			.key = "port",
@@ -289,7 +287,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	/* hostname and  and password are the only optionals */
 	if (server)
 		len += strlen(server);
-	if (pass)
+	if (pass != NULL && *pass != '\0')
 		len += strlen(pass);
 	if (port)
 		len += 20;
@@ -313,10 +311,13 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 
 	strcat(connstr, " dbname=");
 	strcat(connstr, db);
-	strcat(connstr, " user=");
-	strcat(connstr, user);
 
-	if (pass != NULL) {
+	if (user != NULL && *user != '\0') {
+		strcat(connstr, " user=");
+		strcat(connstr, user);
+	}
+
+	if (pass != NULL && *pass != '\0') {
 		strcat(connstr, " password=");
 		strcat(connstr, pass);
 	}
