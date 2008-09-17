@@ -63,10 +63,8 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *mi = upi_priv(upi);
 	unsigned int size;
-	char buf[ULOGD_MAX_KEYLEN];
-	char *underscore;
-	int i;
 	char *table = table_ce(upi->config_kset).u.string;
+	int i;
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
@@ -96,22 +94,24 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 		sprintf(mi->stmt, "insert into %s.%s (", mi->schema, table);
 	else
 		sprintf(mi->stmt, "insert into %s (", table);
+
 	mi->stmt_val = mi->stmt + strlen(mi->stmt);
 
 	for (i = 0; i < upi->input.num_keys; i++) {
 		if (upi->input.keys[i].flags & ULOGD_KEYF_INACTIVE)
 			continue;
 
-		strncpy(buf, upi->input.keys[i].name, ULOGD_MAX_KEYLEN);
-		while ((underscore = strchr(buf, '.')))
-			*underscore = '_';
-		sprintf(mi->stmt_val, "%s,", buf);
-		mi->stmt_val = mi->stmt + strlen(mi->stmt);
-	}
-	*(mi->stmt_val - 1) = ')';
+		strncpy(mi->stmt_val, upi->input.keys[i].name, ULOGD_MAX_KEYLEN);
+		strntr(mi->stmt_val, '.', '_');
 
-	sprintf(mi->stmt_val, " values (");
-	mi->stmt_val = mi->stmt + strlen(mi->stmt);
+		mi->stmt_val += strlen(upi->input.keys[i].name);
+
+		if (i + 1 < upi->input.num_keys)
+			*(mi->stmt_val)++ = ',';
+	}
+
+	*(mi->stmt_val)++ = ')';
+	mi->stmt_val += sprintf(mi->stmt_val, " values (");
 
 	ulogd_log(ULOGD_DEBUG, "stmt='%s'\n", mi->stmt);
 
