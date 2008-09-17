@@ -174,9 +174,9 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 			wordend = get_word(wordend, " =\t\n", (char *) &wordbuf);
 			args = (char *)&wordbuf;
 
-			if (ce->hit && !(ce->options & CONFIG_OPT_MULTI))
-			{
-				pr_debug("->ce-hit and option not multi!\n");
+			if (ce->hit && !(ce->options & CONFIG_OPT_MULTI)) {
+				ulogd_log(ULOGD_ERROR, "'%s' specified multiple times\n",
+						  ce->key);
 				config_errce = ce;
 				err = -ERRMULT;
 				goto cpf_error;
@@ -200,16 +200,17 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 			}
 			break;
 		}
-		pr_debug("parse_file: exiting main loop\n");
 	}
 
 
 	for (i = 0; i < kset->num_ces; i++) {
 		struct config_entry *ce = &kset->ces[i];
+
 		pr_debug("ce post loop, ce=%s\n", ce->key);
+
 		if ((ce->options & CONFIG_OPT_MANDATORY) && (ce->hit == 0)) {
-			pr_debug("Mandatory config directive \"%s\" not found\n",
-				ce->key);
+			ulogd_log(ULOGD_ERROR, "%s: mandatory config directive '%s' "
+					  "not set\n", section, ce->key);
 			config_errce = ce;
 			err = -ERRMAND;
 			goto cpf_error;
