@@ -147,7 +147,7 @@ err_rollback:
 	llist_for_each_prev_safe(curr, tmp, &di->rows_committed)
 		llist_move_tail(curr, &di->rows);
 
-	return -1;
+	return rows;
 }
 
 /**
@@ -168,8 +168,10 @@ db_timer_cb(struct ulogd_timer *t)
 		if (di->num_rows == 0)
 			return;
 
-		if ((rows = __db_commit(pi)) < 0)
+		if ((rows = __db_commit(pi)) < 0) {
+			ulogd_upi_error(pi, rows);
 			return;
+		}
 	}
 }
 
@@ -556,6 +558,7 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi)
 {
 	struct db_instance *di = upi_priv(pi);
 	struct db_row *row;
+	int ret = ULOGD_IRET_OK;
 
 	pr_fn_debug("pi=%p\n", pi);
 
@@ -578,7 +581,7 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi)
 		return ULOGD_IRET_OK;
 
 	if (di->num_rows >= di->buffer_size)
-		__db_commit(pi);
+		ret = __db_commit(pi);
 
-	return ULOGD_IRET_OK;
+	return ret;
 }
