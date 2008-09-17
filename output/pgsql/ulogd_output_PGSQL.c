@@ -13,7 +13,7 @@
  */
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
-#include <ulogd/conffile.h>
+#include <ulogd/plugin.h>
 #include <ulogd/db.h>
 #include <libpq-fe.h>
 
@@ -192,7 +192,7 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	upi->input.num_keys = PQntuples(pi->pgres);
 	ulogd_log(ULOGD_DEBUG, "%u fields in table\n", upi->input.num_keys);
 
-	upi->input.keys = calloc(upi->input.num_keys, sizeof(struct ulogd_key));
+	upi->input.keys = ulogd_alloc_keyset(upi->input.num_keys, 0);
 	if (upi->input.keys == NULL) {
 		upi->input.num_keys = 0;
 		PQclear(pi->pgres);
