@@ -19,7 +19,11 @@
 #include <signal.h>	/* need this because of extension-sighandler */
 #include <sys/types.h>
 
+/* TODO should move to common.h */
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
+#define __fmt_printf(idx, first) \
+						__attribute__ ((format (printf,(idx),(first))))
 
 #define ULOGD_VERSION "2.0.0beta"
 
@@ -231,7 +235,9 @@ void ulogd_register_plugin(struct ulogd_plugin *me);
 struct ulogd_key *alloc_ret(const u_int16_t type, const char*);
 
 /* write a message to the daemons' logfile */
-void __ulogd_log(int level, char *file, int line, const char *message, ...);
+void __ulogd_log(int level, char *file, int line, const char *fmt, ...) \
+	__fmt_printf(4, 5);
+
 /* macro for logging including filename and line number */
 #define ulogd_log(level, format, args...) \
 	__ulogd_log(level, __FILE__, __LINE__, format, ## args)

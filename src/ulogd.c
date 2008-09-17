@@ -277,7 +277,7 @@ void ulogd_register_plugin(struct ulogd_plugin *me)
 {
 	if (strcmp(me->version, ULOGD_VERSION)) { 
 		ulogd_log(ULOGD_NOTICE, "plugin `%s' has incompatible version %s\n",
-			  me->version);
+				  me->name, me->version);
 		return;
 	}
 	if (find_plugin(me->name)) {
@@ -648,8 +648,8 @@ static int create_stack(const char *option)
 	char *tok;
 	int ret;
 
-	if (!buf) {
-		ulogd_log(ULOGD_ERROR, "");
+	if (buf == NULL) {
+		ulogd_log(ULOGD_ERROR, "%s: out of memory\n", __func__);
 		ret = -ENOMEM;
 		goto out_buf;
 	}
