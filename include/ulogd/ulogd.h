@@ -113,6 +113,7 @@ struct ulogd_key {
 			int32_t		i32;
 			int64_t		i64;
 			void		*ptr;
+			char		*str;
 		} value;
 		struct ulogd_key *source;
 	} u;
