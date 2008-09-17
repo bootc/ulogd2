@@ -203,16 +203,12 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	}
 
 	for (i = 0; i < PQntuples(pi->pgres); i++) {
-		char buf[ULOGD_MAX_KEYLEN+1];
-
 		/* replace all underscores with dots */
-		strncpy(buf, PQgetvalue(pi->pgres, i, 0), ULOGD_MAX_KEYLEN);
-		strntr(buf, '_', '.');
+		strncpy(upi->input.keys[i].name, PQgetvalue(pi->pgres, i, 0),
+				ULOGD_MAX_KEYLEN);
+		strntr(upi->input.keys[i].name, '_', '.');
 
-		pr_fn_debug("field '%s' found: ", buf);
-
-		/* add it to list of input keys */
-		strncpy(upi->input.keys[i].name, buf, ULOGD_MAX_KEYLEN);
+		pr_fn_debug("field '%s' found: ", upi->input.keys[i].name);
 	}
 
 	PQclear(pi->pgres);
