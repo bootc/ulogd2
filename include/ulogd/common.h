@@ -55,4 +55,7 @@ int set_sockbuf_len(int fd, int rcv_len, int snd_len);
 /* translate characters in string */
 int strntr(char *, char, char);
 
+/* unsigned to string */
+int utoa(unsigned, char *, size_t);
+
 #endif /* COMMON_H */

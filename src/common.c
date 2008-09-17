@@ -74,3 +74,39 @@ strntr(char *str, char from, char to)
 
 	return 0;
 }
+
+/**
+ * Return number as string.
+ *
+ * @return characters written, -1 on error.
+ */
+int
+utoa(unsigned v, char *str, size_t len)
+{
+	char *end = str + len;
+	int i;
+
+	do {
+		unsigned mod = v % 10;
+
+		v /= 10;
+
+		*str++ = '0' + mod;
+	} while (v > 0 && str < end - 1);
+
+	*str = '\0';
+
+	/* characters are in reverse order, therefore swap */
+	end -= len;
+
+	len = str - end;
+	for (i = 0, str--; i < (len / 2); i++) {
+		char tmp = str[-i];
+
+		str[-i] = end[i];
+		end[i] = tmp;
+	}
+
+	return len - (end - str);
+}
+
