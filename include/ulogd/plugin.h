@@ -26,6 +26,7 @@ int ulogd_upi_start(struct ulogd_pluginstance *);
 int ulogd_upi_stop(struct ulogd_pluginstance *);
 int ulogd_upi_interp(struct ulogd_pluginstance *);
 void ulogd_upi_signal(struct ulogd_pluginstance *, int);
+int ulogd_upi_error(struct ulogd_pluginstance *, int);
 void ulogd_upi_set_state(struct ulogd_pluginstance *, enum UpiState);
 int ulogd_upi_reset_cfg(struct ulogd_pluginstance *);
 

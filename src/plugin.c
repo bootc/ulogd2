@@ -329,6 +329,20 @@ ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
 	pi->plugin->signal(pi, signo);
 }
 
+int
+ulogd_upi_error(struct ulogd_pluginstance *pi, int err)
+{
+	assert(err != ULOGD_IRET_OK);
+
+	if (pi->state == PsStarted)
+		ulogd_upi_stop(pi);
+
+	if (err == ULOGD_IRET_AGAIN)
+		stack_fsm_add(pi->stack);
+
+	return 0;
+}
+
 void
 ulogd_upi_set_state(struct ulogd_pluginstance *pi, enum UpiState state)
 {
