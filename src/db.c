@@ -185,12 +185,10 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 	if (di->driver->open_db(upi) < 0)
 		return -1;
 
-	if (sql_createstmt(upi) < 0)
-		goto err_close;
-
 	if (db_has_prepare(di)) {
 		di->driver->prepare(upi); /* TODO check retval */
-	}
+	} else if (sql_createstmt(upi) < 0)
+		goto err_close;
 
 	/* note that this handler is only used for those DB plugins which
 	   use ulogd_db_interp(), others use their own handler (such
