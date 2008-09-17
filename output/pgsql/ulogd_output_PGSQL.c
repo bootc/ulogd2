@@ -259,16 +259,23 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 		ulogd_log(ULOGD_ERROR, "unable to connect to db (%s): %s\n",
 			  connstr, PQerrorMessage(pi->dbh));
 		pgsql_close_db(upi);
-		return -1;
+		goto err_free;
 	}
 
 	if (pgsql_namespace(upi)) {
 		ulogd_log(ULOGD_ERROR, "unable to test for pgsql schemas\n");
 		pgsql_close_db(upi);
-		return -1;
+		goto err_free;
 	}
 
+	free(connstr);
+
 	return 0;
+
+err_free:
+	free(connstr);
+
+	return -1;
 }
 
 static int
