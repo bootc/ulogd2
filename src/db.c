@@ -96,6 +96,16 @@ db_row_add(struct ulogd_pluginstance *pi, struct db_row *row)
 	return 0;
 }
 
+/**
+ * Commit loop for passing rows to database.
+ *
+ * Does much (but currently not all) of the list handling after
+ * finishing (both successfully and unsuccessfully).  On success
+ * the committed rows are deleted.
+ *
+ * @arg pi		Plugin instance to use.
+ * @return Number of rows committed.
+ */
 static int
 __db_commit(struct ulogd_pluginstance *pi)
 {
