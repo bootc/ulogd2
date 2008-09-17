@@ -146,11 +146,15 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-#define PGSQL_GETCOLUMN_TEMPLATE 			\
-	"SELECT  a.attname FROM pg_class c, pg_attribute a WHERE c.relname ='%s' AND a.attnum>0 AND a.attrelid=c.oid ORDER BY a.attnum"
+#define PGSQL_GETCOLUMN_TEMPLATE \
+	"SELECT  a.attname FROM pg_class c, pg_attribute a WHERE " \
+	"c.relname ='%s' AND a.attnum>0 AND a.attrelid=c.oid ORDER BY a.attnum"
 
-#define PGSQL_GETCOLUMN_TEMPLATE_SCHEMA 		\
-	"SELECT a.attname FROM pg_attribute a, pg_class c LEFT JOIN pg_namespace n ON c.relnamespace=n.oid WHERE c.relname ='%s' AND n.nspname='%s' AND a.attnum>0 AND a.attrelid=c.oid AND a.attisdropped=FALSE ORDER BY a.attnum"
+#define PGSQL_GETCOLUMN_TEMPLATE_SCHEMA \
+	"SELECT a.attname FROM pg_attribute a, pg_class c LEFT JOIN " \
+	"pg_namespace n ON c.relnamespace=n.oid WHERE c.relname ='%s' " \
+	"AND n.nspname='%s' AND a.attnum>0 AND a.attrelid=c.oid " \
+	"AND a.attisdropped=FALSE ORDER BY a.attnum"
 
 /* find out which columns the table has */
 static int
