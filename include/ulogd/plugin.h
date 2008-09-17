@@ -20,6 +20,13 @@
 #ifndef PLUGIN_H
 #define PLUGIN_H
 
+int ulogd_upi_configure(struct ulogd_pluginstance *,
+						struct ulogd_pluginstance_stack *);
+int ulogd_upi_start(struct ulogd_pluginstance *);
+int ulogd_upi_stop(struct ulogd_pluginstance *);
+int ulogd_upi_interp(struct ulogd_pluginstance *);
+void ulogd_upi_signal(struct ulogd_pluginstance *, int);
+
 /* set key values */
 void key_i8(struct ulogd_key *, int);
 void key_i16(struct ulogd_key *, int);

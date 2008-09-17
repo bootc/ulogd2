@@ -388,11 +388,12 @@ static void ulogd_clean_results(struct ulogd_pluginstance *pi)
 void ulogd_propagate_results(struct ulogd_pluginstance *pi)
 {
 	struct ulogd_pluginstance *cur = pi;
+
 	/* iterate over remaining plugin stack */
 	llist_for_each_entry_continue(cur, &pi->stack->list, list) {
 		int ret;
 		
-		ret = cur->plugin->interp(cur);
+		ret = ulogd_upi_interp(cur);
 		switch (ret) {
 		case ULOGD_IRET_ERR:
 			ulogd_log(ULOGD_NOTICE,
@@ -525,8 +526,8 @@ find_okey_in_stack(char *name,
 static int
 create_stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
 {
-	int i = 0;
 	struct ulogd_pluginstance *pi_cur;
+	int ret, i = 0;
 
 	/* PASS 2: */
 	ulogd_log(ULOGD_DEBUG, "connecting input/output keys of stack:\n");
@@ -538,16 +539,12 @@ create_stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
 		i++;
 		ulogd_log(ULOGD_DEBUG, "traversing plugin `%s'\n", 
 			  pi_cur->plugin->name);
+
 		/* call plugin to tell us which keys it requires in
 		 * given configuration */
-		if (pi_cur->plugin->configure) {
-			int ret = pi_cur->plugin->configure(pi_cur, 
-							    stack);
-			if (ret < 0) {
-				ulogd_log(ULOGD_ERROR, "%s: configuration error\n",
-					  pi_cur->id);
-				return ret;
-			}
+		if ((ret = ulogd_upi_configure(pi_cur, stack)) < 0) {
+			ulogd_log(ULOGD_ERROR, "%s: configuration error\n", pi_cur->id);
+			return ret;
 		}
 
 		if (i == 1) {
@@ -627,16 +624,12 @@ static int create_stack_start_instances(struct ulogd_pluginstance_stack *stack)
 
 	/* start from input to output plugin */
 	llist_for_each_entry(pi, &stack->list, list) {
-		if (!pi->plugin->start)
-			continue;
-
-		ret = pi->plugin->start(pi);
-		if (ret < 0) {
-			ulogd_log(ULOGD_ERROR, "error during start of `%s'\n",
-				  pi->id);
+		if ((ret = ulogd_upi_start(pi)) < 0) {
+			ulogd_log(ULOGD_ERROR, "error during start of `%s'\n", pi->id);
 			return ret;
 		}
 	}
+
 	return 0;
 }
 
@@ -838,7 +831,7 @@ _do_signal(struct ulogd_pluginstance *pi,
 	int signo = (int)arg;
 
 	if (pi->plugin->signal) {
-		pi->plugin->signal(pi, signo);
+		ulogd_upi_signal(pi, signo);
 
 		return 1;
 	}
@@ -868,16 +861,16 @@ _do_reconf(struct ulogd_pluginstance *pi,
 
 	switch (op) {
 	case STOP:
-		ret = pi->plugin->stop(pi);
+		ret = ulogd_upi_stop(pi);
 		break;
 
 	case CONFIGURE:
 		ulogd_pluginstance_reset_cfg(pi);
-		ret = pi->plugin->configure(pi, stack);
+		ret = ulogd_upi_configure(pi, stack);
 		break;
 
 	case START:
-		ret = pi->plugin->start(pi);
+		ret = ulogd_upi_start(pi);
 		break;
 
 	default:

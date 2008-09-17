@@ -20,7 +20,47 @@
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
 
+int
+ulogd_upi_configure(struct ulogd_pluginstance *pi,
+					struct ulogd_pluginstance_stack *stack)
+{
+	if (pi->plugin->configure == NULL)
+		return 0;
 
+	return pi->plugin->configure(pi, stack);
+}
+
+int
+ulogd_upi_start(struct ulogd_pluginstance *pi)
+{
+	if (pi->plugin->start == NULL)
+		return 0;
+
+	return pi->plugin->start(pi);
+}
+
+int
+ulogd_upi_stop(struct ulogd_pluginstance *pi)
+{
+	return pi->plugin->stop(pi);
+}
+
+int
+ulogd_upi_interp(struct ulogd_pluginstance *pi)
+{
+	return pi->plugin->interp(pi);
+}
+
+void
+ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
+{
+	if (pi->plugin->signal == NULL)
+		return;
+
+	pi->plugin->signal(pi, signo);
+}
+
+/* key API */
 static void
 __check_get(const struct ulogd_key *key, unsigned type)
 {
@@ -252,3 +292,4 @@ ulogd_key_find(const struct ulogd_keyset *set, const char *name)
 
 	return NULL;
 }
+
