@@ -112,6 +112,9 @@ struct ulogd_key {
 		} value;
 		struct ulogd_key *source;
 	} u;
+
+	/* private date owned by plugin */
+	void *priv;
 };
 
 struct ulogd_keyset {

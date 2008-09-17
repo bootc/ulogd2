@@ -21,6 +21,14 @@
 #define PLUGIN_H
 
 
+static inline void *
+upi_key_priv(const struct ulogd_key *key)
+{
+	return key->priv;
+}
+
+struct ulogd_key *ulogd_alloc_keyset(int n, size_t priv_size);
+
 struct ulogd_key *ulogd_key_find(const struct ulogd_keyset *,
 								 const char *name);
 
