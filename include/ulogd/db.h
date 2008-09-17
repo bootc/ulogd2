@@ -4,6 +4,12 @@
 #include <ulogd/ulogd.h>
 #include <stdbool.h>
 
+/**
+ * default buffer size used for batching.  If this limit is reached
+ * a commit is done (or after timer elapsed).
+ */
+#define ULOGD_DB_BUFFER_DEFAULT	100
+
 struct db_driver {
 	/* set input keys depending on database shema (required) */
 	int (* get_columns)(struct ulogd_pluginstance *upi);
@@ -70,30 +76,43 @@ db_has_prepare(const struct db_instance *di)
 
 #define TIME_ERR		((time_t)-1)	/* Be paranoid */
 
-#define DB_CES							\
-		{						\
-			.key = "table",				\
-			.type = CONFIG_TYPE_STRING,		\
-			.options = CONFIG_OPT_MANDATORY,	\
-		},						\
-		{						\
-			.key = "reconnect",			\
-			.type = CONFIG_TYPE_INT,		\
-		},						\
-		{						\
-			.key = "ip_as_string",			\
-			.type = CONFIG_TYPE_INT,		\
-		},						\
-		{						\
-			.key = "connect_timeout",		\
-			.type = CONFIG_TYPE_INT,		\
-		}
+/*
+ * GENERIC DATABASE CONFIGURATION SWITCHES
+ *
+ * buffer=N		Buffer size used for batching.  If this limit is reached
+ *				a commit is forced (or after timer elapsed).
+ */
+#define DB_CES \
+	{ \
+		.key = "table", \
+		.type = CONFIG_TYPE_STRING, \
+		.options = CONFIG_OPT_MANDATORY, \
+	}, \
+	{ \
+		.key = "reconnect", \
+		.type = CONFIG_TYPE_INT, \
+	}, \
+	{ \
+		.key = "ip_as_string", \
+		.type = CONFIG_TYPE_INT, \
+	}, \
+	{ \
+		.key = "connect_timeout", \
+		.type = CONFIG_TYPE_INT, \
+	}, \
+	{ \
+		.key = "buffer", \
+		.type = CONFIG_TYPE_INT, \
+		.u.value = ULOGD_DB_BUFFER_DEFAULT, \
+	}
 
-#define DB_CE_NUM	4
+#define DB_CE_NUM	5
+
 #define table_ce(x)	(x->ces[0])
 #define reconnect_ce(x)	(x->ces[1])
 #define asstring_ce(x)	(x->ces[2])
 #define timeout_ce(x)	(x->ces[3])
+#define db_buffer_ce(x)	(x->ces[4])
 
 void ulogd_db_signal(struct ulogd_pluginstance *upi, int signal);
 int ulogd_db_start(struct ulogd_pluginstance *upi);

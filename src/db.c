@@ -283,9 +283,8 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 		return ret;
 	}
 
-	/* TODO make configurable */
-	di->buffer_size = 1024;
-	di->max_backlog = 1024 * 1024;
+	di->buffer_size = db_buffer_ce(upi->config_kset).u.value;
+	di->max_backlog = 1024 * di->buffer_size;
 
 	/* Second: Open Database */
 	ret = di->driver->open_db(upi);
