@@ -21,20 +21,36 @@
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 
-/*
- * Currently the sole purpose of this plugin is to provide the static
- * 'flow.count' row in the accounting database.  It thus supersedes
- * previous hacks in the SQLITE3 module e. g.
- */
-enum OKeys {
-	FlowCount = 0,
+/* days from Jan. 1 1970 to Jan 1 01 */
+#define DAY_OFFSET		719163
+
+enum InKeys {
+	InFlowStartSec = 0,
 };
 
-static struct ulogd_key static_keys[] = {
-	[FlowCount] = {
+enum OutKeys {
+	OutFlowCount = 0,
+	OutFlowStartDay,
+};
+
+
+static struct ulogd_key static_in_keys[] = {
+	[InFlowStartSec] = {
+		.type = ULOGD_RET_UINT32,
+		.name = "flow.start.sec",
+	},
+};
+
+static struct ulogd_key static_out_keys[] = {
+	[OutFlowCount] = {
 		.type = ULOGD_RET_INT32,
 		.flags = ULOGD_RETF_NONE,
 		.name = "flow.count",
+	},
+	[OutFlowStartDay] = {
+		.type = ULOGD_RET_UINT32,
+		.flags = ULOGD_RETF_NONE,
+		.name = "flow.start.day",
 	},
 };
 
@@ -42,21 +58,32 @@ static struct ulogd_key static_keys[] = {
 static int
 static_interp(struct ulogd_pluginstance *pi)
 {
-	struct ulogd_key *ret = pi->output.keys;
+	struct ulogd_key *out = pi->output.keys;
+	struct ulogd_key *in = pi->input.keys;
 
 	pr_debug("%s: pi=%p\n", __func__, pi);
 
-	ret[FlowCount].u.value.i32 = 1;
-	ret[FlowCount].flags |= ULOGD_RETF_VALID;
+	out[OutFlowCount].u.value.i32 = 1;
+	out[OutFlowCount].flags |= ULOGD_RETF_VALID;
+
+	out[OutFlowStartDay].u.value.ui32
+		= in[InFlowStartSec].u.source->u.value.ui32 / (1 DAY) + DAY_OFFSET;
+	out[OutFlowStartDay].flags |= ULOGD_RETF_VALID;
 
 	return 0;
 }
 
 static struct ulogd_plugin static_plugin = {
 	.name = "STATIC",
+	.flags = ULOGD_PF_RECONF,
+	.input = {
+		.keys = static_in_keys,
+		.num_keys = ARRAY_SIZE(static_in_keys),
+		.type = ULOGD_DTYPE_PACKET | ULOGD_DTYPE_FLOW,
+	},
 	.output = {
-		.keys = static_keys,
-		.num_keys = ARRAY_SIZE(static_keys),
+		.keys = static_out_keys,
+		.num_keys = ARRAY_SIZE(static_out_keys),
 		.type = ULOGD_DTYPE_PACKET | ULOGD_DTYPE_FLOW,
 	},
 	.interp = &static_interp,

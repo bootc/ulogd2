@@ -28,6 +28,7 @@
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/linuxlist.h>
+#include <ulogd/plugin.h>
 #include <ulogd/ipfix_protocol.h>
 #include <time.h>
 #include <sys/time.h>
@@ -139,7 +140,6 @@ enum {
 	O_CT_ID,
 	O_FLOW_START_SEC,
 	O_FLOW_START_USEC,
-	O_FLOW_START_DAY,
 	O_FLOW_END_SEC,
 	O_FLOW_END_USEC,
 	O_FLOW_DURATION,
@@ -285,11 +285,6 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.vendor		= IPFIX_VENDOR_IETF,
 			.field_id	= IPFIX_flowStartMicroSeconds,
 		},
-	},
-	{
-		.type 	= ULOGD_RET_UINT16,
-		.flags 	= ULOGD_RETF_NONE,
-		.name	= "flow.start.day",
 	},
 	{
 		.type	= ULOGD_RET_UINT32,
@@ -851,8 +846,6 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 	ret[O_FLOW_START_SEC].flags |= ULOGD_RETF_VALID;
 	ret[O_FLOW_START_USEC].u.value.ui32 = ct->time[START].tv_usec;
 	ret[O_FLOW_START_USEC].flags |= ULOGD_RETF_VALID;
-	ret[O_FLOW_START_DAY].u.value.ui16 = ct->time[START].tv_sec / (1 DAY);
-	ret[O_FLOW_START_DAY].flags |= ULOGD_RETF_VALID;
 
 	ret[O_FLOW_END_SEC].u.value.ui32 = ct->time[STOP].tv_sec;
 	ret[O_FLOW_END_SEC].flags |= ULOGD_RETF_VALID;
