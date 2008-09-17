@@ -71,14 +71,54 @@ static struct config_keyset pgsql_kset = {
 #define port_ce(x)	(x->ces[DB_CE_NUM+4])
 #define schema_ce(x)	(x->ces[DB_CE_NUM+5])
 
+static int
+__pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
+{
+   struct pgsql_priv *priv = upi_priv(pi);
+   int __pgret;
+
+   if (priv->pgres == NULL) {
+	   ulogd_log(ULOGD_FATAL, "%s: command failed\n", pi->id);
+	   abort();
+   }
+
+   __pgret = PQresultStatus(priv->pgres);
+   if (pgret != NULL)
+	   *pgret = __pgret;
+
+   switch (__pgret) {
+   case PGRES_COMMAND_OK:
+	   PQclear(priv->pgres);
+	   /* fall-through */
+   case PGRES_TUPLES_OK:
+	   break;					/* caller has to call PQclear() */
+
+   case PGRES_EMPTY_QUERY:
+   case PGRES_NONFATAL_ERROR:
+   case PGRES_BAD_RESPONSE:
+   case PGRES_FATAL_ERROR:
+	   ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
+	   PQclear(priv->pgres);
+	   return -1;
+
+   case PGRES_COPY_OUT:
+   case PGRES_COPY_IN:
+   default:
+	   ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
+	   PQclear(priv->pgres);
+	   abort();					/* unsupported */
+   }
+
+   return 0;
+}
+
 #define PGSQL_HAVE_NAMESPACE_TEMPLATE 			\
 	"SELECT nspname FROM pg_namespace n WHERE n.nspname='%s'"
 
 /**
- * Execute a simple SQL command on the database.  If the command fails
- * or does not have any result tuples clear the PGresult afterwards,
- * otherwise leave the result as is and return %PGRES_TUPLES_OK.  The
- * result has then to be cleared by caller.
+ * Execute a simple SQL command on the database.  PGres is freed
+ * automatically if the return value is not %PGRES_TUPLES_OK, in which
+ * case it has to be cleared by the caller.
  *
  * An empty command is considered an error and reported as such.
  *
@@ -87,33 +127,16 @@ static struct config_keyset pgsql_kset = {
  * @return >=0 if OK, <0 on error.
  */
 static int
-__pgsql_exec(struct ulogd_pluginstance *pi, const char *cmd)
+__pgsql_exec(struct ulogd_pluginstance *pi, const char *cmd, int *pgret)
 {
    struct pgsql_priv *priv = upi_priv(pi);
-   int ret;
 
    if (cmd == NULL)
        return -1;
 
-   if ((priv->pgres = PQexec(priv->dbh, cmd)) == NULL) {
-	   ulogd_log(ULOGD_ERROR, "%s: %s: command failed\n", pi->id, cmd);
-	   return -1;
-   }
+   priv->pgres = PQexec(priv->dbh, cmd);
 
-   if ((ret = PQresultStatus(priv->pgres)) == PGRES_COMMAND_OK)
-	   PQclear(priv->pgres);
-   else if (ret == PGRES_TUPLES_OK) {
-	   return PGRES_TUPLES_OK;
-   } else {
-	   ulogd_log(ULOGD_ERROR, "%s: %s: %s\n", pi->id, cmd,
-				 PQerrorMessage(priv->dbh));
-
-	   PQclear(priv->pgres);
-
-	   return -1;
-   }
-
-   return 0;
+   return __pgsql_err(pi, pgret);
 }
 
 /* Determine if server support schemas */
@@ -126,15 +149,15 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 
 	pr_fn_debug("pi=%p\n", pi);
 
-	if (!pi->dbh)
-		return 1;
+	if (pi->dbh == NULL)
+		return -1;
 
 	sprintf(pgbuf, PGSQL_HAVE_NAMESPACE_TEMPLATE,
 		schema_ce(upi->config_kset).u.string);
 	ulogd_log(ULOGD_DEBUG, "%s\n", pgbuf);
 
-	if (__pgsql_exec(upi, pgbuf) != PGRES_TUPLES_OK)
-		return 1;
+	if (__pgsql_exec(upi, pgbuf, NULL) < 0)
+		return ULOGD_IRET_AGAIN;
 
 	PQclear(pi->pgres);
 
@@ -183,10 +206,10 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 			 table_ce(upi->config_kset).u.string);
 	}
 
-	if (__pgsql_exec(upi, pgbuf) != PGRES_TUPLES_OK)
-		return -1;
+	if (__pgsql_exec(upi, pgbuf, NULL) < 0)
+		return ULOGD_IRET_AGAIN;
 
-	if (upi->input.keys)
+	if (upi->input.keys != NULL)
 		free(upi->input.keys);
 
 	upi->input.num_keys = PQntuples(pi->pgres);
@@ -258,7 +281,7 @@ pgsql_prepare(struct ulogd_pluginstance *pi)
 	struct db_instance *di = &priv->db_inst;
 	char *table = table_ce(pi->config_kset).u.string;
 	char *query, *pch;
-	int i;
+	int i, pgret;
 
 	pr_fn_debug("pi=%p\n", pi);
 
@@ -299,14 +322,12 @@ pgsql_prepare(struct ulogd_pluginstance *pi)
 
 	priv->pgres = PQprepare(priv->dbh, "insert", query,
 							pi->input.num_keys, NULL /* paramTypes */);
-	if (priv->pgres == NULL
-		|| PQresultStatus(priv->pgres) != PGRES_COMMAND_OK) {
-		ulogd_log(ULOGD_ERROR, "%s: prepare: %s\n",
-				  pi->id, PQerrorMessage(priv->dbh));
+	if (__pgsql_err(pi, &pgret) < 0)
 		goto err_free;
-	}
 
-	PQclear(priv->pgres);
+	if (pgret == PGRES_TUPLES_OK)
+		PQclear(priv->pgres);
+
 	free(query);
 
 	ulogd_log(ULOGD_DEBUG, "%s: statement prepared\n", pi->id);
@@ -354,7 +375,8 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	/* 80 is more than what we need for the fixed parts below */
 	len = 80 + strlen(user) + strlen(db);
 
-	/* hostname and  and password are the only optionals */
+	/* hostname, password, user and pass are optional, depending
+	   on what kind of connection is used. */
 	if (server)
 		len += strlen(server);
 	if (pass != NULL && *pass != '\0')
@@ -403,7 +425,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 		goto err_free;
 	}
 
-	if (pgsql_namespace(upi)) {
+	if (pgsql_namespace(upi) < 0) {
 		ulogd_log(ULOGD_ERROR, "unable to test for pgsql schemas\n");
 		pgsql_close_db(upi);
 		goto err_free;
@@ -434,6 +456,7 @@ static int
 __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 {
 	struct pgsql_priv *priv = upi_priv(pi);
+	int pgret;
 
 	pr_fn_debug("pi=%p\n", pi);
 
@@ -454,21 +477,15 @@ __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 								 (const char * const *)priv->param_val,
 								 NULL, NULL /* param_fmts */,
 								 0 /* want result in text format */);
-	if (priv->pgres == NULL
-		|| PQresultStatus(priv->pgres) != PGRES_COMMAND_OK) {
-		ulogd_log(ULOGD_ERROR, "execute: %s\n",
-				  PQerrorMessage(priv->dbh));
-		goto err_clear;
+
+	if (__pgsql_err(pi, &pgret) < 0) {
+		if (pgret == PGRES_FATAL_ERROR)
+			return ULOGD_IRET_AGAIN;
+
+		return ULOGD_IRET_ERR;
 	}
 
-	PQclear(priv->pgres);
-
 	return 0;
-
-err_clear:
-	PQclear(priv->pgres);
-
-	return -1;
 }
 
 /**
@@ -485,12 +502,12 @@ pgsql_commit(struct ulogd_pluginstance *pi, int max_commit)
 	struct db_instance *di = &priv->db_inst;
 	struct llist_head *curr, *tmp;
 	struct db_row *row;
-	int rows = 0;
+	int pgret, rows = 0;
 
 	pr_fn_debug("pi=%p\n", pi);
 
-	if (__pgsql_exec(pi, "start transaction") < 0)
-		return -1;
+	if (__pgsql_exec(pi, "start transaction", &pgret) < 0)
+		goto err;
 
 	llist_for_each_prev_safe(curr, tmp, &di->rows) {
 		if (++rows > max_commit)
@@ -504,18 +521,20 @@ pgsql_commit(struct ulogd_pluginstance *pi, int max_commit)
 		llist_move(&row->link, &di->rows_committed);
     }
 
-	if (__pgsql_exec(pi, "commit") < 0)
-		return -1;
+	if (__pgsql_exec(pi, "commit", &pgret) < 0)
+		goto err_rollback;
 
 	/* rows are deleted by generic DB layer */
 
 	return rows;
 
 err_rollback:
-	if (__pgsql_exec(pi, "rollback") < 0)
-		abort();
+	(void)__pgsql_exec(pi, "rollback", &pgret);
 
-	return -1;
+err:
+	ulogd_upi_set_state(pi, PsConfigured);
+
+	return ULOGD_IRET_AGAIN;
 }
 
 static int
@@ -523,9 +542,12 @@ pgsql_execute(struct ulogd_pluginstance *upi, const char *stmt,
 			  unsigned int len)
 {
 	struct pgsql_priv *priv = upi_priv(upi);
-	int ret;
+	int ret, pgret;
 
-	if ((ret = __pgsql_exec(upi, stmt)) == PGRES_TUPLES_OK)
+	if ((ret = __pgsql_exec(upi, stmt, &pgret)) < 0)
+		return ret;
+
+	if (pgret == PGRES_TUPLES_OK)
 		PQclear(priv->pgres);
 
 	return ret;
