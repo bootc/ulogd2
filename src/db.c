@@ -284,8 +284,6 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
-	ulogd_log(ULOGD_NOTICE, "(re)configuring\n");
-
 	if (check_driver(upi) < 0)
 		return -1;
 
@@ -300,21 +298,15 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	di->max_backlog = 1024 * di->buffer_size;
 
 	/* Second: Open Database */
-	ret = di->driver->open_db(upi);
-	if (ret < 0) {
-		ulogd_log(ULOGD_ERROR, "error in open_db\n");
+	if ((ret = di->driver->open_db(upi)) < 0)
 		return ret;
-	}
 
 	/* Third: Determine required input keys for given table */
-	ret = di->driver->get_columns(upi);
-	if (ret < 0)
-		ulogd_log(ULOGD_ERROR, "error in get_columns\n");
+	if ((ret = di->driver->get_columns(upi)) < 0)
+		goto err_close;
 
-	/* Close database, since ulogd core could just call configure
-	 * but abort during input key resolving routines.  configure
-	 * doesn't have a destructor... */
-	di->driver->close_db(upi);
+	/* close here because of restart logic later */
+	(void)di->driver->close_db(upi);
 
 	/* init timer */
 	di->timer.cb = db_timer_cb;
@@ -324,8 +316,13 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 
 	if (ulogd_register_timer(&di->timer) < 0) {
 		ulogd_log(ULOGD_FATAL, "%s: database timer: %m\n", upi->id);
-		return -1;
+		goto err_close;
 	}
+
+	return 0;
+
+err_close:
+	(void)di->driver->close_db(upi);
 
 	return ret;
 }
