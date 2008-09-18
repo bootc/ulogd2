@@ -539,7 +539,7 @@ _init_db(struct ulogd_pluginstance *upi)
 	return di->interp(upi);
 }
 
-void
+int
 ulogd_db_signal(struct ulogd_pluginstance *upi, int signal)
 {
 	switch (signal) {
@@ -551,6 +551,8 @@ ulogd_db_signal(struct ulogd_pluginstance *upi, int signal)
 	default:
 		break;
 	}
+
+	return 0;
 }
 
 int

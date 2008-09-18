@@ -24,14 +24,13 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/conffile.h>
+#include <ulogd/plugin.h>
 #include <unistd.h>
 #include <string.h>
-#include <errno.h>
 #include <time.h>
-#include <ulogd/ulogd.h>
-#include <ulogd/conffile.h>
 
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX	256
@@ -110,9 +109,10 @@ static int _output_logemu(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static void signal_handler_logemu(struct ulogd_pluginstance *pi, int signal)
+static int
+signal_handler_logemu(struct ulogd_pluginstance *pi, int signal)
 {
-	struct logemu_instance *li = (struct logemu_instance *) &pi->private;
+	struct logemu_instance *li = upi_priv(pi);
 
 	switch (signal) {
 	case SIGHUP:
@@ -127,6 +127,8 @@ static void signal_handler_logemu(struct ulogd_pluginstance *pi, int signal)
 	default:
 		break;
 	}
+
+	return 0;
 }
 		
 

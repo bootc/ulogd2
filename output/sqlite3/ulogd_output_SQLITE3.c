@@ -777,7 +777,7 @@ sqlite3_stop(struct ulogd_pluginstance *pi)
 }
 
 
-static void
+static int
 sqlite3_signal(struct ulogd_pluginstance *pi, int sig)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
@@ -797,6 +797,8 @@ sqlite3_signal(struct ulogd_pluginstance *pi, int sig)
 	default:
 		break;
 	}
+
+	return 0;
 }
 
 

@@ -119,18 +119,18 @@ static struct config_keyset nacct_kset = {
 	},
 };
 
-static void
+static int
 sighup_handler_print(struct ulogd_pluginstance *pi, int signal)
 {
-	struct nacct_priv *oi = (struct nacct_priv *)&pi->private;
+	struct nacct_priv *priv = upi_priv(pi);
 
 	switch (signal) {
 	case SIGHUP:
 	{
 		ulogd_log(ULOGD_NOTICE, "NACCT: reopening logfile\n");
-		fclose(oi->of);
-		oi->of = fopen(NACCT_CFG_FILE(pi), "a");
-		if (!oi->of)
+		fclose(priv->of);
+		priv->of = fopen(NACCT_CFG_FILE(pi), "a");
+		if (!priv->of)
 			ulogd_log(ULOGD_ERROR, "%s: %s\n", NACCT_CFG_FILE(pi),
 					  strerror(errno));
 		break;
@@ -139,6 +139,8 @@ sighup_handler_print(struct ulogd_pluginstance *pi, int signal)
 	default:
 		break;
 	}
+
+	return 0;
 }
 
 static int

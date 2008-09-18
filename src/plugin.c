@@ -326,10 +326,17 @@ ulogd_upi_interp(struct ulogd_pluginstance *pi)
 void
 ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
 {
+	int ret;
+
 	if (pi->plugin->signal == NULL)
 		return;
 
-	pi->plugin->signal(pi, signo);
+	if (pi->plugin->signal(pi, signo) < 0) {
+		ulogd_upi_stop(pi);
+
+		if (ret == ULOGD_IRET_AGAIN)
+			stack_fsm_add(pi->stack);
+	}
 }
 
 int

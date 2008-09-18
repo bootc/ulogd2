@@ -464,7 +464,8 @@ static int stop_ipfix(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-static void signal_handler_ipfix(struct ulogd_pluginstance *pi, int signal)
+static int
+signal_handler_ipfix(struct ulogd_pluginstance *pi, int signal)
 {
 	struct ipfix_instance *li = (struct ipfix_instance *) &pi->private;
 
@@ -477,6 +478,8 @@ static void signal_handler_ipfix(struct ulogd_pluginstance *pi, int signal)
 	default:
 		break;
 	}
+
+	return 0;
 }
 	
 static int configure_ipfix(struct ulogd_pluginstance *pi,

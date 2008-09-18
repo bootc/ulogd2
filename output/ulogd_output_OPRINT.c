@@ -20,13 +20,11 @@
  * $Id$
  *
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
 #include <ulogd/conffile.h>
+#include <ulogd/plugin.h>
+#include <string.h>
 
 #ifndef ULOGD_OPRINT_DEFAULT
 #define ULOGD_OPRINT_DEFAULT	"/var/log/ulogd.pktlog"

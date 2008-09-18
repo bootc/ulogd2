@@ -114,13 +114,13 @@ db_has_prepare(const struct db_instance *di)
 #define timeout_ce(x)	(x->ces[3])
 #define db_buffer_ce(x)	(x->ces[4])
 
-void ulogd_db_signal(struct ulogd_pluginstance *upi, int signal);
 int ulogd_db_start(struct ulogd_pluginstance *upi);
 int ulogd_db_stop(struct ulogd_pluginstance *upi);
 int ulogd_db_interp(struct ulogd_pluginstance *upi);
 int ulogd_db_interp_batch(struct ulogd_pluginstance *upi);
 int ulogd_db_configure(struct ulogd_pluginstance *upi,
 			struct ulogd_pluginstance_stack *stack);
+int ulogd_db_signal(struct ulogd_pluginstance *upi, int signal);
 
 /* generic row handling */
 struct db_row *db_row_new(struct ulogd_pluginstance *pi);

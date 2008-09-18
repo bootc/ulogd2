@@ -167,7 +167,7 @@ struct ulogd_plugin {
 	int (* stop)(struct ulogd_pluginstance *pi);
 
 	/* function to receive a signal */
-	void (* signal)(struct ulogd_pluginstance *pi, int signal);
+	int (* signal)(struct ulogd_pluginstance *pi, int signal);
 
 	/* configuration parameters */
 	struct config_keyset *config_kset;
