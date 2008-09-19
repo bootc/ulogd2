@@ -239,8 +239,8 @@ enum {
 };
 
 
-static inline int 
-interp_packet(struct ulogd_pluginstance *upi, struct nflog_data *ldata)
+static int
+nflog_interp(struct ulogd_pluginstance *upi, struct nflog_data *ldata)
 {
 	struct ulogd_key *out = upi->output.keys;
 	struct nfulnl_msg_packet_hdr *ph;
@@ -300,7 +300,8 @@ interp_packet(struct ulogd_pluginstance *upi, struct nflog_data *ldata)
 }
 
 /* callback called from ulogd core when fd is readable */
-static int nful_read_cb(int fd, unsigned int what, void *param)
+static int
+nful_read_cb(int fd, unsigned int what, void *param)
 {
 	struct ulogd_pluginstance *upi = (struct ulogd_pluginstance *)param;
 	struct nflog_input *ui = (struct nflog_input *)upi->private;
@@ -322,25 +323,27 @@ static int nful_read_cb(int fd, unsigned int what, void *param)
 }
 
 /* callback called by libnfnetlink* for every nlmsg */
-static int msg_cb(struct nflog_g_handle *gh, struct nfgenmsg *nfmsg,
-		  struct nflog_data *nfa, void *data)
+static int
+msg_cb(struct nflog_g_handle *gh, struct nfgenmsg *nfmsg,
+	   struct nflog_data *nfa, void *data)
 {
 	struct ulogd_pluginstance *upi = data;
 
-	return interp_packet(upi, nfa);
+	return nflog_interp(upi, nfa);
 }
 
-static int configure(struct ulogd_pluginstance *upi,
-		     struct ulogd_pluginstance_stack *stack)
+static int
+nflog_configure(struct ulogd_pluginstance *upi,
+		  struct ulogd_pluginstance_stack *stack)
 {
-	ulogd_log(ULOGD_DEBUG, "parsing config file section `%s', "
-		  "plugin `%s'\n", upi->id, upi->plugin->name);
+	if (config_parse_file(upi->id, upi->config_kset) < 0)
+		return ULOGD_IRET_STOP;
 
-	config_parse_file(upi->id, upi->config_kset);
 	return 0;
 }
 
-static int start(struct ulogd_pluginstance *upi)
+static int
+nflog_start(struct ulogd_pluginstance *upi)
 {
 	struct nflog_input *ui = (struct nflog_input *) upi->private;
 	unsigned int flags;
@@ -424,7 +427,8 @@ out_buf:
 	return -1;
 }
 
-static int stop(struct ulogd_pluginstance *pi)
+static int
+nflog_stop(struct ulogd_pluginstance *pi)
 {
 	struct nflog_input *ui = (struct nflog_input *)pi->private;
 
@@ -445,13 +449,13 @@ struct ulogd_plugin libulog_plugin = {
 	.output = {
 			.type = ULOGD_DTYPE_RAW,
 			.keys = output_keys,
-			.num_keys = sizeof(output_keys)/sizeof(struct ulogd_key),
+			.num_keys = ARRAY_SIZE(output_keys),
 		},
 	.priv_size 	= sizeof(struct nflog_input),
-	.configure 	= &configure,
-	.start 		= &start,
-	.stop 		= &stop,
-	.config_kset 	= &libulog_kset,
+	.configure 	= &nflog_configure,
+	.start 		= &nflog_start,
+	.stop 		= &nflog_stop,
+	.config_kset = &libulog_kset,
 	.version	= ULOGD_VERSION,
 };
 
