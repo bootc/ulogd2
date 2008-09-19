@@ -536,8 +536,6 @@ err_rollback:
 	(void)__pgsql_exec(pi, "rollback", &pgret);
 
 err:
-	ulogd_upi_set_state(pi, PsConfigured);
-
 	return ULOGD_IRET_AGAIN;
 }
 
