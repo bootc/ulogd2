@@ -473,13 +473,14 @@ pluginstance_alloc_init(struct ulogd_plugin *pl, char *pi_id,
 
 
 /* plugin loader to dlopen() a plugins */
-static int load_plugin(const char *file)
+static int
+load_plugin(const char *file)
 {
-	if (!dlopen(file, RTLD_NOW)) {
-		ulogd_log(ULOGD_ERROR, "load_plugin: '%s': %s\n", file,
-			  dlerror());
+	if (dlopen(file, RTLD_NOW) == NULL) {
+		ulogd_log(ULOGD_ERROR, "%s: %s\n", file, dlerror());
 		return -1;
 	}
+
 	return 0;
 }
 
@@ -719,41 +720,45 @@ static int logfile_open(const char *name)
 }
 
 /* wrapper to handle conffile error codes */
-static int parse_conffile(const char *section, struct config_keyset *ce)
+static int
+parse_conffile(const char *section, struct config_keyset *ce)
 {
 	int err;
 
 	err = config_parse_file(section, ce);
+	if (err == 0)
+		return 0;
 
-	switch(err) {
-		case 0:
-			return 0;
-			break;
-		case -ERROPEN:
-			ulogd_log(ULOGD_ERROR,
-				"unable to open configfile: %s\n",
-				ulogd_configfile);
-			break;
-		case -ERRMAND:
-			ulogd_log(ULOGD_ERROR,
-				"mandatory option \"%s\" not found\n",
-				config_errce->key);
-			break;
-		case -ERRMULT:
-			ulogd_log(ULOGD_ERROR,
-				"option \"%s\" occurred more than once\n",
-				config_errce->key);
-			break;
-		case -ERRUNKN:
-			ulogd_log(ULOGD_ERROR,
-				"unknown config key \"%s\"\n",
-				config_errce->key);
-			break;
-		case -ERRSECTION:
-			ulogd_log(ULOGD_ERROR,
-				"section \"%s\" not found\n", section);
-			break;
+	switch (-err) {
+	case ERROPEN:
+		ulogd_log(ULOGD_ERROR, "unable to open configfile: %s\n",
+				  ulogd_configfile);
+		break;
+
+	case ERRMAND:
+		ulogd_log(ULOGD_ERROR, "mandatory option \"%s\" not found\n",
+				  config_errce->key);
+		break;
+
+	case ERRMULT:
+		ulogd_log(ULOGD_ERROR, "option \"%s\" occurred more than once\n",
+				  config_errce->key);
+		break;
+
+	case ERRUNKN:
+		ulogd_log(ULOGD_ERROR,
+				  "unknown config key \"%s\"\n",config_errce->key);
+		break;
+
+	case ERRSECTION:
+		ulogd_log(ULOGD_ERROR, "section \"%s\" not found\n", section);
+		break;
+
+	case ERRPLUGIN:
+		ulogd_log(ULOGD_ERROR, "plugin error\n");
+		break;
 	}
+
 	return 1;
 }
 
@@ -955,10 +960,8 @@ main(int argc, char* argv[])
 	}
 	
 	/* parse config file */
-	if (parse_conffile("global", &ulogd_kset)) {
-		ulogd_log(ULOGD_FATAL, "parse_conffile\n");
-		exit(1);
-	}
+	if (parse_conffile("global", &ulogd_kset))
+		exit(EXIT_FAILURE);
 
 	if (llist_empty(&ulogd_pi_stacks)) {
 		ulogd_log(ULOGD_FATAL, 

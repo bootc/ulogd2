@@ -20,6 +20,7 @@ enum {
 	ERRMAND,	/* mandatory option not found */
 	ERRUNKN,	/* unknown config key */
 	ERRSECTION,	/* section not found */
+	ERRPLUGIN,	/* plugin error */
 };
 
 /* maximum line lenght of config file entries */

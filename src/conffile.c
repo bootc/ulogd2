@@ -195,7 +195,10 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 					ce->u.value = atoi(args);
 					break;
 				case CONFIG_TYPE_CALLBACK:
-					(ce->u.parser)(args);
+					if ((ce->u.parser)(args) < 0) {
+						err = -ERRPLUGIN;
+						goto cpf_error;
+					}
 					break;
 			}
 			break;
