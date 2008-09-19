@@ -69,14 +69,6 @@
 #include <ulogd/signal.h>
 #include <ulogd/ifi.h>
 
-
-#ifdef DEBUG
-/*#define DEBUGP(format, args...) fprintf(stderr, format, ## args) */
-#define DEBUGP(format, args...) 
-#else
-#define DEBUGP(format, args...) 
-#endif
-
 #define COPYRIGHT \
 	"Copyright (C) 2000-2005 Harald Welte <laforge@netfilter.org>\n"
 
@@ -344,7 +336,7 @@ static void ulogd_clean_results(struct ulogd_pluginstance *pi)
 {
 	struct ulogd_pluginstance *cur;
 
-	DEBUGP("cleaning up results\n");
+	pr_fn_debug("cleaning up results\n");
 
 	/* iterate through plugin stack */
 	llist_for_each_entry(cur, &pi->stack->list, list) {
