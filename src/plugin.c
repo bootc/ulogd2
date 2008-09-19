@@ -262,11 +262,11 @@ ulogd_upi_configure(struct ulogd_pluginstance *pi,
 
 	ulogd_upi_set_state(pi, PsConfiguring);
 
+	ulogd_upi_reset_cfg(pi);
+
 	if ((ret = pi->plugin->configure(pi, stack)) < 0) {
 		if (ret == ULOGD_IRET_AGAIN)
 			stack_fsm_add(pi->stack);
-
-		ulogd_upi_reset_cfg(pi);
 
 		return ret;
 	}
