@@ -1,13 +1,14 @@
-/* ulogd_inppkt_NFLOG.c - stackable input plugin for NFLOG packets -> ulogd2
+/*
+ * ulogd_inppkt_NFLOG.c
  *
  * (C) 2004-2005 by Harald Welte <laforge@gnumonks.org>
  */
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <netinet/in.h>
-
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
+
+#include <netinet/in.h>
 #include <libnetfilter_log/libnetfilter_log.h>
 
 #ifndef NFLOG_GROUP_DEFAULT
@@ -32,7 +33,6 @@ struct nflog_input {
 };
 
 /* configuration entries */
-
 static struct config_keyset libulog_kset = {
 	.num_ces = 7,
 	.ces = {
@@ -242,86 +242,60 @@ enum {
 static inline int 
 interp_packet(struct ulogd_pluginstance *upi, struct nflog_data *ldata)
 {
-	struct ulogd_key *ret = upi->output.keys;
-	struct nfulnl_msg_packet_hdr *ph = nflog_get_msg_packet_hdr(ldata);
-	struct nfulnl_msg_packet_hw *hw = nflog_get_packet_hw(ldata);
+	struct ulogd_key *out = upi->output.keys;
+	struct nfulnl_msg_packet_hdr *ph;
+	struct nfulnl_msg_packet_hw *hw;
 	char *payload;
-	int payload_len = nflog_get_payload(ldata, &payload);
-	char *prefix = nflog_get_prefix(ldata);
+	int payload_len;
+	char *prefix;
 	struct timeval ts;
-	u_int32_t mark = nflog_get_nfmark(ldata);
-	u_int32_t indev = nflog_get_indev(ldata);
-	u_int32_t outdev = nflog_get_outdev(ldata);
-	u_int32_t seq;
+	u_int32_t dev, seq, mark;
 	
 
-	if (ph) {
-		/* FIXME */
-		ret[K_OOB_HOOK].u.value.ui8 = ph->hook;
-		ret[K_OOB_HOOK].flags |= ULOGD_RETF_VALID;
+	if ((ph = nflog_get_msg_packet_hdr(ldata)) != NULL)
+		key_u8(&out[K_OOB_HOOK], ph->hook);
+
+	if ((hw = nflog_get_packet_hw(ldata)) != NULL) {
+		key_ptr(&out[K_RAW_MAC], &hw->hw_addr);
+		key_u16(&out[K_RAW_MAC_LEN], ntohs(hw->hw_addrlen));
 	}
 
-	if (hw) {
-		ret[K_RAW_MAC].u.value.ptr = &hw->hw_addr;
-		ret[K_RAW_MAC].flags |= ULOGD_RETF_VALID;
-		ret[K_RAW_MAC_LEN].u.value.ui16 = ntohs(hw->hw_addrlen);
-		ret[K_RAW_MAC_LEN].flags |= ULOGD_RETF_VALID;
+	if ((payload_len = nflog_get_payload(ldata, &payload)) >= 0) {
+		key_ptr(&out[K_RAW_PKT], payload);
+		key_u32(&out[K_RAW_PKTLEN], payload_len);
 	}
 
-	if (payload_len >= 0) {
-		/* include pointer to raw packet */
-		ret[K_RAW_PKT].u.value.ptr = payload;
-		ret[K_RAW_PKT].flags |= ULOGD_RETF_VALID;
+	key_u32(&out[K_RAW_PKTCNT], 1);
 
-		ret[K_RAW_PKTLEN].u.value.ui32 = payload_len;
-		ret[K_RAW_PKTLEN].flags |= ULOGD_RETF_VALID;
-	}
-
-	/* number of packets */
-	ret[K_RAW_PKTCNT].u.value.ui32 = 1;
-	ret[K_RAW_PKTCNT].flags |= ULOGD_RETF_VALID;
-
-	if (prefix) {
-		ret[K_OOB_PREFIX].u.value.ptr = prefix;
-		ret[K_OOB_PREFIX].flags |= ULOGD_RETF_VALID;
-	}
+	if ((prefix = nflog_get_prefix(ldata)) != NULL)
+		key_ptr(&out[K_OOB_PREFIX], prefix);
 
 	/* god knows why timestamp_usec contains crap if timestamp_sec
 	 * == 0 if (pkt->timestamp_sec || pkt->timestamp_usec) { */
 	if (nflog_get_timestamp(ldata, &ts) == 0 && ts.tv_sec) {
 		/* FIXME: convert endianness */
-		ret[K_OOB_TIME_SEC].u.value.ui32 = ts.tv_sec & 0xffffffff;
-		ret[K_OOB_TIME_SEC].flags |= ULOGD_RETF_VALID;
-		ret[K_OOB_TIME_USEC].u.value.ui32 = ts.tv_usec & 0xffffffff;
-		ret[K_OOB_TIME_USEC].flags |= ULOGD_RETF_VALID;
+		key_u32(&out[K_OOB_TIME_SEC], ts.tv_sec & 0xffffffff);
+		key_u32(&out[K_OOB_TIME_USEC], ts.tv_usec & 0xffffffff);
 	}
 
-	ret[K_OOB_MARK].u.value.ui32 = mark;
-	ret[K_OOB_MARK].flags |= ULOGD_RETF_VALID;
+	key_u32(&out[K_OOB_MARK], nflog_get_nfmark(ldata));
 
-	if (indev > 0) {
-		ret[K_OOB_IFI_IN].u.value.ui32 = indev;
-		ret[K_OOB_IFI_IN].flags |= ULOGD_RETF_VALID;
-	}
+	if ((dev = nflog_get_indev(ldata)) > 0)
+		key_u32(&out[K_OOB_IFI_IN], dev);
+	if ((dev = nflog_get_outdev(ldata)) > 0)
+		key_u32(&out[K_OOB_IFI_OUT], dev);
 
-	if (outdev > 0) {
-		ret[K_OOB_IFI_OUT].u.value.ui32 = outdev;
-		ret[K_OOB_IFI_OUT].flags |= ULOGD_RETF_VALID;
-	}
+	if (nflog_get_seq(ldata, &seq) == 0)
+		key_u32(&out[K_OOB_SEQ], seq);
 
-	if (nflog_get_seq(ldata, &seq) == 0) {
-		ret[K_OOB_SEQ].u.value.ui32 = seq;
-		ret[K_OOB_SEQ].flags |= ULOGD_RETF_VALID;
-	}
-	if (nflog_get_seq_global(ldata, &seq) == 0) {
-		ret[K_OOB_SEQ_GLOBAL].u.value.ui32 = seq;
-		ret[K_OOB_SEQ_GLOBAL].flags |= ULOGD_RETF_VALID;
-	}
+	if (nflog_get_seq_global(ldata, &seq) == 0)
+		key_u32(&out[K_OOB_SEQ_GLOBAL], seq);
 
-	if (nflog_get_logmark(ldata, &ret[K_OOB_LOGMARK].u.value.ui32) == 0)
-		ret[K_OOB_LOGMARK].flags |= ULOGD_RETF_VALID;
+	if (nflog_get_logmark(ldata, &mark) == 0)
+		key_u32(&out[K_OOB_LOGMARK], mark);
 	
 	ulogd_propagate_results(upi);
+
 	return 0;
 }
 
