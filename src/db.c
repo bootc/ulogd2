@@ -169,7 +169,9 @@ db_timer_cb(struct ulogd_timer *t)
 			return;
 
 		if ((rows = __db_commit(pi)) < 0) {
+			ulogd_unregister_timer(&di->timer);
 			ulogd_upi_error(pi, rows);
+
 			return;
 		}
 	}
@@ -316,11 +318,6 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	di->timer.flags = TIMER_F_PERIODIC;
 	di->timer.data = upi;
 
-	if (ulogd_register_timer(&di->timer) < 0) {
-		ulogd_log(ULOGD_FATAL, "%s: database timer: %m\n", upi->id);
-		goto err_close;
-	}
-
 	return 0;
 
 err_close:
@@ -356,6 +353,9 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 	   as pgsql). */
 	di->interp = _init_db;
 
+	if (ulogd_register_timer(&di->timer) < 0)
+		return -1;
+
 	return 0;
 
 err_close:
@@ -379,6 +379,9 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 		free(upi->input.keys);
 		upi->input.keys = NULL;
 	}
+
+	ulogd_unregister_timer(&di->timer);
+
 	return 0;
 }
 
@@ -582,7 +585,7 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi)
 	if (db_row_add(pi, row) < 0)
 		return ULOGD_IRET_OK;
 
-	if (di->num_rows >= di->buffer_size)
+	if (di->num_rows >= di->buffer_size && pi->state == PsStarted)
 		ret = __db_commit(pi);
 
 	return ret;
