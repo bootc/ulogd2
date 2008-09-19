@@ -577,23 +577,23 @@ pgsql_configure(struct ulogd_pluginstance *upi,
 }
 
 static struct ulogd_plugin pgsql_plugin = { 
-	.name 		= "PGSQL", 
-	.input 		= {
-		.keys	= NULL,
+	.name = "PGSQL",
+	.flags = ULOGD_PF_RECONF,
+	.input = {
+		.keys = NULL,
 		.num_keys = 0,
-		.type	= ULOGD_DTYPE_PACKET | ULOGD_DTYPE_FLOW,
+		.type = ULOGD_DTYPE_PACKET | ULOGD_DTYPE_FLOW,
 	},
-	.output 	= {
-		.type	= ULOGD_DTYPE_SINK,
+	.output = {
+		.type = ULOGD_DTYPE_SINK,
 	},
-	.config_kset 	= &pgsql_kset,
-	.priv_size	= sizeof(struct pgsql_priv),
-	.configure	= &pgsql_configure,
-	.start		= &ulogd_db_start,
-	.stop		= &ulogd_db_stop,
-	.signal		= &ulogd_db_signal,
-	.interp		= &ulogd_db_interp_batch,
-	.version	= ULOGD_VERSION,
+	.config_kset = &pgsql_kset,
+	.priv_size = sizeof(struct pgsql_priv),
+	.configure = &pgsql_configure,
+	.start = &ulogd_db_start,
+	.stop = &ulogd_db_stop,
+	.interp = &ulogd_db_interp_batch,
+	.version = ULOGD_VERSION,
 };
 
 void __attribute__ ((constructor)) init(void);
