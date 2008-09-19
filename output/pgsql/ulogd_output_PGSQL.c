@@ -432,6 +432,9 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 		goto err_free;
 	}
 
+	if (__pgsql_exec(upi, "set synchronous_commit to off", NULL) < 0)
+		goto err_free;
+
 	free(connstr);
 
 	return 0;
