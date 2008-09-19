@@ -798,53 +798,6 @@ _do_signal(struct ulogd_pluginstance *pi,
 	return 0;
 }
 
-enum ReconfOp {
-	INVAL=0,
-	STOP,
-	CONFIGURE,
-	START,
-};
-
-static int
-_do_reconf(struct ulogd_pluginstance *pi,
-		   struct ulogd_pluginstance_stack *stack, void *arg)
-{
-	enum ReconfOp op = (unsigned)arg;
-	int ret = 0;
-
-	assert(pi != NULL);
-
-	/* check whether stack is reconfigurable */
-	if ((stack->flags & ULOGD_SF_RECONF) == 0)
-		return 0;
-
-	switch (op) {
-	case STOP:
-		ret = ulogd_upi_stop(pi);
-		break;
-
-	case CONFIGURE:
-		ulogd_upi_reset_cfg(pi);
-		ret = ulogd_upi_configure(pi, stack);
-		break;
-
-	case START:
-		if ((ret = ulogd_upi_start(pi)) == ULOGD_IRET_AGAIN)
-			ret = 0;
-		break;
-
-	default:
-		return -1;
-	}
-
-	if (ret < 0) {
-		ulogd_log(ULOGD_FATAL, "reconfiguring '%s' failed\n", pi->id);
-		return -1;
-	}
-
-	return 1;
-}
-
 static int
 reconfigure_plugins(void)
 {
@@ -857,20 +810,10 @@ reconfigure_plugins(void)
 	/* Skip stacks which contain at least one plugin which is not
 	   reconfigurable.  This a short-term workaround until all plugins
 	   are reconfigurable. */
-
-	if (for_each_pluginstance(_do_reconf, (void *)STOP) < 0)
-		abort();
-
 	llist_for_each_entry(stack, &ulogd_pi_stacks, stack_list) {
-		if ((stack->flags & ULOGD_SF_RECONF) == 0)
-			continue;
-
-		if (stack_resolve_keys(stack) < 0)
-			abort();
+		if (stack_reconfigure(stack) < 0)
+			return -1;
 	}
-
-	if (for_each_pluginstance(_do_reconf, (void *)START) < 0)
-		abort();
 
 	ulogd_set_state(GS_RUNNING);
 

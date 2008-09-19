@@ -227,6 +227,20 @@ stack_fsm_timer_cb(struct ulogd_timer *t)
   }
 }
 
+int
+stack_reconfigure(struct ulogd_pluginstance_stack *stack)
+{
+	struct ulogd_pluginstance *pi;
+
+	if ((stack->flags & ULOGD_SF_RECONF) == 0)
+		return 0;
+
+	llist_for_each_entry(pi, &stack->list, list)
+		ulogd_upi_stop(pi);
+
+	return stack_fsm(stack);
+}
+
 /**
  * Configure a plugin.
  *

@@ -71,6 +71,7 @@ struct ulogd_key *ulogd_key_find(const struct ulogd_keyset *,
 
 int ulogd_plugin_init(void);
 int stack_fsm(struct ulogd_pluginstance_stack *);
+int stack_reconfigure(struct ulogd_pluginstance_stack *);
 int stack_resolve_keys(struct ulogd_pluginstance_stack *);
 
 
