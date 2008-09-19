@@ -143,11 +143,10 @@ enum {
 	O_FLOW_END_SEC,
 	O_FLOW_END_USEC,
 	O_FLOW_DURATION,
-	__O_MAX
 };
 
-static struct ulogd_key nfct_okeys[__O_MAX] = {
-	{
+static struct ulogd_key nfct_okeys[] = {
+	[O_IP_SADDR] = {
 		.type 	= ULOGD_RET_IPADDR,
 		.flags 	= ULOGD_RETF_NONE,
 		.name	= "ip.saddr",
@@ -156,7 +155,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id = IPFIX_sourceIPv4Address,
 		},
 	},
-	{
+	[O_IP_DADDR] = {
 		.type	= ULOGD_RET_IPADDR,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "ip.daddr",
@@ -165,7 +164,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id = IPFIX_destinationIPv4Address,
 		},
 	},
-	{
+	[O_IP_PROTO] = {
 		.type	= ULOGD_RET_UINT8,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "ip.protocol",
@@ -174,7 +173,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id = IPFIX_protocolIdentifier,
 		},
 	},
-	{
+	[O_L4_SPORT] = {
 		.type	= ULOGD_RET_UINT16,
 		.flags 	= ULOGD_RETF_NONE,
 		.name	= "l4.sport",
@@ -183,7 +182,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id 	= IPFIX_sourceTransportPort,
 		},
 	},
-	{
+	[O_L4_DPORT] = {
 		.type	= ULOGD_RET_UINT16,
 		.flags 	= ULOGD_RETF_NONE,
 		.name	= "l4.dport",
@@ -192,7 +191,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id 	= IPFIX_destinationTransportPort,
 		},
 	},
-	{
+	[O_RAW_IN_PKTLEN] = {
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "raw.in.pktlen",
@@ -202,7 +201,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			/* FIXME: this could also be octetDeltaCount */
 		},
 	},
-	{
+	[O_RAW_IN_PKTCOUNT] = {
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "raw.in.pktcount",
@@ -212,7 +211,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			/* FIXME: this could also be packetDeltaCount */
 		},
 	},
-	{
+	[O_RAW_OUT_PKTLEN] = {
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "raw.out.pktlen",
@@ -222,7 +221,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			/* FIXME: this could also be octetDeltaCount */
 		},
 	},
-	{
+	[O_RAW_OUT_PKTCOUNT] = {
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "raw.out.pktcount",
@@ -232,7 +231,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			/* FIXME: this could also be packetDeltaCount */
 		},
 	},
-	{
+	[O_ICMP_CODE] = {
 		.type	= ULOGD_RET_UINT8,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "icmp.code",
@@ -241,7 +240,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id	= IPFIX_icmpCodeIPv4,
 		},
 	},
-	{
+	[O_ICMP_TYPE] = {
 		.type	= ULOGD_RET_UINT8,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "icmp.type",
@@ -250,7 +249,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id	= IPFIX_icmpTypeIPv4,
 		},
 	},
-	{
+	[O_CT_MARK] = {
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "ct.mark",
@@ -259,7 +258,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id	= IPFIX_NF_mark,
 		},
 	},
-	{
+	[O_CT_ID] = {
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "ct.id",
@@ -268,7 +267,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id	= IPFIX_NF_conntrack_id,
 		},
 	},
-	{
+	[O_FLOW_START_SEC] = {
 		.type 	= ULOGD_RET_UINT32,
 		.flags 	= ULOGD_RETF_NONE,
 		.name	= "flow.start.sec",
@@ -277,7 +276,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id	= IPFIX_flowStartSeconds,
 		},
 	},
-	{
+	[O_FLOW_START_USEC] = {
 		.type 	= ULOGD_RET_UINT32,
 		.flags 	= ULOGD_RETF_NONE,
 		.name	= "flow.start.usec",
@@ -286,7 +285,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id	= IPFIX_flowStartMicroSeconds,
 		},
 	},
-	{
+	[O_FLOW_END_SEC] = {
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "flow.end.sec",
@@ -295,7 +294,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id	= IPFIX_flowEndSeconds,
 		},
 	},
-	{
+	[O_FLOW_END_USEC] = {
 		.type	= ULOGD_RET_UINT32,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "flow.end.usec",
@@ -304,7 +303,7 @@ static struct ulogd_key nfct_okeys[__O_MAX] = {
 			.field_id	= IPFIX_flowEndSeconds,
 		},
 	},
-	{
+	[O_FLOW_DURATION] = {
 		.type = ULOGD_RET_UINT32,
 		.flags = ULOGD_RETF_NONE,
 		.name = "flow.duration",
