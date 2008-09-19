@@ -371,7 +371,6 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
-	ulogd_log(ULOGD_NOTICE, "stopping\n");
 	di->driver->close_db(upi);
 
 	/* try to free our dynamically allocated input key array */
