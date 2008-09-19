@@ -433,10 +433,9 @@ nflog_stop(struct ulogd_pluginstance *pi)
 	struct nflog_input *ui = (struct nflog_input *)pi->private;
 
 	ulogd_unregister_fd(&ui->nful_fd);
+
 	nflog_unbind_group(ui->nful_gh);
 	nflog_close(ui->nful_h);
-
-	free(pi);
 
 	return 0;
 }
