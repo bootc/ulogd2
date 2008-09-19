@@ -601,20 +601,6 @@ stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
 }
 
 static int
-ulogd_stack_set_state(struct ulogd_pluginstance_stack *stack,
-					  enum UpiState state)
-{
-	if (stack->state == state)
-		return 0;
-
-	/* TODO check plugin state */
-
-	stack->state = state;
-
-	return 0;
-}
-
-static int
 create_stack(const char *option)
 {
 	struct ulogd_pluginstance_stack *stack;
@@ -634,6 +620,7 @@ create_stack(const char *option)
 		goto out_stack;
 	}
 	INIT_LLIST_HEAD(&stack->list);
+	stack->state = PsInit;
 
 	/* By default a stack is reconfigurable unless there is a plugin
 	   which is not reconfigurable */
@@ -691,8 +678,6 @@ create_stack(const char *option)
 		if ((pi->plugin->flags & ULOGD_PF_RECONF) == 0)
 			stack->flags &= ~ULOGD_SF_RECONF;
 	}
-
-	ulogd_stack_set_state(stack, PsInit);
 
 	if (stack_fsm(stack) < 0)
 		goto out;

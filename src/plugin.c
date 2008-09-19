@@ -88,6 +88,20 @@ static const enum UpiState next_state[__PsMax + 1] = {
 	[PsStarted] = PsInit,
 };
 
+static int
+stack_set_state(struct ulogd_pluginstance_stack *stack,
+				enum UpiState state)
+{
+	if (stack->state == state)
+		return 0;
+
+	pr_fn_debug("%d -> %d\n", stack->state, state);
+
+	stack->state = state;
+
+	return 0;
+}
+
 /**
  * The actual finite state machine.
  */
@@ -358,28 +372,19 @@ ulogd_upi_set_state(struct ulogd_pluginstance *pi, enum UpiState state)
 {
 	struct ulogd_pluginstance *curr;
 	struct ulogd_pluginstance_stack *stack = pi->stack;
-#ifdef DEBUG
-	enum UpiState old_sstate;
-#endif /* DEBUG */
+	enum UpiState sstate;
 
 	if (pi->state == state)
 		return;
 
-#ifdef DEBUG
-	old_sstate = stack->state;
-#endif /* DEBUG */
-
-	stack->state = pi->state = state;
+	sstate = pi->state = state;
 
 	llist_for_each_entry_reverse(curr, &stack->list, list) {
-		if (curr->state < stack->state)
-			stack->state = curr->state;
+		if (curr->state < sstate)
+			sstate = curr->state;
 	}
 
-#ifdef DEBUG
-	if (stack->state != old_sstate)
-		pr_fn_debug("%d -> %d\n", old_sstate, stack->state);
-#endif /* DEBUG */
+	stack_set_state(pi->stack, sstate);
 }
 
 /**
