@@ -76,6 +76,7 @@
 static FILE *logfile = NULL;		/* logfile pointer */
 static char *ulogd_configfile = ULOGD_CONFIGFILE;
 static char *ulogd_logfile = ULOGD_LOGFILE_DEFAULT;
+static char pid_file[PATH_MAX] = "/var/run/ulogd.pid";
 static FILE syslog_dummy;
 static enum GlobalState state;
 
@@ -844,6 +845,19 @@ sig_handler(int signo)
 	}
 }
 
+static int
+write_pid_file(void)
+{
+	FILE *fp;
+
+	if ((fp = fopen(pid_file, "w")) != NULL) {
+		fprintf(fp, "%d\n", (int)getpid());
+		fclose(fp);
+	}
+
+	return 0;
+}
+
 static void print_usage(void)
 {
 	/* FIXME */
@@ -986,6 +1000,9 @@ main(int argc, char* argv[])
 		fclose(stdin);
 		setsid();
 	}
+
+	if (write_pid_file() < 0)
+		exit(EXIT_FAILURE);
 
 	ulogd_register_signal(SIGTERM, sync_sig_handler, ULOGD_SIGF_SYNC);
 	ulogd_register_signal(SIGINT, sig_handler, 0);
