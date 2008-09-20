@@ -229,9 +229,6 @@ upi_priv(struct ulogd_pluginstance *upi)
 	return (void *)&upi->private;
 }
 
-/* stack flags */
-#define ULOGD_SF_RECONF			0x00000001 /* stack is reconfigurable */
-
 struct ulogd_pluginstance_stack {
 	/* global list of pluginstance stacks */
 	struct llist_head stack_list;

@@ -626,10 +626,6 @@ create_stack(const char *option)
 	INIT_LLIST_HEAD(&stack->list);
 	stack->state = PsInit;
 
-	/* By default a stack is reconfigurable unless there is a plugin
-	   which is not reconfigurable */
-	stack->flags = ULOGD_SF_RECONF;
-
 	ulogd_log(ULOGD_DEBUG, "building new pluginstance stack (%s):\n",
 		  option);
 
@@ -678,9 +674,6 @@ create_stack(const char *option)
 			
 		ulogd_log(ULOGD_DEBUG, "pushing `%s' on stack\n", pl->name);
 		llist_add_tail(&pi->list, &stack->list);
-
-		if ((pi->plugin->flags & ULOGD_PF_RECONF) == 0)
-			stack->flags &= ~ULOGD_SF_RECONF;
 	}
 
 	if (stack_fsm(stack) < 0)
@@ -788,9 +781,6 @@ reconfigure_plugins(void)
 
 	ulogd_set_state(GS_INITIALIZING);
 
-	/* Skip stacks which contain at least one plugin which is not
-	   reconfigurable.  This a short-term workaround until all plugins
-	   are reconfigurable. */
 	llist_for_each_entry(stack, &ulogd_pi_stacks, stack_list) {
 		if (stack_reconfigure(stack) < 0)
 			return -1;
