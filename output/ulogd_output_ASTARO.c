@@ -196,7 +196,7 @@ lh_log_mac(const struct ulogd_pluginstance *pi, unsigned idx,
 		
 		dst = (unsigned char *)k->u.value.ptr;
 	} else {
-		ulogd_log(ULOGD_ERROR, "%s: srcmac = dstmac = 0!\n", __func__);
+		upi_log(pi, ULOGD_ERROR, "srcmac = dstmac = 0!\n");
 		return 0;
 	}
 	
@@ -532,13 +532,13 @@ astaro_configure(struct ulogd_pluginstance *pi,
 
 	priv->facility = nv_get_value(nv_facility, CFG_FACILITY(pi), LOG_KERN);
 	if (priv->facility < 0) {
-		ulogd_log(ULOGD_FATAL, "unknown facility '%s'\n", CFG_FACILITY(pi));
+		upi_log(pi, ULOGD_FATAL, "unknown facility '%s'\n", CFG_FACILITY(pi));
 		return -EINVAL;
 	}
 
 	priv->level = nv_get_value(nv_level, CFG_LEVEL(pi), LOG_NOTICE);
 	if (priv->level < 0) {
-		ulogd_log(ULOGD_FATAL, "unknown level '%s'\n", CFG_LEVEL(pi));
+		upi_log(pi, ULOGD_FATAL, "unknown level '%s'\n", CFG_LEVEL(pi));
 		return -EINVAL;
 	}
 

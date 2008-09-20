@@ -23,14 +23,11 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <syslog.h>
-#include <errno.h>
 #include <ulogd/ulogd.h>
-#include <ulogd/conffile.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
+#include <unistd.h>
+#include <syslog.h>
 
 #ifndef SYSLOG_FACILITY_DEFAULT
 #define SYSLOG_FACILITY_DEFAULT	"LOG_KERN"
@@ -117,8 +114,7 @@ static int syslog_configure(struct ulogd_pluginstance *pi,
 	else if (!strcmp(facility, "LOG_USER"))
 		syslog_facility = LOG_USER;
 	else {
-		ulogd_log(ULOGD_FATAL, "unknown facility '%s'\n",
-			  facility);
+		upi_log(pi, ULOGD_FATAL, "unknown facility '%s'\n", facility);
 		return -EINVAL;
 	}
 
@@ -139,8 +135,7 @@ static int syslog_configure(struct ulogd_pluginstance *pi,
 	else if (!strcmp(level, "LOG_DEBUG"))
 		syslog_level = LOG_DEBUG;
 	else {
-		ulogd_log(ULOGD_FATAL, "unknown level '%s'\n",
-			  level);
+		upi_log(pi, ULOGD_FATAL, "unknown level '%s'\n", level);
 		return -EINVAL;
 	}
 

@@ -78,7 +78,7 @@ __pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
 	int __pgret;
 
 	if (priv->pgres == NULL) {
-		ulogd_log(ULOGD_FATAL, "%s: command failed\n", pi->id);
+		upi_log(pi, ULOGD_FATAL, "command failed\n");
 		return -1;
 	}
 
@@ -87,7 +87,7 @@ __pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
 		*pgret = __pgret;
 
 	if (__pgret != PGRES_COMMAND_OK && __pgret != PGRES_TUPLES_OK)
-		ulogd_log(ULOGD_ERROR, "%s: %s\n", pi->id, PQerrorMessage(priv->dbh));
+		upi_log(pi, ULOGD_ERROR, "%s\n", PQerrorMessage(priv->dbh));
 
 	switch (__pgret) {
 	case PGRES_COMMAND_OK:
@@ -155,7 +155,7 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 
 	sprintf(pgbuf, PGSQL_HAVE_NAMESPACE_TEMPLATE,
 			schema_ce(upi->config_kset).u.string);
-	ulogd_log(ULOGD_DEBUG, "%s\n", pgbuf);
+	upi_log(upi, ULOGD_DEBUG, "%s\n", pgbuf);
 
 	if (__pgsql_exec(upi, pgbuf, NULL) < 0)
 		return ULOGD_IRET_AGAIN;
@@ -164,7 +164,7 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 
 	pi->db_inst.schema = schema_ce(upi->config_kset).u.string;
 
-	ulogd_log(ULOGD_DEBUG, "%s: using schema %s\n", upi->id,
+	upi_log(upi, ULOGD_DEBUG, "using schema %s\n",
 			  schema_ce(upi->config_kset).u.string);
 	
 	return 0;
@@ -193,7 +193,7 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	pr_fn_debug("pi=%p\n", pi);
 
 	if (!pi->dbh) {
-		ulogd_log(ULOGD_ERROR, "no database handle\n");
+		upi_log(upi, ULOGD_ERROR, "no database handle\n");
 		return 1;
 	}
 
@@ -220,7 +220,7 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 		char *val = PQgetvalue(pi->pgres, i, 0);
 
 		if (val == NULL) {
-			ulogd_log(ULOGD_ERROR, "%s: error fetching tuples\n", upi->id);
+			upi_log(upi, ULOGD_ERROR, "error fetching tuples\n");
 			return -1;
 		}
 
@@ -228,15 +228,15 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 			upi->input.num_keys--;
 	}
 
-	ulogd_log(ULOGD_DEBUG, "%s: using %d/%d columns of table\n",
-			  upi->id, upi->input.num_keys, PQntuples(pi->pgres));
+	upi_log(upi, ULOGD_DEBUG, "using %d/%d columns of table\n",
+			upi->input.num_keys, PQntuples(pi->pgres));
 
 	upi->input.keys = ulogd_alloc_keyset(upi->input.num_keys, 0);
 	if (upi->input.keys == NULL) {
 		upi->input.num_keys = 0;
 		PQclear(pi->pgres);
 
-		ulogd_log(ULOGD_ERROR, "%s: out of memory\n", upi->id);
+		upi_log(upi, ULOGD_ERROR, "out of memory\n");
 
 		return -ENOMEM;
 	}
@@ -331,7 +331,7 @@ pgsql_prepare(struct ulogd_pluginstance *pi)
 
 	free(query);
 
-	ulogd_log(ULOGD_DEBUG, "%s: statement prepared\n", pi->id);
+	upi_log(pi, ULOGD_DEBUG, "statement prepared\n");
 
 	return 0;
 
@@ -351,7 +351,7 @@ pgsql_close_db(struct ulogd_pluginstance *upi)
 	PQfinish(pi->dbh);
 	pi->dbh = NULL;
 
-	ulogd_log(ULOGD_INFO, "%s: database connection closed\n", upi->id);
+	upi_log(upi, ULOGD_INFO, "database connection closed\n");
 
 	return 0;
 }
@@ -419,8 +419,8 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	
 	pi->dbh = PQconnectdb(connstr);
 	if (PQstatus(pi->dbh) != CONNECTION_OK) {
-		ulogd_log(ULOGD_ERROR, "unable to connect to db (%s): %s\n",
-			  connstr, PQerrorMessage(pi->dbh));
+		upi_log(upi, ULOGD_ERROR, "unable to connect to db (%s): %s\n",
+				connstr, PQerrorMessage(pi->dbh));
 		pgsql_close_db(upi);
 
 		errret = ULOGD_IRET_AGAIN;
@@ -429,7 +429,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	}
 
 	if (pgsql_namespace(upi) < 0) {
-		ulogd_log(ULOGD_ERROR, "unable to test for pgsql schemas\n");
+		upi_log(upi, ULOGD_ERROR, "unable to test for pgsql schemas\n");
 		pgsql_close_db(upi);
 		goto err_free;
 	}
@@ -439,7 +439,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 
 	free(connstr);
 
-	ulogd_log(ULOGD_INFO, "%s: database connection opened\n", upi->id);
+	upi_log(upi, ULOGD_INFO, "database connection opened\n");
 
 	return 0;
 

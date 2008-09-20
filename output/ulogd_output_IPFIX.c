@@ -27,13 +27,10 @@
  * - implement PR-SCTP (no api definition in draft sockets api)
  *
  */
-
-#include <stdio.h>
-#include <stdlib.h>
+#include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <unistd.h>
-#include <string.h>
-#include <errno.h>
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -106,7 +103,6 @@ int bitmask_set_bit_to(struct bitmask *bm, unsigned int bits, int to)
 {
 	unsigned int byte = bits / 8;
 	unsigned int bit = bits % 8;
-	unsigned char *ptr;
 
 	if (byte > SIZE_OCTETS(bm->size_bits))
 		return -EINVAL;
@@ -139,7 +135,7 @@ int bitmasks_equal(const struct bitmask *bm1, const struct bitmask *bm2)
 struct bitmask *bitmask_dup(const struct bitmask *bm_orig)
 {
 	struct bitmask *bm_new;
-	int size = sizoef(*bm_new) + SIZE_OCTETS(bm_orig->size_bits);
+	int size = sizeof(*bm_new) + SIZE_OCTETS(bm_orig->size_bits);
 
 	bm_new = malloc(size);
 	if (!bm_new)
@@ -222,13 +218,13 @@ build_template_for_bitmask(struct ulogd_pluginstance *upi,
 
 	tmpl = malloc(size);
 	if (!tmpl)
-		return -ENOMEM;
+		return NULL;
 	memset(tmpl, 0, size);
 
 	tmpl->bitmask = dup_bitmask(bm);
 	if (!tmpl->bitmask) {
 		free(tmpl);
-		return -ENOMEM;
+		return NULL;
 	}
 
 	/* initialize template header */
@@ -246,14 +242,14 @@ build_template_for_bitmask(struct ulogd_pluginstance *upi,
 			continue;
 
 		if (length < 0 || length > 0xfffe) {
-			ulogd_log(ULOGD_INFO, "ignoring key `%s' because "
+			upi_log(upi, ULOGD_INFO, "ignoring key '%s' because "
 				  "it has an ipfix incompatible length\n",
 				  key->name);
 			continue;
 		}
 
 		if (key->ipfix.field_id == 0) {
-			ulogd_log(ULOGD_INFO, "ignoring key `%s' because "
+			upi_log(upi, ULOGD_INFO, "ignoring key '%s' because "
 				  "it has no field_id\n", key->name);
 			continue;
 		}
@@ -324,10 +320,10 @@ static int output_ipfix(struct ulogd_pluginstance *upi)
 	/* lookup template ID for this bitmask */
 	template = find_template_for_bitmask(upi, ii->valid_bitmask);
 	if (!template) {
-		ulogd_log(ULOGD_INFO, "building new template\n");
+		upi_log(upi, ULOGD_INFO, "building new template\n");
 		template = build_template_for_bitmask(upi, ii->valid_bitmask);
 		if (!template) {
-			ulogd_log(ULOGD_ERROR, "can't build new template!\n");
+			upi_log(upi, ULOGD_ERROR, "error building template\n");
 			return -1;
 		}
 		/* FIXME: prepend? */
@@ -362,7 +358,7 @@ static int open_connect_socket(struct ulogd_pluginstance *pi)
 			  port_ce(pi->config_kset).u.string,
 			  &hint, &res);
 	if (ret != 0) {
-		ulogd_log(ULOGD_ERROR, "can't resolve host/service: %s\n",
+		upi_log(pi, ULOGD_ERROR, "can't resolve host/service: %s\n",
 			  gai_strerror(ret));
 		return -1;
 	}
@@ -381,8 +377,7 @@ static int open_connect_socket(struct ulogd_pluginstance *pi)
 				/* try next result */
 				continue;
 			default:
-				ulogd_log(ULOGD_ERROR, "error: %s\n",
-					  strerror(errno));
+				upi_log(pi, ULOGD_ERROR, "error: %s\n", strerror(errno));
 				break;
 			}
 		}
@@ -397,9 +392,8 @@ static int open_connect_socket(struct ulogd_pluginstance *pi)
 			ret = setsockopt(ii->fd, IPPROTO_SCTP, SCTP_INITMSG,
 					 &initmsg, sizeof(initmsg));
 			if (ret < 0) {
-				ulogd_log(ULOGD_ERROR, "cannot set number of"
-					  "sctp streams: %s\n",
-					  strerror(errno));
+				upi_log(pi, ULOGD_ERROR, "cannot set number of"
+					  "sctp streams: %m\n");
 				close(ii->fd);
 				freeaddrinfo(resave);
 				return ret;
@@ -413,7 +407,7 @@ static int open_connect_socket(struct ulogd_pluginstance *pi)
 		}
 
 		/* if we reach this, we have a working connection */
-		ulogd_log(ULOGD_NOTICE, "connection established\n");
+		upi_log(pi, ULOGD_NOTICE, "connection established\n");
 		freeaddrinfo(resave);
 		return 0;
 	}
@@ -426,8 +420,6 @@ static int start_ipfix(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_instance *ii = (struct ipfix_instance *) &pi->private;
 	int ret;
-
-	ulogd_log(ULOGD_DEBUG, "starting ipfix\n");
 
 	ii->valid_bitmask = bitmask_alloc(pi->input.num_keys);
 	if (!ii->valid_bitmask)
@@ -471,7 +463,7 @@ signal_handler_ipfix(struct ulogd_pluginstance *pi, int signal)
 
 	switch (signal) {
 	case SIGHUP:
-		ulogd_log(ULOGD_NOTICE, "ipfix: reopening connection\n");
+		upi_log(pi, ULOGD_INFO, "reopening connection\n");
 		stop_ipfix(pi);
 		start_ipfix(pi);
 		break;
@@ -489,11 +481,8 @@ static int configure_ipfix(struct ulogd_pluginstance *pi,
 	char *proto_str = proto_ce(pi->config_kset).u.string;
 	int ret;
 
-	/* FIXME: error handling */
-	ulogd_log(ULOGD_DEBUG, "parsing config file section %s\n", pi->id);
-	ret = config_parse_file(pi->id, pi->config_kset);
-	if (ret < 0)
-		return ret;
+	if (config_parse_file(pi->id, pi->config_kset) < 0)
+		return ULOGD_IRET_ERR;
 
 	/* determine underlying protocol */
 	if (!strcasecmp(proto_str, "udp")) {
@@ -513,7 +502,7 @@ static int configure_ipfix(struct ulogd_pluginstance *pi,
 		ii->sock_proto = IPPROTO_DCCP;
 #endif
 	} else {
-		ulogd_log(ULOGD_ERROR, "unknown protocol `%s'\n",
+		upi_log(pi, ULOGD_ERROR, "unknown protocol '%s'\n",
 			  proto_ce(pi->config_kset));
 		return -EINVAL;
 	}

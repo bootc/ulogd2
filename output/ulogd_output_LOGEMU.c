@@ -116,12 +116,11 @@ signal_handler_logemu(struct ulogd_pluginstance *pi, int signal)
 
 	switch (signal) {
 	case SIGHUP:
-		ulogd_log(ULOGD_NOTICE, "syslogemu: reopening logfile\n");
+		upi_log(pi, ULOGD_INFO, "syslogemu: reopening logfile\n");
 		fclose(li->of);
 		li->of = fopen(pi->config_kset->ces[0].u.string, "a");
 		if (!li->of) {
-			ulogd_log(ULOGD_ERROR, "can't reopen syslogemu: %s\n",
-				  strerror(errno));
+			upi_log(pi, ULOGD_ERROR, "can't reopen syslogemu: %m\n");
 		}
 		break;
 	default:
@@ -137,24 +136,22 @@ static int start_logemu(struct ulogd_pluginstance *pi)
 	struct logemu_instance *li = (struct logemu_instance *) &pi->private;
 	char *tmp;
 
-	ulogd_log(ULOGD_DEBUG, "starting logemu\n");
+	upi_log(pi, ULOGD_INFO, "starting logemu\n");
 
 #ifdef DEBUG_LOGEMU
 	li->of = stdout;
 #else
-	ulogd_log(ULOGD_DEBUG, "opening file: %s\n",
+	upi_log(pi, ULOGD_DEBUG, "opening file: %s\n",
 		  pi->config_kset->ces[0].u.string);
 	li->of = fopen(pi->config_kset->ces[0].u.string, "a");
 	if (!li->of) {
-		ulogd_log(ULOGD_FATAL, "can't open syslogemu: %s\n", 
-			  strerror(errno));
+		upi_log(pi, ULOGD_FATAL, "can't open syslogemu: %m\n");
 		return errno;
 	}		
 #endif
 
 	if (gethostname(hostname, sizeof(hostname)) < 0) {
-		ulogd_log(ULOGD_FATAL, "can't gethostname(): %s\n",
-			  strerror(errno));
+		upi_log(pi, ULOGD_FATAL, "get hostname: %m\n");
 		return -EINVAL;
 	}
 
@@ -178,7 +175,7 @@ static int configure_logemu(struct ulogd_pluginstance *pi,
 			    struct ulogd_pluginstance_stack *stack)
 {
 	/* FIXME: error handling */
-	ulogd_log(ULOGD_DEBUG, "parsing config file section %s\n", pi->id);
+	upi_log(pi, ULOGD_DEBUG, "parsing config file section\n");
 	config_parse_file(pi->id, pi->config_kset);
 
 	return 0;

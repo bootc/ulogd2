@@ -20,14 +20,10 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <arpa/inet.h>
 #include <ulogd/ulogd.h>
-#include <ulogd/conffile.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
+#include <arpa/inet.h>
 
 #define NACCT_FILE_DEFAULT	"/var/log/nacctdata.log"
 
@@ -127,11 +123,11 @@ sighup_handler_print(struct ulogd_pluginstance *pi, int signal)
 	switch (signal) {
 	case SIGHUP:
 	{
-		ulogd_log(ULOGD_NOTICE, "NACCT: reopening logfile\n");
+		upi_log(pi, ULOGD_INFO, "reopening logfile\n");
 		fclose(priv->of);
 		priv->of = fopen(NACCT_CFG_FILE(pi), "a");
 		if (!priv->of)
-			ulogd_log(ULOGD_ERROR, "%s: %s\n", NACCT_CFG_FILE(pi),
+			upi_log(pi, ULOGD_ERROR, "%s: %s\n", NACCT_CFG_FILE(pi),
 					  strerror(errno));
 		break;
 	}
@@ -164,8 +160,8 @@ nacct_init(struct ulogd_pluginstance *pi)
 	struct nacct_priv *op = (struct nacct_priv *)&pi->private;
 
 	if ((op->of = fopen(NACCT_CFG_FILE(pi), "a")) == NULL) {
-		ulogd_log(ULOGD_FATAL, "%s: %s\n", 
-				  NACCT_CFG_FILE(pi), strerror(errno));
+		upi_log(pi, ULOGD_FATAL, "%s: %s\n",
+				NACCT_CFG_FILE(pi), strerror(errno));
 		return -1;
 	}		
 	return 0;

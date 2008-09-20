@@ -56,7 +56,7 @@ static int oprint_interp(struct ulogd_pluginstance *upi)
 		struct ulogd_key *ret = upi->input.keys[i].u.source;
 
 		if (!ret)
-			ulogd_log(ULOGD_NOTICE, "no result for %s ?!?\n",
+			upi_log(upi, ULOGD_NOTICE, "no result for '%s'\n",
 				  upi->input.keys[i].name);
 		
 		if (!IS_VALID(*ret))
@@ -119,12 +119,11 @@ static void sighup_handler_print(struct ulogd_pluginstance *upi, int signal)
 
 	switch (signal) {
 	case SIGHUP:
-		ulogd_log(ULOGD_NOTICE, "OPRINT: reopening logfile\n");
+		upi_log(upi, ULOGD_INFO, "reopening logfile\n");
 		fclose(oi->of);
 		oi->of = fopen(upi->config_kset->ces[0].u.string, "a");
 		if (!oi->of) {
-			ulogd_log(ULOGD_ERROR, "can't open PKTLOG: %s\n",
-				strerror(errno));
+			upi_log(upi, ULOGD_ERROR, "can't open PKTLOG: %m\n");
 		}
 		break;
 	default:
@@ -154,8 +153,7 @@ static int oprint_init(struct ulogd_pluginstance *upi)
 
 	op->of = fopen(upi->config_kset->ces[0].u.string, "a");
 	if (!op->of) {
-		ulogd_log(ULOGD_FATAL, "can't open PKTLOG: %s\n", 
-			strerror(errno));
+		upi_log(upi, ULOGD_FATAL, "can't open PKTLOG: %m\n");
 		return -1;
 	}		
 	return 0;
