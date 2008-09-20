@@ -476,12 +476,21 @@ load_plugin(const char *file)
 	return 0;
 }
 
-/* find an output key in a given stack, starting at 'start' */
+/**
+ * Find an output key in a given stack, starting at 'start'.
+ *
+ * @arg name	Name to search for.
+ * @arg start	Plugin to start search at.
+ * @arg src		Plugin which contains the found key, only valid if
+ *				function does not return %NULL.
+ * @return Key found.
+ */
 static struct ulogd_key *
-find_okey_in_stack(char *name,
-		   struct ulogd_pluginstance_stack *stack,
-		   struct ulogd_pluginstance *start)
+find_okey_in_stack(const char *name,
+				   const struct ulogd_pluginstance *start,
+				   struct ulogd_pluginstance **src)
 {
+	const struct ulogd_pluginstance_stack *stack = start->stack;
 	struct ulogd_pluginstance *pi;
 
 	llist_for_each_entry_reverse(pi, &start->list, list) {
@@ -493,8 +502,9 @@ find_okey_in_stack(char *name,
 		for (i = 0; i < pi->output.num_keys; i++) {
 			struct ulogd_key *okey = &pi->output.keys[i];
 			if (!strcmp(name, okey->name)) {
-				ulogd_log(ULOGD_DEBUG, "%s(%s)\n",
-					  pi->id, pi->plugin->name);
+				if (src != NULL)
+					*src = pi;
+
 				return okey;
 			}
 		}
@@ -503,11 +513,13 @@ find_okey_in_stack(char *name,
 	return NULL;
 }
 
-/* resolve key connections from bottom to top of stack */
+/**
+ * Resolve input key connections from top to bottom of stack.
+ */
 int
-stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
+stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 {
-	struct ulogd_pluginstance *pi_cur;
+	struct ulogd_pluginstance *pi_cur, *pi_src;
 	int i = 0;
 
 	assert(stack->state == PsConfigured);
@@ -571,20 +583,19 @@ stack_resolve_keys(struct ulogd_pluginstance_stack *stack)
 					return -EINVAL;
 				}
 
-				okey = find_okey_in_stack(ikey->name, 
-							  stack, pi_cur);
-				if (!okey) {
+				okey = find_okey_in_stack(ikey->name, pi_cur, &pi_src);
+				if (okey == NULL) {
 					if (ikey->flags & ULOGD_KEYF_OPTIONAL)
 						continue;
-					ulogd_log(ULOGD_ERROR, "cannot find "
-						  "key `%s' in stack\n",
-						  ikey->name);
+
+					ulogd_log(ULOGD_ERROR, "cannot find key '%s' in stack\n",
+							  ikey->name);
 					return -EINVAL;
 				}
 
-				ulogd_log(ULOGD_DEBUG, "assigning `%s(?)' as "
-					  "source for %s(%s)\n", okey->name,
-					  pi_cur->plugin->name, ikey->name);
+				ulogd_log(ULOGD_DEBUG, "%s(%s) -> %s(%s)\n",
+						  ikey->name, pi_cur->id,
+						  okey->name, pi_src->id);
 				ikey->u.source = okey;
 			}
 		}
