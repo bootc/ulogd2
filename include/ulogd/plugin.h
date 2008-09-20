@@ -20,6 +20,9 @@
 #ifndef PLUGIN_H
 #define PLUGIN_H
 
+extern struct llist_head ulogd_plugins;
+extern struct llist_head ulogd_pi_stacks;
+
 int ulogd_upi_configure(struct ulogd_pluginstance *,
 						struct ulogd_pluginstance_stack *);
 int ulogd_upi_start(struct ulogd_pluginstance *);
@@ -57,6 +60,8 @@ key_valid(const struct ulogd_key *key)
 {
 	return key != NULL && (key->flags & ULOGD_RETF_VALID);
 }
+
+int upi_for_each(int (*)(struct ulogd_pluginstance *, void *), void *);
 
 static inline void *
 upi_key_priv(const struct ulogd_key *key)

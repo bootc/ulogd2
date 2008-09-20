@@ -79,11 +79,6 @@ static char *ulogd_logfile = ULOGD_LOGFILE_DEFAULT;
 static FILE syslog_dummy;
 static enum GlobalState state;
 
-/* linked list for all registered plugins */
-static LLIST_HEAD(ulogd_plugins);
-static LLIST_HEAD(ulogd_pi_stacks);
-
-
 static int load_plugin(const char *file);
 static int create_stack(const char *file);
 static int logfile_open(const char *name);
@@ -770,34 +765,7 @@ parse_conffile(const char *section, struct config_keyset *ce)
 }
 
 static int
-for_each_pluginstance(int (* cb)(struct ulogd_pluginstance *,
-								 struct ulogd_pluginstance_stack *,
-								 void *), void *arg)
-{
-	struct ulogd_pluginstance_stack *stack;
-	int sum = 0;
-
-	pr_debug("%s: cb=%p\n", __func__, cb);
-
-	llist_for_each_entry(stack, &ulogd_pi_stacks, stack_list) {
-		struct ulogd_pluginstance *pi;
-
-		llist_for_each_entry(pi, &stack->list, list) {
-			int ret;
-
-			if ((ret = cb(pi, stack, arg)) < 0)
-				return -1;
-
-			sum += ret;
-		}
-	}
-
-	return sum;
-}
-
-static int
-_do_signal(struct ulogd_pluginstance *pi,
-		   struct ulogd_pluginstance_stack *stack, void *arg)
+__do_signal(struct ulogd_pluginstance *pi, void *arg)
 {
 	int signo = (int)arg;
 
@@ -856,7 +824,7 @@ sync_sig_handler(int signo)
 		break;
 	}
 
-	for_each_pluginstance(_do_signal, (void *)signo);
+	upi_for_each(__do_signal, (void *)signo);
 }
 
 static void

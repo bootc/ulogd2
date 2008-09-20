@@ -20,6 +20,10 @@
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
 
+/* linked list for all registered plugins */
+LLIST_HEAD(ulogd_plugins);
+LLIST_HEAD(ulogd_pi_stacks);
+
 static struct ulogd_timer stack_fsm_timer;
 static LLIST_HEAD(stack_fsm_list);
 
@@ -246,6 +250,30 @@ stack_reconfigure(struct ulogd_pluginstance_stack *stack)
 	}
 
 	return stack_fsm(stack);
+}
+
+int
+upi_for_each(int (* cb)(struct ulogd_pluginstance *, void *), void *arg)
+{
+	struct ulogd_pluginstance_stack *stack;
+	int sum = 0;
+
+	pr_debug("%s: cb=%p\n", __func__, cb);
+
+	llist_for_each_entry(stack, &ulogd_pi_stacks, stack_list) {
+		struct ulogd_pluginstance *pi;
+
+		llist_for_each_entry(pi, &stack->list, list) {
+			int ret;
+
+			if ((ret = cb(pi, arg)) < 0)
+				return -1;
+
+			sum += ret;
+		}
+	}
+
+	return sum;
 }
 
 /**
