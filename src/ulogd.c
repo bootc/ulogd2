@@ -818,6 +818,8 @@ sync_sig_handler(int signo)
 		break;
 
 	case SIGTERM:
+		ulogd_upi_stop_all();
+		exit(EXIT_SUCCESS);
 		break;
 
 	default:

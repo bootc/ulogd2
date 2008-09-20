@@ -33,6 +33,8 @@ int ulogd_upi_error(struct ulogd_pluginstance *, int);
 void ulogd_upi_set_state(struct ulogd_pluginstance *, enum UpiState);
 int ulogd_upi_reset_cfg(struct ulogd_pluginstance *);
 
+int ulogd_upi_stop_all(void);
+
 /* set key values */
 void key_i8(struct ulogd_key *, int);
 void key_i16(struct ulogd_key *, int);
