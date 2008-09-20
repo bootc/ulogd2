@@ -25,7 +25,7 @@
  * RMEM_DEFAULT size.  */
 #define NFLOG_BUFSIZE_DEFAULT	150000
 
-struct nflog_input {
+struct nflog_priv {
 	struct nflog_handle *nful_h;
 	struct nflog_g_handle *nful_gh;
 	unsigned char *nfulog_buf;
@@ -304,7 +304,7 @@ static int
 nful_read_cb(int fd, unsigned int what, void *param)
 {
 	struct ulogd_pluginstance *upi = (struct ulogd_pluginstance *)param;
-	struct nflog_input *ui = (struct nflog_input *)upi->private;
+	struct nflog_priv *priv = upi_priv(upi);
 	int len;
 
 	if (!(what & ULOGD_FD_READ))
@@ -313,11 +313,11 @@ nful_read_cb(int fd, unsigned int what, void *param)
 	/* we don't have a while loop here, since we don't want to
 	 * grab all the processing time just for us.  there might be other
 	 * sockets that have pending work */
-	len = recv(fd, ui->nfulog_buf, bufsiz_ce(upi->config_kset).u.value, 0);
+	len = recv(fd, priv->nfulog_buf, bufsiz_ce(upi->config_kset).u.value, 0);
 	if (len < 0)
 		return len;
 
-	nflog_handle_packet(ui->nful_h, (char *)ui->nfulog_buf, len);
+	nflog_handle_packet(priv->nful_h, (char *)priv->nfulog_buf, len);
 
 	return 0;
 }
@@ -345,23 +345,23 @@ nflog_configure(struct ulogd_pluginstance *upi,
 static int
 nflog_start(struct ulogd_pluginstance *upi)
 {
-	struct nflog_input *ui = (struct nflog_input *) upi->private;
+	struct nflog_priv *priv = upi_priv(upi);
 	unsigned int flags;
 
-	ui->nfulog_buf = malloc(bufsiz_ce(upi->config_kset).u.value);
-	if (!ui->nfulog_buf)
+	priv->nfulog_buf = malloc(bufsiz_ce(upi->config_kset).u.value);
+	if (!priv->nfulog_buf)
 		goto out_buf;
 
 	ulogd_log(ULOGD_DEBUG, "opening nfnetlink socket\n");
-	ui->nful_h = nflog_open();
-	if (!ui->nful_h)
+	priv->nful_h = nflog_open();
+	if (!priv->nful_h)
 		goto out_handle;
 
 	if (unbind_ce(upi->config_kset).u.value > 0) {
 		ulogd_log(ULOGD_NOTICE, "forcing unbind of existing log "
 			  "handler for protocol %d\n", 
 			  af_ce(upi->config_kset).u.value);
-		if (nflog_unbind_pf(ui->nful_h, 
+		if (nflog_unbind_pf(priv->nful_h,
 				    af_ce(upi->config_kset).u.value) < 0) {
 			ulogd_log(ULOGD_ERROR, "unable to force-unbind "
 				  "existing log handler for protocol %d\n",
@@ -372,7 +372,7 @@ nflog_start(struct ulogd_pluginstance *upi)
 
 	ulogd_log(ULOGD_DEBUG, "binding to protocol family %d\n",
 		  af_ce(upi->config_kset).u.value);
-	if (nflog_bind_pf(ui->nful_h, af_ce(upi->config_kset).u.value) < 0) {
+	if (nflog_bind_pf(priv->nful_h, af_ce(upi->config_kset).u.value) < 0) {
 		ulogd_log(ULOGD_ERROR, "unable to bind to protocol family %d\n",
 			  af_ce(upi->config_kset).u.value);
 		goto out_bind_pf;
@@ -380,17 +380,17 @@ nflog_start(struct ulogd_pluginstance *upi)
 
 	ulogd_log(ULOGD_DEBUG, "binding to log group %d\n",
 		  group_ce(upi->config_kset).u.value);
-	ui->nful_gh = nflog_bind_group(ui->nful_h,
+	priv->nful_gh = nflog_bind_group(priv->nful_h,
 				       group_ce(upi->config_kset).u.value);
-	if (!ui->nful_gh) {
+	if (!priv->nful_gh) {
 		ulogd_log(ULOGD_ERROR, "unable to bind to log group %d\n",
 			  group_ce(upi->config_kset).u.value);
 		goto out_bind;
 	}
 
-	nflog_set_mode(ui->nful_gh, NFULNL_COPY_PACKET, 0xffff);
+	nflog_set_mode(priv->nful_gh, NFULNL_COPY_PACKET, 0xffff);
 
-	//nflog_set_nlbufsiz(&ui->nful_gh, );
+	//nflog_set_nlbufsiz(&priv->nful_gh, );
 	//nfnl_set_rcvbuf();
 	
 	/* set log flags based on configuration */
@@ -400,42 +400,42 @@ nflog_start(struct ulogd_pluginstance *upi)
 	if (seq_ce(upi->config_kset).u.value != 0)
 		flags |= NFULNL_CFG_F_SEQ_GLOBAL;
 	if (flags) {
-		if (nflog_set_flags(ui->nful_gh, flags) < 0)
+		if (nflog_set_flags(priv->nful_gh, flags) < 0)
 			ulogd_log(ULOGD_ERROR, "unable to set flags 0x%x\n",
 				  flags);
 	}
 	
-	nflog_callback_register(ui->nful_gh, &msg_cb, upi);
+	nflog_callback_register(priv->nful_gh, &msg_cb, upi);
 
-	ui->nful_fd.fd = nflog_fd(ui->nful_h);
-	ui->nful_fd.cb = &nful_read_cb;
-	ui->nful_fd.data = upi;
-	ui->nful_fd.when = ULOGD_FD_READ;
+	priv->nful_fd.fd = nflog_fd(priv->nful_h);
+	priv->nful_fd.cb = &nful_read_cb;
+	priv->nful_fd.data = upi;
+	priv->nful_fd.when = ULOGD_FD_READ;
 
-	if (ulogd_register_fd(&ui->nful_fd) < 0)
+	if (ulogd_register_fd(&priv->nful_fd) < 0)
 		goto out_bind;
 
 	return 0;
 
 out_bind:
-	nflog_close(ui->nful_h);
+	nflog_close(priv->nful_h);
 out_bind_pf:
-	nflog_unbind_pf(ui->nful_h, af_ce(upi->config_kset).u.value);
+	nflog_unbind_pf(priv->nful_h, af_ce(upi->config_kset).u.value);
 out_handle:
-	free(ui->nfulog_buf);
+	free(priv->nfulog_buf);
 out_buf:
-	return -1;
+	return ULOGD_IRET_STOP;
 }
 
 static int
 nflog_stop(struct ulogd_pluginstance *pi)
 {
-	struct nflog_input *ui = (struct nflog_input *)pi->private;
+	struct nflog_priv *priv = upi_priv(pi);
 
-	ulogd_unregister_fd(&ui->nful_fd);
+	ulogd_unregister_fd(&priv->nful_fd);
 
-	nflog_unbind_group(ui->nful_gh);
-	nflog_close(ui->nful_h);
+	nflog_unbind_group(priv->nful_gh);
+	nflog_close(priv->nful_h);
 
 	return 0;
 }
@@ -450,7 +450,7 @@ struct ulogd_plugin libulog_plugin = {
 			.keys = output_keys,
 			.num_keys = ARRAY_SIZE(output_keys),
 		},
-	.priv_size 	= sizeof(struct nflog_input),
+	.priv_size 	= sizeof(struct nflog_priv),
 	.configure 	= &nflog_configure,
 	.start 		= &nflog_start,
 	.stop 		= &nflog_stop,
