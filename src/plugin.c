@@ -235,8 +235,15 @@ stack_reconfigure(struct ulogd_pluginstance_stack *stack)
 	if ((stack->flags & ULOGD_SF_RECONF) == 0)
 		return 0;
 
-	llist_for_each_entry(pi, &stack->list, list)
+	llist_for_each_entry(pi, &stack->list, list) {
+		int i;
+
 		ulogd_upi_stop(pi);
+
+		/* clear source links */
+		for (i = 0; i < pi->input.num_keys; i++)
+			pi->input.keys[i].u.source = NULL;
+	}
 
 	return stack_fsm(stack);
 }
