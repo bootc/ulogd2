@@ -794,7 +794,23 @@ reconfigure_plugins(void)
 static void
 sync_sig_handler(int signo)
 {
-	pr_debug("%s: signal '%d' received\n", __func__, signo);
+	char *sig_name = NULL;
+
+	switch (signo) {
+	case SIGHUP:
+		sig_name = "HUP";
+		break;
+
+	case SIGTERM:
+		sig_name = "TERM";
+		break;
+
+	default:
+		break;
+	}
+
+	if (sig_name != NULL)
+		ulogd_log(ULOGD_INFO, "signal SIG%s received\n", sig_name);
 
 	if (ulogd_get_state() != GS_RUNNING)
 		return;
@@ -814,20 +830,18 @@ sync_sig_handler(int signo)
 		break;
 
 	default:
+		upi_for_each(__do_signal, (void *)signo);
 		break;
 	}
-
-	upi_for_each(__do_signal, (void *)signo);
 }
 
 static void
 sig_handler(int signo)
 {
-	pr_debug("%s: signal '%d' received\n", __func__, signo);
-
 	switch (signo) {
 	case SIGINT:
-		exit(0);
+		ulogd_log(ULOGD_INFO, "signal SIGINT received\n");
+		exit(EXIT_SUCCESS);
 		break;
 
 	default:
