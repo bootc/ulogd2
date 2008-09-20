@@ -375,6 +375,8 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 
 	/* try to free our dynamically allocated input key array */
 	if (upi->input.keys) {
+		upi->input.num_keys = 0;
+
 		free(upi->input.keys);
 		upi->input.keys = NULL;
 	}
