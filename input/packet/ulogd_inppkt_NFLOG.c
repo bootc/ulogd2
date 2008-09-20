@@ -39,43 +39,36 @@ static struct config_keyset libulog_kset = {
 		{
 			.key 	 = "bufsize",
 			.type 	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
 			.u.value = NFLOG_BUFSIZE_DEFAULT,
 		},
 		{
 			.key	 = "group",
 			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
 			.u.value = NFLOG_GROUP_DEFAULT,
 		},
 		{
 			.key	 = "rmem",
 			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
 			.u.value = NFLOG_RMEM_DEFAULT,
 		},
 		{
 			.key 	 = "addressfamily",
 			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
 			.u.value = AF_INET,
 		},
 		{
 			.key	 = "unbind",
 			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
 			.u.value = 1,
 		},
 		{
 			.key	 = "seq_local",
 			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
 			.u.value = 0,
 		},
 		{
 			.key	 = "seq_global",
 			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
 			.u.value = 0,
 		},
 	}
@@ -93,7 +86,6 @@ static struct config_keyset libulog_kset = {
 static struct ulogd_key output_keys[] = {
 	{ 
 		.type = ULOGD_RET_RAW, 
-		.flags = ULOGD_RETF_NONE,
 		.name = "raw.mac", 
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_IETF,
@@ -102,7 +94,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_RAW,
-		.flags = ULOGD_RETF_NONE,
 		.name = "raw.pkt",
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_NETFILTER,
@@ -111,7 +102,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "raw.pktlen",
 		.ipfix = { 
 			.vendor = IPFIX_VENDOR_NETFILTER,
@@ -120,7 +110,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "raw.pktcount",
 		.ipfix = { 
 			.vendor = IPFIX_VENDOR_IETF,
@@ -129,7 +118,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_STRING,
-		.flags = ULOGD_RETF_NONE, 
 		.name = "oob.prefix", 
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_NETFILTER,
@@ -137,7 +125,6 @@ static struct ulogd_key output_keys[] = {
 		},
 	},
 	{ 	.type = ULOGD_RET_UINT32, 
-		.flags = ULOGD_RETF_NONE, 
 		.name = "oob.time.sec", 
 		.ipfix = { 
 			.vendor = IPFIX_VENDOR_IETF, 
@@ -146,7 +133,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "oob.time.usec", 
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_IETF,
@@ -155,7 +141,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "oob.mark", 
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_NETFILTER,
@@ -164,7 +149,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "oob.ifindex_in", 
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_IETF,
@@ -173,7 +157,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "oob.ifindex_out", 
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_IETF,
@@ -182,7 +165,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT8,
-		.flags = ULOGD_RETF_NONE,
 		.name = "oob.hook",
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_NETFILTER,
@@ -191,12 +173,10 @@ static struct ulogd_key output_keys[] = {
 	},
 	{ 
 		.type = ULOGD_RET_STRING, 
-		.flags = ULOGD_RETF_NONE, 
 		.name = "raw.mac_len", 
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "oob.seq.local",
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_NETFILTER,
@@ -205,7 +185,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "oob.seq.global",
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_NETFILTER,
@@ -214,7 +193,6 @@ static struct ulogd_key output_keys[] = {
 	},
 	{
 		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
 		.name = "oob.logmark",
 	},
 };
