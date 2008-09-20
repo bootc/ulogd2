@@ -360,7 +360,8 @@ static void ulogd_clean_results(struct ulogd_pluginstance *pi)
 }
 
 /* propagate results to all downstream plugins in the stack */
-void ulogd_propagate_results(struct ulogd_pluginstance *pi)
+void
+ulogd_propagate_results(struct ulogd_pluginstance *pi)
 {
 	struct ulogd_pluginstance *cur = pi;
 
@@ -370,21 +371,24 @@ void ulogd_propagate_results(struct ulogd_pluginstance *pi)
 		
 		ret = ulogd_upi_interp(cur);
 		switch (ret) {
-		case ULOGD_IRET_ERR:
-			ulogd_log(ULOGD_NOTICE,
-				  "error during propagate_results\n");
-			/* fallthrough */
-		case ULOGD_IRET_STOP:
-			/* we shall abort further iteration of the stack */
-			break;
 		case ULOGD_IRET_OK:
 			/* we shall continue travelling down the stack */
 			continue;
-		default:
-			ulogd_log(ULOGD_NOTICE,
-				  "unknown return value `%d' from plugin %s\n",
-				  ret, cur->plugin->name);
+
+		case ULOGD_IRET_ERR:
+			ulogd_log(ULOGD_NOTICE, "%s: error propagating results\n",
+				cur->id);
+			/* fallthrough */
+
+		case ULOGD_IRET_AGAIN:
+		case ULOGD_IRET_STOP:
+			/* we shall abort further iteration of the stack */
 			break;
+
+		default:
+			ulogd_log(ULOGD_NOTICE, "%s: unknown return value '%d'\n",
+					  cur->id, ret);
+			abort();
 		}
 	}
 

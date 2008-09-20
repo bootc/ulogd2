@@ -347,12 +347,13 @@ ulogd_upi_interp(struct ulogd_pluginstance *pi)
 		ulogd_upi_stop(pi);
 
 		if (ret == ULOGD_IRET_AGAIN) {
-			stack_fsm_add(pi->stack);
+			if (stack_fsm_add(pi->stack) < 0)
+				return ULOGD_IRET_ERR;
 
 			return 0;
 		}
 
-		return -1;
+		return ret;
 	}
 
 	return 0;
