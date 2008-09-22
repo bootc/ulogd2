@@ -141,12 +141,11 @@ struct ulogd_pluginstance;
 struct ulogd_plugin {
 	/* global list of plugins */
 	struct llist_head list;
-	/* version */
+
 	char *version;
-	/* name of this plugin (predefined by plugin) */
+
+	/* name of this plugin (set by plugin) */
 	char name[ULOGD_MAX_KEYLEN+1];
-	/* ID for this plugin (dynamically assigned) */
-	unsigned int id;
 
 	unsigned flags;
 
