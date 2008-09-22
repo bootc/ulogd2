@@ -144,8 +144,8 @@ struct ulogd_plugin {
 
 	unsigned flags;
 
-	struct ulogd_keyset input;
-	struct ulogd_keyset output;
+	const struct ulogd_keyset input;
+	const struct ulogd_keyset output;
 
 	/* called per packet, may return ULOGD_IRET_AGAIN */
 	int (* interp)(struct ulogd_pluginstance *pi);
@@ -164,10 +164,10 @@ struct ulogd_plugin {
 	int (* signal)(struct ulogd_pluginstance *pi, int signal);
 
 	/* configuration parameters */
-	struct config_keyset *config_kset;
+	const struct config_keyset *config_kset;
 
 	/* size of instance->priv */
-	unsigned int priv_size;
+	unsigned priv_size;
 };
 
 #define ULOGD_IRET_ERR		-1
