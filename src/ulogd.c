@@ -586,7 +586,9 @@ static int logfile_open(const char *name)
 			exit(2);
 		}
 	}
-	ulogd_log(ULOGD_INFO, "ulogd Version %s starting\n", ULOGD_VERSION);
+
+	ulogd_log(ULOGD_INFO, "ulogd Version %s starting\n", VERSION);
+
 	return 0;
 }
 
@@ -739,8 +741,7 @@ write_pid_file(void)
 
 static void print_usage(void)
 {
-	/* FIXME */
-	printf("ulogd Version %s\n", ULOGD_VERSION);
+	printf("ulogd Version %s\n", VERSION);
 	printf(COPYRIGHT);
 	printf("This is free software with ABSOLUTELY NO WARRANTY.\n\n");
 	printf("Parameters:\n");
@@ -795,7 +796,7 @@ main(int argc, char* argv[])
 			daemonize = 1;
 			break;
 		case 'V':
-			printf("ulogd Version %s\n", ULOGD_VERSION);
+			printf("ulogd Version %s\n", VERSION);
 			printf(COPYRIGHT);
 			exit(0);
 			break;

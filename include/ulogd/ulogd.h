@@ -25,8 +25,6 @@
 #define __fmt_printf(idx, first) \
 						__attribute__ ((format (printf,(idx),(first))))
 
-#define ULOGD_VERSION "2.0.0beta"
-
 /* key types */
 enum ulogd_ktype {
 	ULOGD_RET_NONE = 0,
