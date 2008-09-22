@@ -354,8 +354,6 @@ pgsql_close_db(struct ulogd_pluginstance *upi)
 	PQfinish(pi->dbh);
 	pi->dbh = NULL;
 
-	upi_log(upi, ULOGD_INFO, "database connection closed\n");
-
 	return 0;
 }
 
