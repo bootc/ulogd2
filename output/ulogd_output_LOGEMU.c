@@ -109,28 +109,6 @@ static int _output_logemu(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static int
-signal_handler_logemu(struct ulogd_pluginstance *pi, int signal)
-{
-	struct logemu_instance *li = upi_priv(pi);
-
-	switch (signal) {
-	case SIGHUP:
-		upi_log(pi, ULOGD_INFO, "syslogemu: reopening logfile\n");
-		fclose(li->of);
-		li->of = fopen(pi->config_kset->ces[0].u.string, "a");
-		if (!li->of) {
-			upi_log(pi, ULOGD_ERROR, "can't reopen syslogemu: %m\n");
-		}
-		break;
-	default:
-		break;
-	}
-
-	return 0;
-}
-		
-
 static int start_logemu(struct ulogd_pluginstance *pi)
 {
 	struct logemu_instance *li = (struct logemu_instance *) &pi->private;
@@ -199,7 +177,6 @@ static struct ulogd_plugin logemu_plugin = {
 	.stop	 	= &fini_logemu,
 
 	.interp 	= &_output_logemu, 
-	.signal 	= &signal_handler_logemu,
 	.version	= ULOGD_VERSION,
 };
 

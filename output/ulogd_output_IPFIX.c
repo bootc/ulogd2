@@ -453,24 +453,6 @@ static int stop_ipfix(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-static int
-signal_handler_ipfix(struct ulogd_pluginstance *pi, int signal)
-{
-	struct ipfix_instance *li = (struct ipfix_instance *) &pi->private;
-
-	switch (signal) {
-	case SIGHUP:
-		upi_log(pi, ULOGD_INFO, "reopening connection\n");
-		stop_ipfix(pi);
-		start_ipfix(pi);
-		break;
-	default:
-		break;
-	}
-
-	return 0;
-}
-	
 static int configure_ipfix(struct ulogd_pluginstance *pi,
 			    struct ulogd_pluginstance_stack *stack)
 {
@@ -504,9 +486,6 @@ static int configure_ipfix(struct ulogd_pluginstance *pi,
 		return -EINVAL;
 	}
 
-	/* postpone address lookup to ->start() time, since we want to 
-	 * re-lookup an address on SIGHUP */
-
 	return ulogd_wildcard_inputkeys(pi);
 }
 
@@ -526,7 +505,6 @@ static struct ulogd_plugin ipfix_plugin = {
 	.stop	 	= &stop_ipfix,
 
 	.interp 	= &output_ipfix, 
-	.signal 	= &signal_handler_ipfix,
 	.version	= ULOGD_VERSION,
 };
 

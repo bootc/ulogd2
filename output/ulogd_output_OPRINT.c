@@ -113,24 +113,6 @@ static struct config_keyset oprint_kset = {
 	},
 };
 
-static void sighup_handler_print(struct ulogd_pluginstance *upi, int signal)
-{
-	struct oprint_priv *oi = (struct oprint_priv *) &upi->private;
-
-	switch (signal) {
-	case SIGHUP:
-		upi_log(upi, ULOGD_INFO, "reopening logfile\n");
-		fclose(oi->of);
-		oi->of = fopen(upi->config_kset->ces[0].u.string, "a");
-		if (!oi->of) {
-			upi_log(upi, ULOGD_ERROR, "can't open PKTLOG: %m\n");
-		}
-		break;
-	default:
-		break;
-	}
-}
-
 static int oprint_configure(struct ulogd_pluginstance *upi,
 			    struct ulogd_pluginstance_stack *stack)
 {
@@ -181,7 +163,6 @@ static struct ulogd_plugin oprint_plugin = {
 	.interp	= &oprint_interp,
 	.start 	= &oprint_init,
 	.stop	= &oprint_fini,
-	.signal = &sighup_handler_print,
 	.config_kset = &oprint_kset,
 	.version = ULOGD_VERSION,
 };

@@ -116,30 +116,6 @@ static struct config_keyset nacct_kset = {
 };
 
 static int
-sighup_handler_print(struct ulogd_pluginstance *pi, int signal)
-{
-	struct nacct_priv *priv = upi_priv(pi);
-
-	switch (signal) {
-	case SIGHUP:
-	{
-		upi_log(pi, ULOGD_INFO, "reopening logfile\n");
-		fclose(priv->of);
-		priv->of = fopen(NACCT_CFG_FILE(pi), "a");
-		if (!priv->of)
-			upi_log(pi, ULOGD_ERROR, "%s: %s\n", NACCT_CFG_FILE(pi),
-					  strerror(errno));
-		break;
-	}
-
-	default:
-		break;
-	}
-
-	return 0;
-}
-
-static int
 nacct_conf(struct ulogd_pluginstance *pi,
 		   struct ulogd_pluginstance_stack *stack)
 {
@@ -190,7 +166,6 @@ static struct ulogd_plugin nacct_plugin = {
 	.interp	= &nacct_interp,
 	.start 	= &nacct_init,
 	.stop	= &nacct_fini,
-	.signal = &sighup_handler_print,
 	.config_kset = &nacct_kset,
 	.version = ULOGD_VERSION,
 };

@@ -225,21 +225,6 @@ static int append_create_outfile(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static void signal_pcap(struct ulogd_pluginstance *upi, int signal)
-{
-	struct pcap_instance *pi = (struct pcap_instance *) &upi->private;
-
-	switch (signal) {
-	case SIGHUP:
-		ulogd_log(ULOGD_NOTICE, "reopening capture file\n");
-		fclose(pi->of);
-		append_create_outfile(upi);
-		break;
-	default:
-		break;
-	}
-}
-
 static int configure_pcap(struct ulogd_pluginstance *upi,
 			  struct ulogd_pluginstance_stack *stack)
 {
@@ -277,7 +262,6 @@ static struct ulogd_plugin pcap_plugin = {
 	.configure	= &configure_pcap,
 	.start		= &start_pcap,
 	.stop		= &stop_pcap,
-	.signal		= &signal_pcap,
 	.interp		= &interp_pcap,
 	.version	= ULOGD_VERSION,
 };

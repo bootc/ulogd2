@@ -18,7 +18,6 @@
  *	  flowStart / flowEnd NanoSeconds.
  *	- if using preallocated data structure, get rid of all list heads and
  *	  use per-bucket arrays instead.
- *	- SIGHUP for reconfiguration without loosing hash table contents, but
  *	  re-read of config and reallocation / rehashing of table, if required
  *	- Split hashtable code into separate [filter] plugin, so we can run 
  * 	  small non-hashtable ulogd installations on the firewall boxes, send
