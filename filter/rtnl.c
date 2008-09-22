@@ -1,17 +1,16 @@
 /* rtnl - rtnetlink utility functions
  *
+ * rtnetlink - routing table netlink interface
+ *
  * (C) 2004 by Astaro AG, written by Harald Welte <hwelte@astaro.com>
  *
  * This software is free software and licensed under GNU GPLv2. 
  *
  */
-
-/* rtnetlink - routing table netlink interface */
-
+#include "config.h"
+#include <ulogd/ulogd.h>
+#include <ulogd/common.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
 #include <time.h>
 #include <sys/types.h>
 

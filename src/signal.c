@@ -16,6 +16,7 @@
  *
  * Holger Eitzenberger, 2007.
  */
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/signal.h>

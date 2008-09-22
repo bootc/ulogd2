@@ -20,13 +20,12 @@
  * $Id: printflow.c,v 1.1 2006/05/16 01:57:31 philipc Exp $
  *
  */
-
-#include <string.h>
+#include "config.h"
+#include <ulogd/ulogd.h>
+#include <ulogd/printflow.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
-#include <ulogd/ulogd.h>
-#include <ulogd/printflow.h>
 
 struct ulogd_key printflow_keys[] = {
 	{

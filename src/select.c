@@ -20,12 +20,11 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-#include <fcntl.h>
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/signal.h>
-#include <ulogd/linuxlist.h>
+#include <fcntl.h>
 
 static fd_set readset, writeset, exceptset;
 static int maxfd = -1;

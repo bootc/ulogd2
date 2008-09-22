@@ -3,7 +3,7 @@
  *
  * (C) 2004-2005 by Harald Welte <laforge@gnumonks.org>
  */
-
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>

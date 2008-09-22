@@ -15,22 +15,17 @@
  *
  * H. Eitzenberger, 2006  Astaro AG
  */
+#define SYSLOG_NAMES			/* wtf? */
 
-#define SYSLOG_NAMES
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <syslog.h>
-#include <errno.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
 #include <ulogd/ifi.h>
-#include <ulogd/conffile.h>
+#include <unistd.h>
+#include <syslog.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
 
 #define HIPQUAD(addr) \
         ((unsigned char *)&addr)[3], \

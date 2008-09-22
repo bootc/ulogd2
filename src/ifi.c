@@ -16,7 +16,7 @@
  *
  * Holger Eitzenberger, 2006.
  */
-
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/ifi.h>

@@ -20,7 +20,7 @@
  * $Id: ulogd_filter_IFINDEX.c 1500 2005-10-03 16:54:02Z laforge $
  *
  */
-
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>

@@ -20,25 +20,19 @@
  * $Id$
  *
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include "config.h"
+#include <ulogd/ulogd.h>
+#include <ulogd/common.h>
 #include <unistd.h>
-#include <string.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <pcap.h>
-#include <errno.h>
-#include <ulogd/ulogd.h>
-#include <ulogd/conffile.h>
 
 /* This is a timeval as stored on disk in a dumpfile.
  * It has to use the same types everywhere, independent of the actual
  * `struct timeval'
  */
-
 struct pcap_timeval {
 	int32_t tv_sec;
 	int32_t tv_usec;

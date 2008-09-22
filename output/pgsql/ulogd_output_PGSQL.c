@@ -11,6 +11,7 @@
  *
  * Holger Eitzenberger <holger@eitzenberger.org>  Astaro AG 2008
  */
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>

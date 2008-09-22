@@ -23,13 +23,13 @@
  *
  * $Id$
  */
-
-#include <stdlib.h>
-#include <stdio.h>
+#include "config.h"
+#include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <libipulog/libipulog.h>
 #include <string.h>
 #include <unistd.h>
 #include <net/if.h>
-#include <libipulog/libipulog.h>
 
 struct ipulog_handle
 {

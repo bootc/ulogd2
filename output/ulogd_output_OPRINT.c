@@ -20,6 +20,7 @@
  * $Id$
  *
  */
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/conffile.h>

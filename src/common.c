@@ -16,6 +16,7 @@
  *
  * Holger Eitzenberger <holger@eitzenberger.org>, 2007.
  */
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <sys/types.h>

@@ -38,16 +38,12 @@
  * 15 Oct 2005, Harald Welte <laforge@netfilter.org>
  * 	Port to ulogd2 (@ 0sec conference, Bern, Suisse)
  */
-
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+#include "config.h"
+#include <ulogd/ulogd.h>
+#include <ulogd/db.h>
 #include <time.h>
 #include <arpa/inet.h>
 #include <mysql/mysql.h>
-#include <ulogd/ulogd.h>
-#include <ulogd/conffile.h>
-#include <ulogd/db.h>
 
 #ifdef DEBUG_MYSQL
 #define DEBUGP(x, args...)	fprintf(stderr, x, ## args)

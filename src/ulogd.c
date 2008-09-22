@@ -44,13 +44,16 @@
  * 		- finally get ulogd2 into a running state
  *
  */
+#include "config.h"
+#include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
+#include <ulogd/conffile.h>
+#include <ulogd/signal.h>
+#include <ulogd/ifi.h>
 
 #include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdarg.h>
-#include <errno.h>
 #include <time.h>
 #include <ctype.h>
 #include <dlfcn.h>
@@ -61,13 +64,6 @@
 #include <grp.h>
 #include <pthread.h>
 #include <syslog.h>
-
-#include <ulogd/ulogd.h>
-#include <ulogd/common.h>
-#include <ulogd/plugin.h>
-#include <ulogd/conffile.h>
-#include <ulogd/signal.h>
-#include <ulogd/ifi.h>
 
 #define COPYRIGHT \
 	"Copyright (C) 2000-2005 Harald Welte <laforge@netfilter.org>\n"

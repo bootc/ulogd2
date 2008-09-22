@@ -5,18 +5,15 @@
  * This software is Free Software and licensed under GNU GPLv2. 
  *
  */
+#include "config.h"
+#include <ulogd/ulogd.h>
+#include <ulogd/common.h>
 
 /* IFINDEX handling */
-
 #include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <sys/types.h>
-
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
 #include <linux/netdevice.h>
 
 #include "rtnl.h"

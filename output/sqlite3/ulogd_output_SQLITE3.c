@@ -29,11 +29,10 @@
  *  2006-10-09 Holger Eitzenberger <holger@my-eitzenberger.de>
  *  	- port to ulogd-2.00
  */
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
-#include <ulogd/conffile.h>
 #include <ulogd/plugin.h>
-#include <ulogd/linuxlist.h>
 #include <sqlite3.h>
 #include <string.h>
 #include <arpa/inet.h>

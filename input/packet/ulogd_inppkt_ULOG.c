@@ -2,12 +2,13 @@
  *
  * (C) 2004-2005 by Harald Welte <laforge@gnumonks.org>
  */
+#include "config.h"
+#include <ulogd/ulogd.h>
+#include <libipulog/libipulog.h>
 
 #include <unistd.h>
 #include <stdlib.h>
 
-#include <ulogd/ulogd.h>
-#include <libipulog/libipulog.h>
 
 #ifndef ULOGD_NLGROUP_DEFAULT
 #define ULOGD_NLGROUP_DEFAULT	32

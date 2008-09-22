@@ -27,6 +27,7 @@
  * - implement PR-SCTP (no api definition in draft sockets api)
  *
  */
+#include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
