@@ -41,7 +41,7 @@ db_row_new(struct ulogd_pluginstance *pi)
 	pr_fn_debug("pi=%p\n", pi);
 
 	if ((row = calloc(1, sizeof(struct db_row))) == NULL) {
-		ulogd_log(ULOGD_FATAL, "db: out of memory\n");
+		upi_log(pi, ULOGD_FATAL, "out of memory\n");
 		return NULL;
 	}
 
@@ -81,7 +81,7 @@ db_row_add(struct ulogd_pluginstance *pi, struct db_row *row)
 
 	if (di->max_backlog && di->num_rows >= di->max_backlog) {
 		if (!di->overlimit_msg) {
-			ulogd_log(ULOGD_ERROR, "db: over backlog limit, dropping rows\n");
+			upi_log(pi, ULOGD_ERROR, "over backlog limit, dropping rows\n");
 			di->overlimit_msg = 1;
 		}
 
@@ -126,8 +126,7 @@ __db_commit(struct ulogd_pluginstance *pi)
 	max_commit = max(3 * di->buffer_size, 1024);
 
 	if ((rows = di->driver->commit(pi, max_commit)) < 0) {
-		ulogd_log(ULOGD_ERROR, "%s: commit failed\n", pi->id);
-
+		upi_log(pi, ULOGD_ERROR, "commit failed\n");
 		goto err_rollback;
 	}
 
@@ -137,8 +136,7 @@ __db_commit(struct ulogd_pluginstance *pi)
 		db_row_del(pi, row);
 	}
 
-	ulogd_log(ULOGD_DEBUG, "%s: rows=%d commited=%d\n", pi->id,
-			  di->num_rows, rows);
+	upi_log(pi, ULOGD_DEBUG, "rows=%d commited=%d\n", di->num_rows, rows);
 
 	return rows;
 
@@ -227,11 +225,11 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 		size += strlen(upi->input.keys[i].name) + 1 + SQL_VALSIZE;
 	}
 
-	ulogd_log(ULOGD_DEBUG, "allocating %u bytes for statement\n", size);
+	upi_log(upi, ULOGD_DEBUG, "allocating %u bytes for statement\n", size);
 
 	mi->stmt = (char *) malloc(size);
 	if (!mi->stmt) {
-		ulogd_log(ULOGD_ERROR, "OOM!\n");
+		upi_log(upi, ULOGD_FATAL, "out of memory\n");
 		return -ENOMEM;
 	}
 
@@ -258,7 +256,7 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 	*(mi->stmt_val)++ = ')';
 	mi->stmt_val += sprintf(mi->stmt_val, " values (");
 
-	ulogd_log(ULOGD_DEBUG, "stmt='%s'\n", mi->stmt);
+	upi_log(upi, ULOGD_DEBUG, "stmt='%s'\n", mi->stmt);
 
 	return 0;
 }
@@ -396,7 +394,7 @@ _init_reconnect(struct ulogd_pluginstance *upi)
 	if (reconnect_ce(upi->config_kset).u.value) {
 		di->reconnect = time(NULL);
 		if (di->reconnect != TIME_ERR) {
-			ulogd_log(ULOGD_ERROR, "no connection to database, "
+			upi_log(upi, ULOGD_ERROR, "no connection to database, "
 				  "attempting to reconnect after %u seconds\n",
 				  reconnect_ce(upi->config_kset).u.value);
 			di->reconnect += reconnect_ce(upi->config_kset).u.value;
@@ -406,7 +404,7 @@ _init_reconnect(struct ulogd_pluginstance *upi)
 	}
 
 	/* Disable plugin permanently */
-	ulogd_log(ULOGD_ERROR, "permanently disabling plugin\n");
+	upi_log(upi, ULOGD_ERROR, "permanently disabling plugin\n");
 	di->interp = &disabled_interp_db;
 
 	return 0;
@@ -431,7 +429,7 @@ __interp_db(struct ulogd_pluginstance *upi)
 			continue;
 
 		if (!res)
-			ulogd_log(ULOGD_NOTICE, "no source for `%s' ?!?\n",
+			upi_log(upi, ULOGD_NOTICE, "no source for '%s'\n",
 				  upi->input.keys[i].name);
 
 		if (!res || !IS_VALID(*res)) {
@@ -494,13 +492,11 @@ __interp_db(struct ulogd_pluginstance *upi)
 			sprintf(di->stmt_ins, "',");
 			break;
 		case ULOGD_RET_RAW:
-			ulogd_log(ULOGD_NOTICE,
-				"%s: type RAW not supported by MySQL\n",
+			upi_log(upi, ULOGD_NOTICE, "%s: type RAW not supported by MySQL\n",
 				upi->input.keys[i].name);
 			break;
 		default:
-			ulogd_log(ULOGD_NOTICE,
-				"unknown type %d for %s\n",
+			upi_log(upi, ULOGD_NOTICE, "unknown type %d for %s\n",
 				res->type, upi->input.keys[i].name);
 			break;
 		}
@@ -527,7 +523,7 @@ _init_db(struct ulogd_pluginstance *upi)
 		return 0;
 
 	if (di->driver->open_db(upi)) {
-		ulogd_log(ULOGD_ERROR, "can't establish database connection\n");
+		upi_log(upi, ULOGD_ERROR, "can't establish database connection\n");
 		return _init_reconnect(upi);
 	}
 
