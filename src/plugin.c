@@ -280,7 +280,7 @@ upi_for_each(int (* cb)(struct ulogd_pluginstance *, void *), void *arg)
  * Configure a plugin.
  *
  * An instance might return %ULOGD_IRET_AGAIN, in which case a configure
- * is retried later.
+ * is tried later.
  */
 int
 ulogd_upi_configure(struct ulogd_pluginstance *pi,
@@ -316,7 +316,7 @@ done:
  * Start a plugin instance.
  *
  * An instance might return %ULOGD_IRET_AGAIN, in which case a start
- * is retried later.
+ * is tried again later.
  */
 int
 ulogd_upi_start(struct ulogd_pluginstance *pi)
@@ -345,6 +345,9 @@ done:
 	return 0;
 }
 
+/**
+ * Stop a plugin instance.
+ */
 int
 ulogd_upi_stop(struct ulogd_pluginstance *pi)
 {
@@ -363,6 +366,13 @@ done:
 	return 0;
 }
 
+/**
+ * Packet interpreter called per packet.
+ *
+ * If an error occurs the plugin is stopped.  If the plugin returns
+ * %ULOGD_IRET_AGAIN it will additionally be scheduled for a restart
+ * later.
+ */
 int
 ulogd_upi_interp(struct ulogd_pluginstance *pi)
 {
@@ -387,6 +397,13 @@ ulogd_upi_interp(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
+/**
+ * Call a plugin-specific signal handler.
+ *
+ * If an error occurs the plugin is stopped.  If the plugin returns
+ * %ULOGD_IRET_AGAIN it will additionally be scheduled for a restart
+ * later.
+ */
 void
 ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
 {

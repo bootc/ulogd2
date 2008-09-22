@@ -166,7 +166,7 @@ struct ulogd_plugin {
 	/* function to destruct an existing pluginstance */
 	int (* stop)(struct ulogd_pluginstance *pi);
 
-	/* function to receive a signal */
+	/* function to receive a signal, may return ULOGD_IRET_AGAIN */
 	int (* signal)(struct ulogd_pluginstance *pi, int signal);
 
 	/* configuration parameters */
