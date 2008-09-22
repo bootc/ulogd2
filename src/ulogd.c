@@ -69,11 +69,10 @@
 	"Copyright (C) 2000-2005 Harald Welte <laforge@netfilter.org>\n"
 
 /* global variables */
-static FILE *logfile = NULL;		/* logfile pointer */
+static FILE *logfile;
 static char *ulogd_configfile = ULOGD_CONFIGFILE;
 static char *ulogd_logfile = ULOGD_LOGFILE_DEFAULT;
 static char pid_file[PATH_MAX] = "/var/run/ulogd.pid";
-static FILE syslog_dummy;
 static enum GlobalState state;
 
 static int load_plugin(const char *file);
@@ -294,40 +293,21 @@ static inline int ulogd2syslog_level(int level)
 }
 
 /* log message to the logfile */
-void __ulogd_log(int level, char *file, int line, const char *format, ...)
+void
+__ulogd_log(int level, const char *file, int line, const char *fmt, ...)
 {
-	char *timestr;
 	va_list ap;
-	time_t tm;
-	FILE *outfd;
 
 	/* log only messages which have level at least as high as loglevel */
 	if (level < loglevel_ce.u.value)
 		return;
 
-	if (logfile == &syslog_dummy) {
-		/* FIXME: this omits the 'file' string */
-		va_start(ap, format);
-		vsyslog(ulogd2syslog_level(level), format, ap);
-		va_end(ap);
-	} else {
-  		if (logfile)
-			outfd = logfile;
-		else
-			outfd = stderr;
-
-		va_start(ap, format);
-
-		tm = time(NULL);
-		timestr = ctime(&tm);
-		timestr[strlen(timestr)-1] = '\0';
-		fprintf(outfd, "%s <%1.1d> %s:%d ", timestr, level, file, line);
-
-		vfprintf(outfd, format, ap);
+	if (logfile == NULL) {
+		va_start(ap, fmt);
+		vsyslog(ulogd2syslog_level(level), fmt, ap);
 		va_end(ap);
 
-		/* flush glibc's buffer */
-		fflush(outfd);
+		return;
 	}
 }
 
@@ -588,11 +568,11 @@ static int logfile_open(const char *name)
 	if (name)
 		ulogd_logfile = (char *)name;
 
-	if (!strcmp(name, "stdout")) {
+	if (!strcmp(name, "stdout"))
 		logfile = stdout;
-	} else if (!strcmp(name, "syslog")) {
-		logfile = &syslog_dummy;
-	} else {
+	else if (strcmp(name, "syslog") == 0)
+		logfile = NULL;
+	else {
 		logfile = fopen(ulogd_logfile, "a");
 		if (!logfile) {
 			fprintf(stderr, "ERROR: can't open logfile %s: %s\n", 
@@ -892,10 +872,12 @@ main(int argc, char* argv[])
 		if (fork()) {
 			exit(0);
 		}
-		if (logfile != stdout && logfile != &syslog_dummy)
+		if (logfile != NULL)
 			fclose(stdout);
+
 		fclose(stderr);
 		fclose(stdin);
+
 		setsid();
 	}
 

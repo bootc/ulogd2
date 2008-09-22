@@ -257,7 +257,7 @@ void ulogd_register_plugin(struct ulogd_plugin *me);
 struct ulogd_key *alloc_ret(const u_int16_t type, const char*);
 
 /* write a message to the daemons' logfile */
-void __ulogd_log(int level, char *file, int line, const char *fmt, ...) \
+void __ulogd_log(int lvl, const char *file, int line, const char *fmt, ...) \
 	__fmt_printf(4, 5);
 
 /* macro for logging including filename and line number */
