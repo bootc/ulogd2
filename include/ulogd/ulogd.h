@@ -60,11 +60,14 @@ enum ulogd_ktype {
 /* maximum length of ulogd key */
 #define ULOGD_MAX_KEYLEN 31
 
-#define ULOGD_DEBUG	1	/* debugging information */
-#define ULOGD_INFO	3
-#define ULOGD_NOTICE	5	/* abnormal/unexpected condition */
-#define ULOGD_ERROR	7	/* error condition, requires user action */
-#define ULOGD_FATAL	8	/* fatal, program aborted */
+enum ulogd_loglevel {
+	ULOGD_DEBUG = 1,	/* debugging information */
+	ULOGD_INFO = 3,
+	ULOGD_NOTICE = 5,	/* abnormal/unexpected condition */
+	ULOGD_ERROR = 7,	/* error condition, requires user action */
+	ULOGD_FATAL = 8,	/* fatal, program aborted */
+	__ULOGD_LOGLEVEL_MAX = ULOGD_FATAL
+};
 
 /* ulogd data type */
 enum ulogd_dtype {
@@ -257,8 +260,8 @@ void ulogd_register_plugin(struct ulogd_plugin *me);
 struct ulogd_key *alloc_ret(const u_int16_t type, const char*);
 
 /* write a message to the daemons' logfile */
-void __ulogd_log(int lvl, const char *file, int line, const char *fmt, ...) \
-	__fmt_printf(4, 5);
+void __ulogd_log(enum ulogd_loglevel, const char *file, int line,
+				 const char *fmt, ...) __fmt_printf(4, 5);
 
 /* macro for logging including filename and line number */
 #define ulogd_log(level, format, args...) \

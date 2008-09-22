@@ -266,35 +266,19 @@ ulogd_register_plugin(struct ulogd_plugin *me)
 /***********************************************************************
  * MAIN PROGRAM
  ***********************************************************************/
-
-static inline int ulogd2syslog_level(int level)
-{
-	int syslog_level = LOG_WARNING;
-
-	switch (level) {
-		case ULOGD_DEBUG:
-			syslog_level = LOG_DEBUG;
-			break;
-		case ULOGD_INFO:
-			syslog_level = LOG_INFO;
-			break;
-		case ULOGD_NOTICE:
-			syslog_level = LOG_NOTICE;
-			break;
-		case ULOGD_ERROR:
-			syslog_level = LOG_ERR;
-			break;
-		case ULOGD_FATAL:
-			syslog_level = LOG_CRIT;
-			break;
-	}
-
-	return syslog_level;
-}
+static const int
+ulogd2syslog_loglevel[] = {
+	[ULOGD_DEBUG] = LOG_DEBUG,
+	[ULOGD_INFO] = LOG_INFO,
+	[ULOGD_NOTICE] = LOG_NOTICE,
+	[ULOGD_ERROR] = LOG_ERR,
+	[ULOGD_FATAL] = LOG_CRIT,
+};
 
 /* log message to the logfile */
 void
-__ulogd_log(int level, const char *file, int line, const char *fmt, ...)
+__ulogd_log(enum ulogd_loglevel level, const char *file, int line,
+			const char *fmt, ...)
 {
 	va_list ap;
 
@@ -304,7 +288,7 @@ __ulogd_log(int level, const char *file, int line, const char *fmt, ...)
 
 	if (logfile == NULL) {
 		va_start(ap, fmt);
-		vsyslog(ulogd2syslog_level(level), fmt, ap);
+		vsyslog(ulogd2syslog_loglevel[level], fmt, ap);
 		va_end(ap);
 
 		return;
