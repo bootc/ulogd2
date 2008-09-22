@@ -139,7 +139,7 @@ int ulogd_key_size(struct ulogd_key *key)
 
 	switch (key->type) {
 	case ULOGD_RET_NONE:
-		abort();
+		ulogd_abort("wrong key type\n");
 
 	case ULOGD_RET_INT8:
 	case ULOGD_RET_UINT8:
@@ -331,6 +331,22 @@ void __ulogd_log(int level, char *file, int line, const char *format, ...)
 	}
 }
 
+void
+__ulogd_abort(const char *file, int line, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+
+	/* __ulogd_log(ULOGD_FATAL, fmt, ap); */
+
+	va_end(ap);
+
+	/* TODO backtrace */
+
+	abort();
+}
+
 /* clean results (set all values to 0 and free pointers) */
 static void ulogd_clean_results(struct ulogd_pluginstance *pi)
 {
@@ -386,9 +402,7 @@ ulogd_propagate_results(struct ulogd_pluginstance *pi)
 			break;
 
 		default:
-			ulogd_log(ULOGD_NOTICE, "%s: unknown return value '%d'\n",
-					  cur->id, ret);
-			abort();
+			ulogd_abort("%s: unknown return value '%d'\n", cur->id, ret);
 		}
 	}
 

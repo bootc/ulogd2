@@ -628,13 +628,11 @@ __check_get(const struct ulogd_key *key, unsigned type)
 {
 #ifdef DEBUG
 	if (key == NULL || key->u.source == NULL)
-		abort();
+		ulogd_abort("key pointer invalid (%p)\n", key);
 
-	if ((key->u.source->type & type) == 0) {
-		pr_fn_debug("%s: type check failed (%d <-> %d)\n",
+	if ((key->u.source->type & type) == 0)
+		ulogd_abort("%s: type check failed (%d <-> %d)\n",
 					key->name, key->type, type);
-		abort();
-	}
 #endif /* DEBUG */
 }
 
@@ -643,13 +641,11 @@ __check(const struct ulogd_key *key, unsigned type)
 {
 #ifdef DEBUG
 	if (key == NULL)
-		abort();
+		ulogd_abort("key ptr is NULL\n");
 
-	if ((key->type & type) == 0) {
-		pr_fn_debug("%s: type check failed (%d <-> %d)\n",
+	if ((key->type & type) == 0)
+		ulogd_abort("%s: type check failed (%d <-> %d)\n",
 					key->name, key->type, type);
-		abort();
-	}
 #endif /* DEBUG */
 }
 

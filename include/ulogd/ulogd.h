@@ -25,6 +25,8 @@
 #define __fmt_printf(idx, first) \
 						__attribute__ ((format (printf,(idx),(first))))
 
+#define __noreturn		__attribute__ ((noreturn))
+
 /* key types */
 enum ulogd_ktype {
 	ULOGD_RET_NONE = 0,
@@ -263,6 +265,11 @@ void __ulogd_log(int level, char *file, int line, const char *fmt, ...) \
 	__ulogd_log(level, __FILE__, __LINE__, format, ## args)
 /* backwards compatibility */
 #define ulogd_error(format, args...) ulogd_log(ULOGD_ERROR, format, ## args)
+
+void __ulogd_abort(const char *, int, const char *, ...) __noreturn;
+
+#define ulogd_abort(fmt, args...) \
+	__ulogd_abort(__FILE__, __LINE__, fmt, ## args)
 
 #define IS_VALID(x)	((x).flags & ULOGD_RETF_VALID)
 #define SET_VALID(x)	(x.flags |= ULOGD_RETF_VALID)
