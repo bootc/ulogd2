@@ -141,7 +141,7 @@ static struct ulogd_plugin ifindex_plugin = {
 
 	.start = &ifindex_start,
 	.stop = &ifindex_fini,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

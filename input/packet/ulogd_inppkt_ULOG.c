@@ -4,6 +4,8 @@
  */
 #include "config.h"
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <libipulog/libipulog.h>
 
 #include <unistd.h>
@@ -272,7 +274,7 @@ struct ulogd_plugin libulog_plugin = {
 	.start = &init,
 	.stop = &fini,
 	.config_kset = &libulog_kset,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) initializer(void)

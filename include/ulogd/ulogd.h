@@ -137,7 +137,8 @@ struct ulogd_plugin {
 	/* global list of plugins */
 	struct llist_head list;
 
-	char *version;
+	/* revision number, incremented on API changes */
+	unsigned rev;
 
 	/* name of this plugin (set by plugin) */
 	char name[ULOGD_MAX_KEYLEN+1];

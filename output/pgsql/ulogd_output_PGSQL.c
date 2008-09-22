@@ -598,7 +598,7 @@ static struct ulogd_plugin pgsql_plugin = {
 	.start = &ulogd_db_start,
 	.stop = &ulogd_db_stop,
 	.interp = &ulogd_db_interp_batch,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

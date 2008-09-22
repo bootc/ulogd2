@@ -177,7 +177,7 @@ static struct ulogd_plugin logemu_plugin = {
 	.stop	 	= &fini_logemu,
 
 	.interp 	= &_output_logemu, 
-	.version	= ULOGD_VERSION,
+	.rev		= ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

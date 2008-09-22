@@ -577,7 +577,7 @@ static struct ulogd_plugin astaro_plugin = {
 	.start		= astaro_start,
 	.stop		= astaro_fini,
 	.interp		= astaro_output,
-	.version	= ULOGD_VERSION,
+	.rev		= ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

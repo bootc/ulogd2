@@ -21,6 +21,7 @@
 #include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
@@ -167,7 +168,7 @@ static struct ulogd_plugin pwsniff_plugin = {
 		.type = ULOGD_DTYPE_PACKET,
 	},
 	.interp = &interp_pwsniff,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void)

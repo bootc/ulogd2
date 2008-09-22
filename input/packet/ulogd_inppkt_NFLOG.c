@@ -433,7 +433,7 @@ struct ulogd_plugin libulog_plugin = {
 	.start 		= &nflog_start,
 	.stop 		= &nflog_stop,
 	.config_kset = &libulog_kset,
-	.version	= ULOGD_VERSION,
+	.rev		= ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

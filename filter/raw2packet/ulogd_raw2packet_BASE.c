@@ -510,7 +510,7 @@ static struct ulogd_plugin base_plugin = {
 		.type = ULOGD_DTYPE_PACKET,
 		},
 	.interp = &_interp_iphdr,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

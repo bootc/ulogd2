@@ -168,7 +168,7 @@ static struct ulogd_plugin nacct_plugin = {
 	.start 	= &nacct_init,
 	.stop	= &nacct_fini,
 	.config_kset = &nacct_kset,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

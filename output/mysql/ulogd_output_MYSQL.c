@@ -40,6 +40,8 @@
  */
 #include "config.h"
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <ulogd/db.h>
 #include <time.h>
 #include <arpa/inet.h>
@@ -258,7 +260,7 @@ static struct ulogd_plugin plugin_mysql = {
 	.stop	   = &ulogd_db_stop,
 	.signal	   = &ulogd_db_signal,
 	.interp	   = &ulogd_db_interp,
-	.version   = ULOGD_VERSION,
+	.rev		 = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

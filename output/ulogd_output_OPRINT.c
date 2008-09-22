@@ -165,7 +165,7 @@ static struct ulogd_plugin oprint_plugin = {
 	.start 	= &oprint_init,
 	.stop	= &oprint_fini,
 	.config_kset = &oprint_kset,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

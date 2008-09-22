@@ -20,6 +20,8 @@
  */
 #include "config.h"
 #include <ulogd/ulogd.h>
+#include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <ulogd/printpkt.h>
 
 static struct ulogd_key printpkt_outp[] = {
@@ -55,7 +57,7 @@ static struct ulogd_plugin printpkt_plugin = {
 		.type = ULOGD_DTYPE_PACKET,
 	},
 	.interp = &printpkt_interp,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

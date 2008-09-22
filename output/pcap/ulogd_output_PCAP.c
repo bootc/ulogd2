@@ -23,6 +23,7 @@
 #include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
@@ -257,7 +258,7 @@ static struct ulogd_plugin pcap_plugin = {
 	.start		= &start_pcap,
 	.stop		= &stop_pcap,
 	.interp		= &interp_pcap,
-	.version	= ULOGD_VERSION,
+	.rev		= ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

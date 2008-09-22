@@ -20,6 +20,10 @@
 #ifndef PLUGIN_H
 #define PLUGIN_H
 
+/* will be incremented on each API change */
+#define ULOGD_PLUGIN_REVISION	2
+
+
 extern struct llist_head ulogd_plugins;
 extern struct llist_head ulogd_pi_stacks;
 

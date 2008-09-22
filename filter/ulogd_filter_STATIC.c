@@ -86,7 +86,7 @@ static struct ulogd_plugin static_plugin = {
 		.type = ULOGD_DTYPE_PACKET | ULOGD_DTYPE_FLOW,
 	},
 	.interp = &static_interp,
-	.version = ULOGD_VERSION,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

@@ -169,7 +169,7 @@ static struct ulogd_plugin syslog_plugin = {
 	.configure	= &syslog_configure,
 	.start		= &syslog_start,
 	.interp		= &_output_syslog,
-	.version	= ULOGD_VERSION,
+	.rev		= ULOGD_PLUGIN_REVISION,
 };
 
 void __attribute__ ((constructor)) init(void);

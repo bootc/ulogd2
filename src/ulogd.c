@@ -244,20 +244,24 @@ static struct ulogd_plugin *find_plugin(const char *name)
 }
 
 /* the function called by all plugins for registering themselves */
-void ulogd_register_plugin(struct ulogd_plugin *me)
+void
+ulogd_register_plugin(struct ulogd_plugin *me)
 {
-	if (strcmp(me->version, ULOGD_VERSION)) { 
-		ulogd_log(ULOGD_NOTICE, "plugin `%s' has incompatible version %s\n",
-				  me->name, me->version);
+	if (me->rev != ULOGD_PLUGIN_REVISION) {
+		ulogd_log(ULOGD_NOTICE, "plugin '%s' has incompatible revision %d\n",
+				  me->name, me->rev);
 		return;
 	}
+
 	if (find_plugin(me->name)) {
-		ulogd_log(ULOGD_NOTICE, "plugin `%s' already registered\n",
+		ulogd_log(ULOGD_NOTICE, "plugin '%s' already registered\n",
 				me->name);
 		exit(EXIT_FAILURE);
 	}
-	ulogd_log(ULOGD_NOTICE, "registering plugin `%s'\n", me->name);
+
 	llist_add(&me->list, &ulogd_plugins);
+
+	ulogd_log(ULOGD_NOTICE, "registered plugin '%s'\n", me->name);
 }
 
 /***********************************************************************
