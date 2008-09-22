@@ -291,10 +291,8 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 
 	/* First: Parse configuration file section for this instance */
 	ret = config_parse_file(upi->id, upi->config_kset);
-	if (ret < 0) {
-		ulogd_log(ULOGD_ERROR, "error parsing config file\n");
+	if (ret < 0)
 		return ret;
-	}
 
 	di->buffer_size = db_buffer_ce(upi->config_kset).u.value;
 	di->max_backlog = 1024 * di->buffer_size;
@@ -338,7 +336,10 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 		return ret;
 
 	if (db_has_prepare(di)) {
-		di->driver->prepare(upi); /* TODO check retval */
+		if (di->driver->prepare(upi) < 0) {
+			upi_log(upi, ULOGD_FATAL, "prepare failed\n");
+			goto err_close;
+		}
 	} else if (sql_createstmt(upi) < 0)
 		goto err_close;
 
