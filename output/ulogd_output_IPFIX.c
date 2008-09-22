@@ -209,8 +209,6 @@ struct ulogd_ipfix_template *
 build_template_for_bitmask(struct ulogd_pluginstance *upi,
 			   struct bitmask *bm)
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *) &upi->private;
-	struct ipfix_templ_rec_hdr *rhdr;
 	struct ulogd_ipfix_template *tmpl;
 	unsigned int i, j;
 	int size = sizeof(struct ulogd_ipfix_template)
@@ -221,7 +219,7 @@ build_template_for_bitmask(struct ulogd_pluginstance *upi,
 		return NULL;
 	memset(tmpl, 0, size);
 
-	tmpl->bitmask = dup_bitmask(bm);
+	tmpl->bitmask = bitmask_dup(bm);
 	if (!tmpl->bitmask) {
 		free(tmpl);
 		return NULL;
@@ -327,7 +325,7 @@ static int output_ipfix(struct ulogd_pluginstance *upi)
 			return -1;
 		}
 		/* FIXME: prepend? */
-		list_add(&ii->template_list, &template->list);
+		llist_add(&ii->template_list, &template->list);
 	}
 	
 	total_size = template->total_length;
@@ -418,28 +416,27 @@ static int open_connect_socket(struct ulogd_pluginstance *pi)
 
 static int start_ipfix(struct ulogd_pluginstance *pi)
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *) &pi->private;
+	struct ipfix_instance *priv = upi_priv(pi);
 	int ret;
 
-	ii->valid_bitmask = bitmask_alloc(pi->input.num_keys);
-	if (!ii->valid_bitmask)
-		return -ENOMEM;
+	priv->valid_bitmask = bitmask_alloc(pi->input.num_keys);
+	if (priv->valid_bitmask == NULL)
+		return ULOGD_IRET_ERR;
 
-	ret = open_connect_socket(pi);
-	if (ret < 0)
+	if (open_connect_socket(pi) < 0) {
+		ret = ULOGD_IRET_AGAIN;
 		goto out_bm_free;
+	}
 
-	ret = build_template(pi);
-	if (ret < 0)
-		goto out_sock_close;
+	build_template_for_bitmask(pi, priv->valid_bitmask);
 
 	return 0;
 
 out_sock_close:
-	close(ii->fd);
+	close(priv->fd);
 out_bm_free:
-	bitmask_free(ii->valid_bitmask);
-	ii->valid_bitmask = NULL;
+	bitmask_free(priv->valid_bitmask);
+	priv->valid_bitmask = NULL;
 
 	return ret;
 }
@@ -503,7 +500,7 @@ static int configure_ipfix(struct ulogd_pluginstance *pi,
 #endif
 	} else {
 		upi_log(pi, ULOGD_ERROR, "unknown protocol '%s'\n",
-			  proto_ce(pi->config_kset));
+				proto_ce(pi->config_kset).u.string);
 		return -EINVAL;
 	}
 
