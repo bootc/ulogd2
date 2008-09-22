@@ -27,33 +27,25 @@
 
 #define ULOGD_VERSION "2.0.0beta"
 
-/* All types with MSB = 1 make use of value.ptr
- * other types use one of the union's member */
+/* key types */
+enum ulogd_ktype {
+	ULOGD_RET_NONE = 0,
+    ULOGD_RET_INT8,
+	ULOGD_RET_INT16,
+	ULOGD_RET_INT32,
+	ULOGD_RET_INT64,
+	ULOGD_RET_UINT8,
+	ULOGD_RET_UINT16,
+	ULOGD_RET_UINT32,
+	ULOGD_RET_UINT64,
+	ULOGD_RET_BOOL,
+	ULOGD_RET_IPADDR,
+	ULOGD_RET_IP6ADDR,
+	ULOGD_RET_STRING,
+	ULOGD_RET_RAW,
+};
 
-/* types without length */
-#define ULOGD_RET_NONE		0x0000
-
-#define ULOGD_RET_INT8		0x0001
-#define ULOGD_RET_INT16		0x0002
-#define ULOGD_RET_INT32		0x0003
-#define ULOGD_RET_INT64		0x0004
-
-#define ULOGD_RET_UINT8		0x0011
-#define ULOGD_RET_UINT16	0x0012
-#define ULOGD_RET_UINT32	0x0013
-#define ULOGD_RET_UINT64	0x0014
-
-#define ULOGD_RET_BOOL		0x0050
-
-#define ULOGD_RET_IPADDR	0x0100
-#define ULOGD_RET_IP6ADDR	0x0200
-
-/* types with length field */
-#define ULOGD_RET_STRING	0x8020
-#define ULOGD_RET_RAW		0x8030
-
-
-/* FLAGS */
+/* key flags */
 #define ULOGD_RETF_NONE		0x0000
 #define ULOGD_RETF_VALID	0x0001	/* contains a valid result */
 #define ULOGD_RETF_FREE		0x0002	/* ptr needs to be free()d */
@@ -88,12 +80,15 @@ enum ulogd_dtype {
 struct ulogd_key {
 	/* length of the returned value (only for lengthed types */
 	u_int32_t len;
-	/* type of the returned value (ULOGD_DTYPE_...) */
-	u_int16_t type;
-	/* flags (i.e. free, ...) */
+
+	/* type of the returned value */
+	enum ulogd_ktype type;
+
 	u_int16_t flags;
+
 	/* name of this key */
 	char name[ULOGD_MAX_KEYLEN+1];
+
 	/* IETF IPFIX attribute ID */
 	struct {
 		u_int32_t	vendor;

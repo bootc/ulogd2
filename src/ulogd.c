@@ -142,37 +142,41 @@ int ulogd_key_size(struct ulogd_key *key)
 	int ret;
 
 	switch (key->type) {
+	case ULOGD_RET_NONE:
+		abort();
+
 	case ULOGD_RET_INT8:
 	case ULOGD_RET_UINT8:
 	case ULOGD_RET_BOOL:
 		ret = 1;
 		break;
+
 	case ULOGD_RET_INT16:
 	case ULOGD_RET_UINT16:
 		ret = 2;
 		break;
+
 	case ULOGD_RET_INT32:
 	case ULOGD_RET_UINT32:
 	case ULOGD_RET_IPADDR:
 		ret = 4;
 		break;
+
 	case ULOGD_RET_INT64:
 	case ULOGD_RET_UINT64:
 		ret = 8;
 		break;
+
 	case ULOGD_RET_IP6ADDR:
 		ret = 16;
 		break;
+
 	case ULOGD_RET_STRING:
 		ret = strlen(key->u.value.ptr);
 		break;
+
 	case ULOGD_RET_RAW:
 		ret = key->len;
-		break;
-	default:
-		ulogd_log(ULOGD_ERROR, "don't know sizeo f unknown key "
-			  "`%s' type 0x%x\n", key->name, key->type);
-		ret = -1;
 		break;
 	}
 
