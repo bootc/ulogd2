@@ -136,6 +136,8 @@ __pgsql_exec(struct ulogd_pluginstance *pi, const char *cmd, int *pgret)
 	if (cmd == NULL)
 		return -1;
 
+	pr_fn_debug("cmd: %s\n", cmd);
+
 	priv->pgres = PQexec(priv->dbh, cmd);
 
 	return __pgsql_err(pi, pgret);
@@ -371,7 +373,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	char *pass = pass_ce(upi->config_kset).u.string;
 	char *db = db_ce(upi->config_kset).u.string;
 	char *connstr;
-	int errret = ULOGD_IRET_ERR;
+	int errret = ULOGD_IRET_OK;
 	int len;
 
 	pr_fn_debug("pi=%p\n", upi);
@@ -424,19 +426,20 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 				connstr, PQerrorMessage(pi->dbh));
 		pgsql_close_db(upi);
 
+		goto err;
+	}
+
+	if ((errret = pgsql_namespace(upi)) < 0) {
+		upi_log(upi, ULOGD_ERROR, "unable to test for pgsql schemas\n");
+		goto err_close;
+	}
+
+	if (__pgsql_exec(upi, "set synchronous_commit to off", NULL) < 0) {
+		upi_log(upi, ULOGD_ERROR, "error enabling async commit\n");
 		errret = ULOGD_IRET_AGAIN;
 
-		goto err_free;
+		goto err_close;
 	}
-
-	if (pgsql_namespace(upi) < 0) {
-		upi_log(upi, ULOGD_ERROR, "unable to test for pgsql schemas\n");
-		pgsql_close_db(upi);
-		goto err_free;
-	}
-
-	if (__pgsql_exec(upi, "set synchronous_commit to off", NULL) < 0)
-		goto err_free;
 
 	free(connstr);
 
@@ -444,7 +447,10 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 
 	return 0;
 
-err_free:
+err_close:
+	pgsql_close_db(upi);
+
+err:
 	free(connstr);
 
 	return errret;
