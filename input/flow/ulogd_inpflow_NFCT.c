@@ -791,8 +791,8 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 {
 	struct ulogd_key *ret = upi->output.keys;
 
-	key_u32(&ret[O_IP_SADDR], htonl(nfct->tuple[0].src.v4));
-	key_u32(&ret[O_IP_DADDR], htonl(nfct->tuple[1].src.v4));
+	key_u32(&ret[O_IP_SADDR], ntohl(nfct->tuple[0].src.v4));
+	key_u32(&ret[O_IP_DADDR], ntohl(nfct->tuple[1].src.v4));
 	key_u8(&ret[O_IP_PROTO], nfct->tuple[dir].protonum);
 
 	switch (nfct->tuple[dir].protonum) {
@@ -800,8 +800,8 @@ propagate_ct_flow(struct ulogd_pluginstance *upi,
 	case IPPROTO_UDP:
 	case IPPROTO_SCTP:
 		/* FIXME: DCCP */
-		key_u16(&ret[O_L4_SPORT], htons(nfct->tuple[0].l4src.tcp.port));
-		key_u16(&ret[O_L4_DPORT], htons(nfct->tuple[1].l4src.tcp.port));
+		key_u16(&ret[O_L4_SPORT], ntohs(nfct->tuple[0].l4src.tcp.port));
+		key_u16(&ret[O_L4_DPORT], ntohs(nfct->tuple[1].l4src.tcp.port));
 		break;
 	case IPPROTO_ICMP:
 		key_u8(&ret[O_ICMP_CODE], nfct->tuple[dir].l4src.icmp.code);
@@ -844,8 +844,8 @@ propagate_ct(struct ulogd_pluginstance *upi, struct nfct_conntrack *nfct,
 	struct nfct_pluginstance *priv = (void *)upi->private;
 
 	do {
-		if (nfct->tuple[NFCT_DIR_ORIGINAL].src.v4 == INADDR_LOOPBACK
-			|| nfct->tuple[NFCT_DIR_ORIGINAL].dst.v4 == INADDR_LOOPBACK)
+		if (nfct->tuple[NFCT_DIR_ORIGINAL].src.v4 == htonl(INADDR_LOOPBACK)
+			|| nfct->tuple[NFCT_DIR_ORIGINAL].dst.v4 == htonl(INADDR_LOOPBACK))
 			break;
 
 		if (CLASS_C_CMP(nfct->tuple[NFCT_DIR_ORIGINAL].src.v4, INADDR_CLUSTER)
