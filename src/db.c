@@ -287,12 +287,18 @@ ulogd_db_configure(struct ulogd_pluginstance *upi,
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
 	if (check_driver(upi) < 0)
-		return -1;
+		return ULOGD_IRET_ERR;
 
 	/* First: Parse configuration file section for this instance */
 	ret = config_parse_file(upi->id, upi->config_kset);
 	if (ret < 0)
 		return ret;
+
+	if (disable_ce(upi->config_kset).u.value != 0) {
+		upi_log(upi, ULOGD_INFO, "disabled in config\n");
+
+		return ULOGD_IRET_OK;
+	}
 
 	di->buffer_size = db_buffer_ce(upi->config_kset).u.value;
 	di->max_backlog = 1024 * di->buffer_size;

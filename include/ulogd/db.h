@@ -104,15 +104,20 @@ db_has_prepare(const struct db_instance *di)
 		.key = "buffer", \
 		.type = CONFIG_TYPE_INT, \
 		.u.value = ULOGD_DB_BUFFER_DEFAULT, \
+	}, \
+	{ \
+		.key = "disable", \
+		.type = CONFIG_TYPE_INT, \
 	}
 
-#define DB_CE_NUM	5
+#define DB_CE_NUM	6
 
 #define table_ce(x)	(x->ces[0])
 #define reconnect_ce(x)	(x->ces[1])
 #define asstring_ce(x)	(x->ces[2])
 #define timeout_ce(x)	(x->ces[3])
 #define db_buffer_ce(x)	(x->ces[4])
+#define disable_ce(x)	(x->ces[5])
 
 int ulogd_db_start(struct ulogd_pluginstance *upi);
 int ulogd_db_stop(struct ulogd_pluginstance *upi);

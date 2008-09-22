@@ -41,7 +41,6 @@ static struct config_keyset pgsql_kset = {
 		{
 			.key = "host", 
 			.type = CONFIG_TYPE_STRING,
-			.options = CONFIG_OPT_NONE,
 		},
 		{ 
 			.key = "user", 
@@ -70,6 +69,7 @@ static struct config_keyset pgsql_kset = {
 #define pass_ce(x)	(x->ces[DB_CE_NUM+3])
 #define port_ce(x)	(x->ces[DB_CE_NUM+4])
 #define schema_ce(x)	(x->ces[DB_CE_NUM+5])
+
 
 static int
 __pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
