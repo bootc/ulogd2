@@ -673,6 +673,28 @@ key_get_str(const struct ulogd_key *key)
 }
 
 /**
+ * Compare two keys.
+ *
+ * Handle IP addresses and unsigned int 32bit as equal.  The check for
+ * %ULOGD_RET_NONE is necessary for plugins which do not set key type
+ * on keys, e. g. database plugins which determine keys from the table
+ * schema on startup.
+ */
+bool
+key_type_eq(const struct ulogd_key *k1, const struct ulogd_key *k2)
+{
+	unsigned t1, t2;
+
+	if (k1->type == ULOGD_RET_NONE || k2->type == ULOGD_RET_NONE)
+		return true;
+
+	t1 = (k1->type == ULOGD_RET_IPADDR) ? ULOGD_RET_UINT32 : k1->type;
+	t2 = (k2->type == ULOGD_RET_IPADDR) ? ULOGD_RET_UINT32 : k2->type;
+
+	return t1 == t2;
+}
+
+/**
  * Allocate a keyset for use with ulogd_pluginstance.  The keys are
  * optionally setup with private data.
  *

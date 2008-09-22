@@ -597,6 +597,13 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 					return -EINVAL;
 				}
 
+				if (!key_type_eq(ikey, okey)) {
+					ulogd_log(ULOGD_FATAL, "type mismatch %u:%s(%s) <-> "
+							  "%u:%s(%s)\n",
+							  ikey->type, ikey->name, pi_cur->id,
+							  ikey->type, okey->name, pi_src->id);
+				}
+
 				ulogd_log(ULOGD_DEBUG, "%s(%s) -> %s(%s)\n",
 						  ikey->name, pi_cur->id,
 						  okey->name, pi_src->id);

@@ -68,6 +68,8 @@ bool key_get_bool(const struct ulogd_key *);
 void *key_get_ptr(const struct ulogd_key *);
 char *key_get_str(const struct ulogd_key *);
 
+bool key_type_eq(const struct ulogd_key *, const struct ulogd_key *);
+
 static inline bool
 key_valid(const struct ulogd_key *key)
 {
