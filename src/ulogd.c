@@ -687,7 +687,7 @@ sync_sig_handler(int signo)
 	}
 
 	if (sig_name != NULL)
-		ulogd_log(ULOGD_INFO, "signal SIG%s received\n", sig_name);
+		ulogd_log(ULOGD_INFO, "SIG%s received\n", sig_name);
 
 	if (ulogd_get_state() != GS_RUNNING)
 		return;
@@ -716,8 +716,12 @@ static void
 sig_handler(int signo)
 {
 	switch (signo) {
+	case SIGABRT:
+		ulogd_log(ULOGD_INFO, "SIGABRT received\n");
+		exit(EXIT_FAILURE);
+
 	case SIGINT:
-		ulogd_log(ULOGD_INFO, "signal SIGINT received\n");
+		ulogd_log(ULOGD_INFO, "SIGINT received\n");
 		exit(EXIT_SUCCESS);
 		break;
 
@@ -886,6 +890,7 @@ main(int argc, char* argv[])
 
 	ulogd_register_signal(SIGTERM, sync_sig_handler, ULOGD_SIGF_SYNC);
 	ulogd_register_signal(SIGINT, sig_handler, 0);
+	ulogd_register_signal(SIGABRT, sig_handler, 0);
 	ulogd_register_signal(SIGHUP, sync_sig_handler, ULOGD_SIGF_SYNC);
 	ulogd_register_signal(SIGALRM, sync_sig_handler, ULOGD_SIGF_SYNC);
 	ulogd_register_signal(SIGUSR1, sync_sig_handler, ULOGD_SIGF_SYNC);
