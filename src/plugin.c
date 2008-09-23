@@ -243,6 +243,28 @@ stack_set_state(struct ulogd_pluginstance_stack *stack,
 }
 
 /**
+ * Generic stack iterator.
+ */
+int
+stack_for_each(int (* cb)(struct ulogd_pluginstance_stack *, void *),
+			   void *arg)
+{
+	struct ulogd_pluginstance_stack *stack;
+	int sum = 0;
+
+	llist_for_each_entry(stack, &ulogd_pi_stacks, stack_list) {
+		int ret;
+
+		if ((ret = cb(stack, arg)) < 0)
+			return -1;
+
+		sum += ret;
+	}
+
+	return sum;
+}
+
+/**
  * The actual finite state machine.
  */
 static int

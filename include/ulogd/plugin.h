@@ -308,6 +308,9 @@ int ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi);
 void ulogd_propagate_results(struct ulogd_pluginstance *pi);
 
 int ulogd_plugin_init(void);
+
+int stack_for_each(int (*)(struct ulogd_pluginstance_stack *, void *),
+				   void *);
 int stack_fsm(struct ulogd_pluginstance_stack *);
 int stack_reconfigure(struct ulogd_pluginstance_stack *);
 
