@@ -20,6 +20,7 @@
 #include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <ulogd/printpkt.h>
 #include <unistd.h>
 #include <sys/types.h>
