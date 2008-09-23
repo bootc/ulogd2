@@ -412,6 +412,224 @@ upi_for_each(int (* cb)(struct ulogd_pluginstance *, void *), void *arg)
 	return sum;
 }
 
+struct ulogd_pluginstance *
+ulogd_upi_alloc_init(struct ulogd_plugin *pl, const char *pi_id,
+					 struct ulogd_pluginstance_stack *stack)
+{
+	unsigned int size;
+	struct ulogd_pluginstance *pi;
+	void *ptr;
+
+	size = sizeof(struct ulogd_pluginstance);
+	size += pl->priv_size;
+	if (pl->config_kset) {
+		size += sizeof(struct config_keyset);
+		if (pl->config_kset->num_ces)
+			size += pl->config_kset->num_ces *
+						sizeof(struct config_entry);
+	}
+	size += pl->input.num_keys * sizeof(struct ulogd_key);
+	size += pl->output.num_keys * sizeof(struct ulogd_key);
+	pi = malloc(size);
+	if (!pi)
+		return NULL;
+
+	/* initialize */
+	memset(pi, 0, size);
+
+	INIT_LLIST_HEAD(&pi->list);
+	INIT_LLIST_HEAD(&pi->state_link);
+
+	pi->plugin = pl;
+	pi->stack = stack;
+	memcpy(pi->id, pi_id, sizeof(pi->id));
+
+	ptr = (void *)pi + sizeof(*pi);
+
+	ptr += pl->priv_size;
+	/* copy config keys */
+	if (pl->config_kset) {
+		pi->config_kset = ptr;
+		ptr += sizeof(struct config_keyset);
+		pi->config_kset->num_ces = pl->config_kset->num_ces;
+		if (pi->config_kset->num_ces) {
+			ptr += pi->config_kset->num_ces
+						* sizeof(struct config_entry);
+			memcpy(pi->config_kset->ces, pl->config_kset->ces,
+			       pi->config_kset->num_ces
+			       			*sizeof(struct config_entry));
+		}
+	} else
+		pi->config_kset = NULL;
+
+	/* copy input keys */
+	if (pl->input.num_keys) {
+		pi->input.num_keys = pl->input.num_keys;
+		pi->input.keys = ptr;
+		memcpy(pi->input.keys, pl->input.keys,
+		       pl->input.num_keys * sizeof(struct ulogd_key));
+		ptr += pl->input.num_keys * sizeof(struct ulogd_key);
+	}
+
+	/* copy input keys */
+	if (pl->output.num_keys) {
+		pi->output.num_keys = pl->output.num_keys;
+		pi->output.keys = ptr;
+		memcpy(pi->output.keys, pl->output.keys,
+		       pl->output.num_keys * sizeof(struct ulogd_key));
+	}
+
+	ulogd_upi_set_state(pi, PsInit);
+
+	return pi;
+}
+
+int
+ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi)
+{
+	struct ulogd_pluginstance_stack *stack = upi->stack;
+	struct ulogd_pluginstance *pi_cur;
+	unsigned int num_keys = 0;
+	unsigned int index = 0;
+
+	/* ok, this is a bit tricky, and probably requires some documentation.
+	 * Since we are a output plugin (SINK), we can only be the last one
+	 * in the stack.  Therefore, all other (input/filter) plugins, area
+	 * already linked into the stack.  This means, we can iterate over them,
+	 * get a list of all the keys, and create one input key for every output
+	 * key that any of the upstream plugins provide.  By the time we resolve
+	 * the inter-key pointers, everything will work as expected. */
+
+	if (upi->input.keys)
+		free(upi->input.keys);
+
+	/* first pass: count keys */
+	llist_for_each_entry(pi_cur, &stack->list, list) {
+		ulogd_log(ULOGD_DEBUG, "iterating over pluginstance '%s'\n",
+			  pi_cur->id);
+		num_keys += pi_cur->plugin->output.num_keys;
+	}
+
+	ulogd_log(ULOGD_DEBUG, "allocating %u input keys\n", num_keys);
+	upi->input.keys = malloc(sizeof(struct ulogd_key) * num_keys);
+	if (!upi->input.keys)
+		return -ENOMEM;
+
+	/* second pass: copy key names */
+	llist_for_each_entry(pi_cur, &stack->list, list) {
+		int i;
+
+		for (i = 0; i < pi_cur->plugin->output.num_keys; i++) {
+			pr_debug("%s: copy key '%s' from plugin '%s'\n", upi->id,
+					 pi_cur->id);
+
+			upi->input.keys[index++] = pi_cur->output.keys[i];
+		}
+	}
+
+	upi->input.num_keys = num_keys;
+
+	return 0;
+}
+
+/* clean results (set all values to 0 and free pointers) */
+static void
+ulogd_clean_results(struct ulogd_pluginstance *pi)
+{
+	struct ulogd_pluginstance *cur;
+
+	pr_fn_debug("cleaning up results\n");
+
+	/* iterate through plugin stack */
+	llist_for_each_entry(cur, &pi->stack->list, list) {
+		int i;
+
+		/* iterate through input keys of pluginstance */
+		for (i = 0; i < cur->output.num_keys; i++) {
+			struct ulogd_key *key = &cur->output.keys[i];
+
+			if (!(key->flags & ULOGD_RETF_VALID))
+				continue;
+
+			if (key->flags & ULOGD_RETF_FREE) {
+				free(key->u.value.ptr);
+				key->u.value.ptr = NULL;
+			}
+			memset(&key->u.value, 0, sizeof(key->u.value));
+			key->flags &= ~ULOGD_RETF_VALID;
+		}
+	}
+}
+
+/* propagate results to all downstream plugins in the stack */
+void
+ulogd_propagate_results(struct ulogd_pluginstance *pi)
+{
+	struct ulogd_pluginstance *cur = pi;
+
+	/* iterate over remaining plugin stack */
+	llist_for_each_entry_continue(cur, &pi->stack->list, list) {
+		int ret;
+
+		ret = ulogd_upi_interp(cur);
+		switch (ret) {
+		case ULOGD_IRET_OK:
+			/* we shall continue travelling down the stack */
+			continue;
+
+		case ULOGD_IRET_ERR:
+			ulogd_log(ULOGD_NOTICE, "%s: error propagating results\n",
+				cur->id);
+			/* fallthrough */
+
+		case ULOGD_IRET_AGAIN:
+		case ULOGD_IRET_STOP:
+			/* we shall abort further iteration of the stack */
+			break;
+
+		default:
+			ulogd_abort("%s: unknown return value '%d'\n", cur->id, ret);
+		}
+	}
+
+	ulogd_clean_results(pi);
+}
+
+/* try to lookup a registered plugin for a given name */
+struct ulogd_plugin *
+ulogd_find_plugin(const char *name)
+{
+	struct ulogd_plugin *pl;
+
+	llist_for_each_entry(pl, &ulogd_plugins, list) {
+		if (strcmp(name, pl->name) == 0)
+			return pl;
+	}
+
+	return NULL;
+}
+
+/* the function called by all plugins for registering themselves */
+void
+ulogd_register_plugin(struct ulogd_plugin *me)
+{
+	if (me->rev != ULOGD_PLUGIN_REVISION) {
+		ulogd_log(ULOGD_NOTICE, "plugin '%s' has incompatible revision %d\n",
+				  me->name, me->rev);
+		return;
+	}
+
+	if (ulogd_find_plugin(me->name)) {
+		ulogd_log(ULOGD_NOTICE, "plugin '%s' already registered\n",
+				me->name);
+		exit(EXIT_FAILURE);
+	}
+
+	llist_add(&me->list, &ulogd_plugins);
+
+	ulogd_log(ULOGD_NOTICE, "registered plugin '%s'\n", me->name);
+}
+
 /**
  * Configure a plugin.
  *
@@ -824,6 +1042,53 @@ key_type_eq(const struct ulogd_key *k1, const struct ulogd_key *k2)
 	t2 = (k2->type == ULOGD_RET_IPADDR) ? ULOGD_RET_UINT32 : k2->type;
 
 	return t1 == t2;
+}
+
+int
+ulogd_key_size(const struct ulogd_key *key)
+{
+	int ret;
+
+	switch (key->type) {
+	case ULOGD_RET_NONE:
+		ulogd_abort("wrong key type\n");
+
+	case ULOGD_RET_INT8:
+	case ULOGD_RET_UINT8:
+	case ULOGD_RET_BOOL:
+		ret = 1;
+		break;
+
+	case ULOGD_RET_INT16:
+	case ULOGD_RET_UINT16:
+		ret = 2;
+		break;
+
+	case ULOGD_RET_INT32:
+	case ULOGD_RET_UINT32:
+	case ULOGD_RET_IPADDR:
+		ret = 4;
+		break;
+
+	case ULOGD_RET_INT64:
+	case ULOGD_RET_UINT64:
+		ret = 8;
+		break;
+
+	case ULOGD_RET_IP6ADDR:
+		ret = 16;
+		break;
+
+	case ULOGD_RET_STRING:
+		ret = strlen(key->u.value.ptr);
+		break;
+
+	case ULOGD_RET_RAW:
+		ret = key->len;
+		break;
+	}
+
+	return ret;
 }
 
 /**
