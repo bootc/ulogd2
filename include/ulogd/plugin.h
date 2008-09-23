@@ -38,11 +38,6 @@ enum ulogd_ktype {
 	ULOGD_RET_RAW,
 };
 
-#define IS_VALID(x)	((x).flags & ULOGD_RETF_VALID)
-#define SET_VALID(x)	(x.flags |= ULOGD_RETF_VALID)
-#define IS_NEEDED(x)	(x.flags & ULOGD_RETF_NEEDED)
-#define SET_NEEDED(x)	(x.flags |= ULOGD_RETF_NEEDED)
-
 /* key flags */
 #define ULOGD_RETF_NONE		0x0000
 #define ULOGD_RETF_VALID	0x0001	/* contains a valid result */

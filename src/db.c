@@ -442,7 +442,7 @@ __interp_db(struct ulogd_pluginstance *upi)
 			upi_log(upi, ULOGD_NOTICE, "no source for '%s'\n",
 				  upi->input.keys[i].name);
 
-		if (!res || !IS_VALID(*res)) {
+		if (!key_valid(res)) {
 			/* no result, we have to fake something */
 			di->stmt_ins += sprintf(di->stmt_ins, "NULL,");
 			continue;

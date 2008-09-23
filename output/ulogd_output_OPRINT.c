@@ -60,7 +60,7 @@ static int oprint_interp(struct ulogd_pluginstance *upi)
 			upi_log(upi, ULOGD_NOTICE, "no result for '%s'\n",
 				  upi->input.keys[i].name);
 		
-		if (!IS_VALID(*ret))
+		if (!key_valid(ret))
 			continue;
 
 		fprintf(opi->of,"%s=", ret->name);
