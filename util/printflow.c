@@ -22,8 +22,6 @@
  */
 #include "config.h"
 #include <ulogd/ulogd.h>
-#include <ulogd/common.h>
-#include <ulogd/plugin.h>
 #include <ulogd/printflow.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
