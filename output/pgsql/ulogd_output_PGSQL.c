@@ -147,28 +147,37 @@ __pgsql_exec(struct ulogd_pluginstance *pi, const char *cmd, int *pgret)
 static int
 pgsql_namespace(struct ulogd_pluginstance *upi)
 {
-	struct pgsql_priv *pi = upi_priv(upi);
-	char pgbuf[strlen(PGSQL_HAVE_NAMESPACE_TEMPLATE) + 
-			   strlen(schema_ce(upi->config_kset).u.string) + 1];
+	struct pgsql_priv *priv = upi_priv(upi);
+	char *pgbuf;
 
-	pr_fn_debug("pi=%p\n", pi);
+	pr_fn_debug("pi=%p\n", upi);
 
-	if (pi->dbh == NULL)
-		return -1;
-
-	sprintf(pgbuf, PGSQL_HAVE_NAMESPACE_TEMPLATE,
-			schema_ce(upi->config_kset).u.string);
-	upi_log(upi, ULOGD_DEBUG, "%s\n", pgbuf);
-
-	if (__pgsql_exec(upi, pgbuf, NULL) < 0)
+	if (priv->dbh == NULL)
 		return ULOGD_IRET_AGAIN;
 
-	PQclear(pi->pgres);
+	if (asprintf(&pgbuf, PGSQL_HAVE_NAMESPACE_TEMPLATE,
+				 schema_ce(upi->config_kset).u.string) < 0) {
+		upi_log(upi, ULOGD_ERROR, "namespace: %m\n");
 
-	pi->db_inst.schema = schema_ce(upi->config_kset).u.string;
+		return ULOGD_IRET_ERR;
+	}
 
-	upi_log(upi, ULOGD_DEBUG, "using schema %s\n",
+	if (__pgsql_exec(upi, pgbuf, NULL) < 0) {
+		upi_log(upi, ULOGD_ERROR, "error reading namespace: %s\n",
+				PQerrorMessage(priv->dbh));
+		free(pgbuf);
+
+		return ULOGD_IRET_AGAIN;
+	}
+
+	PQclear(priv->pgres);
+
+	priv->db_inst.schema = schema_ce(upi->config_kset).u.string;
+
+	upi_log(upi, ULOGD_DEBUG, "using schema '%s'\n",
 			  schema_ce(upi->config_kset).u.string);
+
+	free(pgbuf);
 	
 	return 0;
 }
@@ -187,44 +196,48 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 static int
 pgsql_get_columns(struct ulogd_pluginstance *upi)
 {
-	struct pgsql_priv *pi = upi_priv(upi);
-	char pgbuf[strlen(PGSQL_GETCOLUMN_TEMPLATE_SCHEMA)
-			   + strlen(table_ce(upi->config_kset).u.string)
-			   + strlen(pi->db_inst.schema) + 2];
-	int i, k;
+	struct pgsql_priv *priv = upi_priv(upi);
+	char *pgbuf;
+	int i, k, tuples;
+	int ret = ULOGD_IRET_AGAIN;
 
-	pr_fn_debug("pi=%p\n", pi);
+	pr_fn_debug("pi=%p\n", upi);
 
-	if (!pi->dbh) {
+	if (priv->dbh == NULL) {
 		upi_log(upi, ULOGD_ERROR, "no database handle\n");
-		return 1;
-	}
-
-	if (pi->db_inst.schema) {
-		snprintf(pgbuf, sizeof(pgbuf)-1,
-				 PGSQL_GETCOLUMN_TEMPLATE_SCHEMA,
-				 table_ce(upi->config_kset).u.string,
-				 pi->db_inst.schema);
-	} else {
-		snprintf(pgbuf, sizeof(pgbuf)-1, PGSQL_GETCOLUMN_TEMPLATE,
-				 table_ce(upi->config_kset).u.string);
-	}
-
-	if (__pgsql_exec(upi, pgbuf, NULL) < 0)
 		return ULOGD_IRET_AGAIN;
+	}
+
+	if (priv->db_inst.schema)
+		ret = asprintf(&pgbuf, PGSQL_GETCOLUMN_TEMPLATE_SCHEMA,
+					   table_ce(upi->config_kset).u.string,
+					   priv->db_inst.schema);
+	else
+		ret = asprintf(&pgbuf, PGSQL_GETCOLUMN_TEMPLATE,
+					   table_ce(upi->config_kset).u.string);
+	if (ret < 0) {
+		upi_log(upi, ULOGD_FATAL, "error creating schema: %m\n");
+		return ULOGD_IRET_ERR;
+	}
+
+	if (__pgsql_exec(upi, pgbuf, NULL) < 0) {
+		upi_log(upi, ULOGD_ERROR, "error getting columns: %s\n",
+				PQerrorMessage(priv->dbh));
+		goto err_again;
+	}
 
 	if (upi->input.keys != NULL)
 		free(upi->input.keys);
 
-	upi->input.num_keys = PQntuples(pi->pgres);
+	tuples = upi->input.num_keys = PQntuples(priv->pgres);
 
 	/* ignore columns with leading underscore */
-	for (i = 0; i < PQntuples(pi->pgres); i++) {
-		char *val = PQgetvalue(pi->pgres, i, 0);
+	for (i = 0; i < tuples; i++) {
+		char *val = PQgetvalue(priv->pgres, i, 0);
 
 		if (val == NULL) {
-			upi_log(upi, ULOGD_ERROR, "error fetching tuples\n");
-			return -1;
+			upi_log(upi, ULOGD_ERROR, "error getting value '%d'\n", i);
+			goto err_again;
 		}
 
 		if (val[0] == '_')
@@ -232,21 +245,21 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	}
 
 	upi_log(upi, ULOGD_DEBUG, "using %d/%d columns of table\n",
-			upi->input.num_keys, PQntuples(pi->pgres));
+			upi->input.num_keys, tuples);
 
 	upi->input.keys = ulogd_alloc_keyset(upi->input.num_keys, 0);
 	if (upi->input.keys == NULL) {
+		upi_log(upi, ULOGD_ERROR, "error allocating keyset: %m\n");
+
 		upi->input.num_keys = 0;
-		PQclear(pi->pgres);
+		PQclear(priv->pgres);
 
-		upi_log(upi, ULOGD_ERROR, "out of memory\n");
-
-		return -ENOMEM;
+		goto err_again;
 	}
 
 	/* skip columns with leading underscore */
 	for (i = 0, k = 0; i < upi->input.num_keys; i++) {
-		strncpy(upi->input.keys[k].name, PQgetvalue(pi->pgres, i, 0),
+		strncpy(upi->input.keys[k].name, PQgetvalue(priv->pgres, i, 0),
 				ULOGD_MAX_KEYLEN);
 
 		if (upi->input.keys[k].name[0] == '_') {
@@ -262,9 +275,16 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 		k++;
 	}
 
-	PQclear(pi->pgres);
+	free(pgbuf);
+
+	PQclear(priv->pgres);
 
 	return 0;
+
+err_again:
+	free(pgbuf);
+
+	return ULOGD_IRET_AGAIN;
 }
 
 /**
@@ -351,8 +371,10 @@ pgsql_close_db(struct ulogd_pluginstance *upi)
 
 	pr_fn_debug("pi=%p\n", upi);
 
-	PQfinish(pi->dbh);
-	pi->dbh = NULL;
+	if (pi->dbh != NULL) {
+		PQfinish(pi->dbh);
+		pi->dbh = NULL;
+	}
 
 	return 0;
 }
@@ -371,7 +393,7 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	char *pass = pass_ce(upi->config_kset).u.string;
 	char *db = db_ce(upi->config_kset).u.string;
 	char *connstr;
-	int errret = ULOGD_IRET_OK;
+	int errret = ULOGD_IRET_AGAIN;
 	int len;
 
 	pr_fn_debug("pi=%p\n", upi);
@@ -420,11 +442,9 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 	
 	pi->dbh = PQconnectdb(connstr);
 	if (PQstatus(pi->dbh) != CONNECTION_OK) {
-		upi_log(upi, ULOGD_ERROR, "unable to connect to db (%s): %s\n",
-				connstr, PQerrorMessage(pi->dbh));
-		pgsql_close_db(upi);
-
-		goto err;
+		upi_log(upi, ULOGD_ERROR, "unable to connect: %s\n",
+				PQerrorMessage(pi->dbh));
+		goto err_close;
 	}
 
 	if ((errret = pgsql_namespace(upi)) < 0) {
@@ -434,7 +454,6 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 
 	if (__pgsql_exec(upi, "set synchronous_commit to off", NULL) < 0) {
 		upi_log(upi, ULOGD_ERROR, "error enabling async commit\n");
-		errret = ULOGD_IRET_AGAIN;
 
 		goto err_close;
 	}
@@ -448,7 +467,6 @@ pgsql_open_db(struct ulogd_pluginstance *upi)
 err_close:
 	pgsql_close_db(upi);
 
-err:
 	free(connstr);
 
 	return errret;
