@@ -328,14 +328,14 @@ stack_fsm_add(struct ulogd_pluginstance_stack *stack)
 {
 	bool need_start = !!llist_empty(&stack_fsm_list);
 
-	if (stack->flags & ULOGD_PF_FSM)
+	if (stack->flags & ULOGD_SF_FSM)
 		return 0;
 
 	pr_fn_debug("stack=%p\n", stack);
 
 	llist_add_tail(&stack->state_link, &stack_fsm_list);
 
-	stack->flags |= ULOGD_PF_FSM;
+	stack->flags |= ULOGD_SF_FSM;
 
 	if (!need_start)
 		return 0;
@@ -394,7 +394,7 @@ stack_fsm_timer_cb(struct ulogd_timer *t)
 
 	  if (stack->state == PsStarted) {
 		  llist_del(&stack->state_link);
-		  stack->flags &= ~ULOGD_PF_FSM;
+		  stack->flags &= ~ULOGD_SF_FSM;
 
 		  if (llist_empty(&stack_fsm_list))
 			  ulogd_unregister_timer(&stack_fsm_timer);

@@ -188,7 +188,6 @@ struct ulogd_pluginstance;
 
 /* plugin flags */
 #define ULOGD_PF_RECONF			0x00000001
-#define ULOGD_PF_FSM			0x00000002 /* stack FSM running */
 
 struct ulogd_plugin {
 	/* global list of plugins */
@@ -289,15 +288,23 @@ upi_priv(const struct ulogd_pluginstance *upi)
 	return (void *)&upi->private;
 }
 
+/* stack flags */
+#define ULOGD_SF_FSM			0x00000001		/* FSM running */
+
 struct ulogd_pluginstance_stack {
 	/* global list of pluginstance stacks */
 	struct llist_head stack_list;
+
 	/* list of plugins in this stack */
 	struct llist_head list;
+
 	unsigned flags;
+
 	enum UpiState state;
+
 	/* for state handling */
 	struct llist_head state_link;
+
 	char *name;
 };
 
