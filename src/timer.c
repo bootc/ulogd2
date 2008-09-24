@@ -61,6 +61,9 @@ ulogd_unregister_timer(struct ulogd_timer *timer)
 {
 	pr_debug("%s: timer=%p\n", __func__, timer);
 
+	if (!timer_running(timer))
+		return;
+
 	llist_del(&timer->list);
 
 	/* this allows to check for "is timer running" easily */

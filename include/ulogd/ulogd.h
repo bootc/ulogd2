@@ -16,6 +16,7 @@
 #include <ulogd/conffile.h>
 #include <ulogd/ipfix_protocol.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <signal.h>	/* need this because of extension-sighandler */
 #include <sys/types.h>
 
@@ -109,5 +110,11 @@ int ulogd_register_timer(struct ulogd_timer *timer);
 void ulogd_unregister_timer(struct ulogd_timer *timer);
 void ulogd_timer_schedule(void);
 int ulogd_timer_handle(void);
+
+static inline bool
+timer_running(const struct ulogd_timer *t)
+{
+	return t->expires > 0;
+}
 
 #endif /* _ULOGD_H */

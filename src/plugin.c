@@ -739,8 +739,6 @@ done:
 int
 ulogd_upi_stop(struct ulogd_pluginstance *pi)
 {
-	assert(pi->state == PsStarted);
-
 	ulogd_log(ULOGD_DEBUG, "stopping '%s'\n", pi->id);
 
 	if (pi->plugin->stop == NULL)
