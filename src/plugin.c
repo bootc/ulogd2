@@ -600,21 +600,20 @@ stack_clean_results(const struct ulogd_pluginstance_stack *stack)
 void
 ulogd_propagate_results(struct ulogd_pluginstance *pi)
 {
-	struct ulogd_pluginstance *cur = pi;
+	struct ulogd_pluginstance_stack *stack = pi->stack;
 
 	/* iterate over remaining plugin stack */
-	llist_for_each_entry_continue(cur, &pi->stack->list, list) {
+	llist_for_each_entry_continue(pi, &stack->list, list) {
 		int ret;
 
-		ret = ulogd_upi_interp(cur);
+		ret = ulogd_upi_interp(pi);
 		switch (ret) {
 		case ULOGD_IRET_OK:
 			/* we shall continue travelling down the stack */
 			continue;
 
 		case ULOGD_IRET_ERR:
-			ulogd_log(ULOGD_NOTICE, "%s: error propagating results\n",
-				cur->id);
+			upi_log(pi, ULOGD_NOTICE, "error propagating results\n");
 			/* fallthrough */
 
 		case ULOGD_IRET_AGAIN:
