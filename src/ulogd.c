@@ -277,20 +277,21 @@ out_buf:
 	return ret;
 }
 
-static int logfile_open(const char *name)
+static int
+logfile_open(const char *name)
 {
-	if (name)
+	if (name != NULL)
 		ulogd_logfile = (char *)name;
 
-	if (!strcmp(name, "stdout"))
+	if (strcmp(ulogd_logfile, "stdout") == 0)
 		logfile = stdout;
-	else if (strcmp(name, "syslog") == 0)
+	else if (strcmp(ulogd_logfile, "syslog") == 0)
 		logfile = NULL;
 	else {
 		logfile = fopen(ulogd_logfile, "a");
-		if (!logfile) {
+		if (logfile == NULL) {
 			fprintf(stderr, "ERROR: can't open logfile %s: %s\n", 
-				name, strerror(errno));
+				ulogd_logfile, strerror(errno));
 			exit(2);
 		}
 	}
