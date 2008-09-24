@@ -118,50 +118,58 @@ static struct log_type {
 	{ NULL, }
 };
 
-struct ulogd_key astaro_in_keys[] = {
-	{ .type = ULOGD_RET_STRING, .name = "oob.prefix", },
-	{ .type = ULOGD_RET_UINT32, .name = "oob.logmark", },
-	{ .type = ULOGD_RET_UINT32, .name = "oob.seq.local" },
-	{ .type = ULOGD_RET_UINT32, .name = "oob.ifindex_in" },
-	{ .type = ULOGD_RET_UINT32, .name = "oob.ifindex_out" },
-	{ .type = ULOGD_RET_RAW, .name = "raw.mac",	},
-	{ .type = ULOGD_RET_IPADDR, .name = "ip.saddr",	},
-	{ .type = ULOGD_RET_IPADDR, .name = "ip.daddr",	},
-	{ .type = ULOGD_RET_UINT8, .name = "ip.protocol", },
-	{ .type = ULOGD_RET_UINT32, .name = "raw.pktlen", },
-	{ .type = ULOGD_RET_UINT8, .name = "ip.tos", },
-	{ .type = ULOGD_RET_UINT8, .name = "ip.ttl", },
-	{ .type = ULOGD_RET_UINT16, .name = "tcp.sport", },
-	{ .type = ULOGD_RET_UINT16, .name = "tcp.dport", },
-	{ .type = ULOGD_RET_UINT16, .name = "udp.sport", },
-	{ .type = ULOGD_RET_UINT16, .name = "udp.dport", },
-	{ .type = ULOGD_RET_BOOL, .name = "tcp.ack", },
-	{ .type = ULOGD_RET_BOOL, .name = "tcp.psh", },
-	{ .type = ULOGD_RET_BOOL, .name = "tcp.rst", },
-	{ .type = ULOGD_RET_BOOL, .name = "tcp.syn", },
-	{ .type = ULOGD_RET_BOOL, .name = "tcp.fin", },
-	{ .type = ULOGD_RET_UINT8, .name = "icmp.type", },
-	{ .type = ULOGD_RET_UINT8, .name = "icmp.code", },
+
+enum InKeys {
+	InOobPrefix,
+	InOobLogmark,
+	InOobSeqLocal,
+	InOobIfiIn,
+	InOobIfiOut,
+	InRawMac,
+	InIpSAddr,
+	InIpDAddr,
+	InIpProto,
+	InRawPktLen,
+	InIpTos,
+	InIpTtl,
+	InTcpSPort,
+	InTcpDPort,
+	InUdpSPort,
+	InUdpDPort,
+	InTcpAck,
+	InTcpPsh,
+	InTcpRst,
+	InTcpSyn,
+	InTcpFin,
+	InIcmpType,
+	InIcmpCode,
 };
 
-/* indexes into tables */
-#define KEY_IDX_ITFIN			3
-#define KEY_IDX_ITFOUT			4
-
-/* ret-value accessors */
-#define KEY_RET(pi, idx)		((pi)->input.keys[(idx)].u.source)
-
-#define KEY_PREFIX(pi)			KEY_RET(pi, 0)
-#define KEY_ITFIN(pi)			KEY_RET(pi, KEY_IDX_ITFIN)
-#define KEY_ITFOUT(pi)			KEY_RET(pi, KEY_IDX_ITFOUT)
-#define KEY_PROTO(pi)			KEY_RET(pi, 8)
-#define KEY_TCP_ACK(pi)			KEY_RET(pi, 16)
-#define KEY_TCP_PSH(pi)			KEY_RET(pi, 17)
-#define KEY_TCP_RST(pi)			KEY_RET(pi, 18)
-#define KEY_TCP_SYN(pi)			KEY_RET(pi, 19)
-#define KEY_TCP_FIN(pi)			KEY_RET(pi, 20)
-#define KEY_ICMP_TYPE(pi)		KEY_RET(pi, 21)
-#define KEY_ICMP_CODE(pi)		KEY_RET(pi, 22)
+struct ulogd_key astaro_in_keys[] = {
+	KEY(STRING, "oob.prefix"),
+	KEY(UINT32, "oob.logmark"),
+	KEY(UINT32, "oob.seq.local"),
+	KEY(UINT32, "oob.ifindex_in"),
+	KEY(UINT32, "oob.ifindex_out"),
+	KEY(RAW, "raw.mac"),
+	KEY(IPADDR, "ip.saddr"),
+	KEY(IPADDR, "ip.daddr"),
+	KEY(UINT8, "ip.protocol"),
+	KEY(UINT32, "raw.pktlen"),
+	KEY(UINT8, "ip.tos"),
+	KEY(UINT8, "ip.ttl"),
+	KEY(UINT16, "tcp.sport"),
+	KEY(UINT16, "tcp.dport"),
+	KEY(UINT16, "udp.sport"),
+	KEY(UINT16, "udp.dport"),
+	KEY(BOOL, "tcp.ack"),
+	KEY(BOOL, "tcp.psh"),
+	KEY(BOOL, "tcp.rst"),
+	KEY(BOOL, "tcp.syn"),
+	KEY(BOOL, "tcp.fin"),
+	KEY(UINT8, "icmp.type"),
+	KEY(UINT8, "icmp.code"),
+};
 
 static int
 avail(const char *buf, const char *pch, size_t max_len)
@@ -175,23 +183,24 @@ static int
 lh_log_mac(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
-	const struct ulogd_key *k = pi->input.keys[idx].u.source;
+	const struct ulogd_key *in = pi->input.keys;
 	static unsigned char mac_unknown[6];
 	struct ifi *ifi;
 	unsigned char *src, *dst;
 
-	if (KEY_ITFIN(pi)->u.value.ui32 > 0) {
-		ifi = ifi_find_by_idx(KEY_ITFIN(pi)->u.value.i32);
+	if (key_src_valid(&in[InOobIfiIn])) {
+		ifi = ifi_find_by_idx(key_get_u32(&in[InOobIfiIn]));
 		dst = (ifi != NULL) ? ifi->lladdr : mac_unknown;
 
-		src = (unsigned char *)k->u.value.ptr;
-	} else if (KEY_ITFOUT(pi)->u.value.ui32 > 0) {
-		ifi = ifi_find_by_idx(KEY_ITFOUT(pi)->u.value.i32);
+		src = key_get_ptr(&in[idx]);
+	} else if (key_src_valid(&in[InOobIfiOut])) {
+		ifi = ifi_find_by_idx(key_get_u32(&in[InOobIfiOut]));
 		src = (ifi != NULL) ? ifi->lladdr : mac_unknown;
 		
-		dst = (unsigned char *)k->u.value.ptr;
+		dst = key_get_ptr(&in[idx]);
 	} else {
 		upi_log(pi, ULOGD_ERROR, "srcmac = dstmac = 0!\n");
+
 		return 0;
 	}
 	
@@ -205,10 +214,11 @@ static int
 lh_log_tos(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
-	const struct ulogd_key *k = pi->input.keys[idx].u.source;
+	const struct ulogd_key *in = pi->input.keys;
+	const uint8_t tos = key_get_u8(&in[InIpTos]);
 	
 	return snprintf(buf, len, "tos=\"0x%02x\" prec=\"0x%02x\" ",
-					IPTOS_TOS(k->u.value.ui8), IPTOS_PREC(k->u.value.ui8));
+					IPTOS_TOS(tos), IPTOS_PREC(tos));
 }
 
 
@@ -218,8 +228,8 @@ static int
 lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
-	const struct ulogd_key *k = pi->input.keys[idx].u.source;
-	struct ifi *ifi = ifi_find_by_idx(k->u.value.ui32);
+	const struct ulogd_key *in = pi->input.keys;
+	struct ifi *ifi = ifi_find_by_idx(key_get_u32(&in[InOobIfiIn]));
 	char *key_name = log_handler[idx].name ? log_handler[idx].name : "itf";
 
 	return snprintf(buf, len, "%s=\"%s\" ", key_name, ifi ? ifi->name
@@ -358,6 +368,7 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 static int
 print_proto_tcp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 {
+	const struct ulogd_key *in = pi->input.keys;
 	char *pch = buf;
 	int delim = 0;
 
@@ -365,15 +376,15 @@ print_proto_tcp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 
 	str_append(&pch, "tcpflags=\"", 10, NULL);
 
-	if (KEY_TCP_ACK(pi)->u.value.b)
+	if (key_get_bool(&in[InTcpAck]))
 		str_append(&pch, "ACK", 3, &delim);
-	if (KEY_TCP_PSH(pi)->u.value.b)
+	if (key_get_bool(&in[InTcpPsh]))
 		str_append(&pch, "PSH", 3, &delim);
-	if (KEY_TCP_RST(pi)->u.value.b)
+	if (key_get_bool(&in[InTcpRst]))
 		str_append(&pch, "RST", 3, &delim);
-	if (KEY_TCP_SYN(pi)->u.value.b)
+	if (key_get_bool(&in[InTcpSyn]))
 		str_append(&pch, "SYN", 3, &delim);
-	if (KEY_TCP_FIN(pi)->u.value.b)
+	if (key_get_bool(&in[InTcpFin]))
 		str_append(&pch, "FIN", 3, &delim);
 
 	str_append(&pch, "\"", 1, NULL);
@@ -384,10 +395,11 @@ print_proto_tcp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 static int
 print_proto_icmp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 {
+	const struct ulogd_key *in = pi->input.keys;
 	char *pch = buf;
 
-	pch += print_key(pch, len, KEY_ICMP_TYPE(pi), "type");
-	pch += print_key(pch, avail(buf, pch, len), KEY_ICMP_CODE(pi), "code");
+	pch += print_key(pch, len, &in[InIcmpType], "type");
+	pch += print_key(pch, avail(buf, pch, len), &in[InIcmpCode], "code");
 
 	return pch - buf;
 }
@@ -395,6 +407,7 @@ print_proto_icmp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 static int
 print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 {
+	const struct ulogd_key *in = pi->input.keys;
 	char *pch = buf;
 	int i;
 
@@ -421,9 +434,9 @@ print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 	}
 
 	/* print proto specific part */
-	if (KEY_PROTO(pi)->u.value.ui8 == IPPROTO_TCP)
+	if (key_get_u8(&in[InIpProto]) == IPPROTO_TCP)
 		pch += print_proto_tcp(pi, pch, avail(buf, pch, max_len));
-	else if (KEY_PROTO(pi)->u.value.ui8 == IPPROTO_ICMP)
+	else if (key_get_u8(&in[InIpProto]) == IPPROTO_ICMP)
 		pch += print_proto_icmp(pi, pch, avail(buf, pch, max_len));
 
 	return pch - buf;
@@ -446,6 +459,7 @@ static int
 astaro_output(struct ulogd_pluginstance *pi)
 {
 	struct astaro_priv *priv = (struct astaro_priv *)pi->private;
+	const struct ulogd_key *in = pi->input.keys;
 	struct ulogd_key *ces = pi->input.keys;
 	static char buf[1024];
 	char *pch = buf, *end = buf + sizeof(buf);
@@ -453,9 +467,9 @@ astaro_output(struct ulogd_pluginstance *pi)
 	
 	if ((ces[0].u.source->flags & ULOGD_RETF_VALID) == 0)
 		return 0;
-	
-	type = log_prefix2type(log_types, KEY_PREFIX(pi) ?
-						   KEY_PREFIX(pi)->u.value.ptr : NULL);
+
+	type = log_prefix2type(log_types, key_src_valid(&in[InOobPrefix]) ?
+						   key_get_str(&in[InOobPrefix]) : NULL);
 	
 	/* static part */
 	pch += snprintf(pch, end - pch,
