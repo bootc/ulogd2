@@ -387,10 +387,8 @@ stack_fsm_timer_cb(struct ulogd_timer *t)
   pr_fn_debug("timer=%p\n", t);
 
   llist_for_each_entry_safe(stack, tmp, &stack_fsm_list, state_link) {
-	  if (stack_fsm(stack) < 0) {
-		  ulogd_log(ULOGD_ERROR, "%s: error\n", __func__);
+	  if (stack_fsm(stack) < 0)
 		  return;
-	  }
 
 	  if (stack->state == PsStarted) {
 		  llist_del(&stack->state_link);

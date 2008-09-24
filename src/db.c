@@ -127,7 +127,7 @@ __db_commit(struct ulogd_pluginstance *pi)
 	max_commit = max(3 * di->buffer_size, 1024);
 
 	if ((rows = di->driver->commit(pi, max_commit)) < 0) {
-		upi_log(pi, ULOGD_ERROR, "commit failed\n");
+		upi_log(pi, ULOGD_DEBUG, "commit failed\n");
 		goto err_rollback;
 	}
 
