@@ -344,6 +344,15 @@ parse_conffile(const char *section, struct config_keyset *ce)
 }
 
 static int
+__stack_reconfigure(struct ulogd_pluginstance_stack *stack, void *arg)
+{
+	if (stack_reconfigure(stack) < 0)
+		return -1;
+
+	return 1;
+}
+
+static int
 __do_signal(struct ulogd_pluginstance *pi, void *arg)
 {
 	int signo = (int)arg;
@@ -353,25 +362,6 @@ __do_signal(struct ulogd_pluginstance *pi, void *arg)
 
 		return 1;
 	}
-
-	return 0;
-}
-
-static int
-reconfigure_plugins(void)
-{
-	struct ulogd_pluginstance_stack *stack;
-
-	ulogd_log(ULOGD_INFO, "reconfiguring plugins\n");
-
-	ulogd_set_state(GS_INITIALIZING);
-
-	llist_for_each_entry(stack, &ulogd_pi_stacks, stack_list) {
-		if (stack_reconfigure(stack) < 0)
-			return -1;
-	}
-
-	ulogd_set_state(GS_RUNNING);
 
 	return 0;
 }
@@ -402,7 +392,11 @@ sync_sig_handler(int signo)
 
 	switch (signo) {
 	case SIGHUP:
-		reconfigure_plugins();
+		ulogd_log(ULOGD_INFO, "reconfiguring plugins\n");
+
+		ulogd_set_state(GS_INITIALIZING);
+		stack_for_each(__stack_reconfigure, NULL);
+		ulogd_set_state(GS_RUNNING);
 		break;
 
 	case SIGALRM:
