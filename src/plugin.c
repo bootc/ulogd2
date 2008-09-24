@@ -626,7 +626,7 @@ ulogd_propagate_results(struct ulogd_pluginstance *pi)
 		}
 	}
 
-	ulogd_clean_results(pi);
+	stack_clean_results(pi);
 }
 
 /* try to lookup a registered plugin for a given name */
