@@ -66,7 +66,7 @@ static int interp_pwsniff(struct ulogd_pluginstance *pi)
 	unsigned char  *ptr, *begp, *pw_begp, *endp, *pw_endp;
 	int len, pw_len, i, cont = 0;
 
-	if (!key_valid(&pi->input.keys[0]))
+	if (!key_src_valid(&pi->input.keys[0]))
 		return 0;
 	
 	iph = (struct iphdr *) pi->input.keys[0].u.value.ptr;

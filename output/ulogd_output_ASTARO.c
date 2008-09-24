@@ -402,7 +402,7 @@ print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 		struct ulogd_key *key = &pi->input.keys[i];
 		char *name;
 
- 		if (key == NULL || !key_valid(key->u.source))
+ 		if (!key_src_valid(key))
 			continue;
 
 		if (log_handler[i].flags & LH_F_NOLOG)
