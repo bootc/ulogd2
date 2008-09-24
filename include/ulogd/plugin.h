@@ -284,7 +284,7 @@ struct ulogd_pluginstance {
 };
 
 static inline void *
-upi_priv(struct ulogd_pluginstance *upi)
+upi_priv(const struct ulogd_pluginstance *upi)
 {
 	return (void *)&upi->private;
 }
