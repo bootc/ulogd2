@@ -349,7 +349,7 @@ nl_error(struct ulogd_pluginstance *pi, struct nlmsghdr *nlh, int *err)
 		break;
 
 	default:
-		ulogd_log(ULOGD_ERROR, "netlink error: %s (seq %u)\n",
+		upi_log(pi, ULOGD_ERROR, "netlink error: %s (seq %u)\n",
 				  strerror(-e->error), e->msg.nlmsg_seq);
 		break;
 	}
@@ -661,8 +661,8 @@ tcache_cleanup(struct ulogd_pluginstance *pi)
 				if (errno == EWOULDBLOCK)
 					break;
 
-				ulogd_log(ULOGD_ERROR, "nfct_get_conntrack: ct=%p: %m\n",
-						  ct);
+				upi_log(pi, ULOGD_ERROR, "nfct_get_conntrack: ct=%p: %m\n",
+						ct);
 				break;
 			}
 
@@ -972,10 +972,10 @@ nfct_timer_cb(struct ulogd_timer *t)
 	sc_end = priv->scache->c_curr_head;
 	tc_end = priv->tcache->c_curr_head;
 
-	ulogd_log(ULOGD_DEBUG, "%s: ct=%u t=%u [%u,%u[ s=%u [%u,%u[\n",
-			  pi->id, num_conntrack,
-			  priv->tcache->c_cnt, tc_start, tc_end,
-			  priv->scache->c_cnt, sc_start, sc_end);
+	upi_log(pi, ULOGD_DEBUG, "ct=%u t=%u [%u,%u[ s=%u [%u,%u[\n",
+			num_conntrack,
+			priv->tcache->c_cnt, tc_start, tc_end,
+			priv->scache->c_cnt, sc_start, sc_end);
 }
 
 static int
@@ -1005,7 +1005,7 @@ init_caches(struct ulogd_pluginstance *pi)
 	/* tuple cache */
 	c = priv->tcache = cache_alloc(buckets_ce(pi));
 	if (priv->tcache == NULL) {
-		ulogd_log(ULOGD_FATAL, "%s: out of memory\n", pi->id);
+		upi_log(pi, ULOGD_FATAL, "out of memory\n");
 		return -1;
 	}
 
@@ -1016,7 +1016,7 @@ init_caches(struct ulogd_pluginstance *pi)
 	/* sequence cache */
 	c = priv->scache = cache_alloc(SCACHE_SIZE);
 	if (priv->scache == NULL) {
-		ulogd_log(ULOGD_FATAL, "%s: out of memory\n", pi->id);
+		upi_log(pi, ULOGD_FATAL, "out of memory\n");
 
 		cache_free(priv->tcache);
 		priv->tcache = NULL;
@@ -1039,7 +1039,7 @@ nfct_start(struct ulogd_pluginstance *upi)
 	pr_debug("%s: pi=%p\n", __func__, upi);
 
 	if (disable_ce(upi) != 0) {
-		ulogd_log(ULOGD_INFO, "%s: disabled\n", upi->id);
+		upi_log(upi, ULOGD_INFO, "disabled\n");
 		return 0;
 	}
 
@@ -1048,14 +1048,14 @@ nfct_start(struct ulogd_pluginstance *upi)
 
 	priv->cth = nfct_open(NFNL_SUBSYS_CTNETLINK, CT_EVENTS);
 	if (priv->cth == NULL) {
-		ulogd_log(ULOGD_FATAL, "error opening ctnetlink\n");
+		upi_log(upi, ULOGD_FATAL, "error opening ctnetlink\n");
 		goto err_free;
 	}
 
 	if (set_sockbuf_len(nfct_fd(priv->cth), RCVBUF_LEN, SNDBUF_LEN) < 0)
 		goto err_free;
 
-	ulogd_log(ULOGD_DEBUG, "%s: ctnetlink connection opened\n", upi->id);
+	upi_log(upi, ULOGD_DEBUG, "ctnetlink connection opened\n");
 
 	priv->nfct_fd.fd = nfct_fd(priv->cth);
 	priv->nfct_fd.cb = &read_cb_nfct;
@@ -1073,8 +1073,8 @@ nfct_start(struct ulogd_pluginstance *upi)
 	if (ulogd_register_timer(&priv->timer) < 0)
 		goto err_unreg_fd;
 
-	ulogd_log(ULOGD_INFO, "%s: started (tcache %u, scache %u)\n", upi->id,
-			  priv->tcache->c_num_heads, priv->scache->c_num_heads);
+	upi_log(upi, ULOGD_INFO, "started (tcache %u, scache %u)\n",
+			priv->tcache->c_num_heads, priv->scache->c_num_heads);
 
 	return 0;
 
@@ -1112,7 +1112,7 @@ nfct_stop(struct ulogd_pluginstance *pi)
 		priv->cth = NULL;
 	}
 
-	ulogd_log(ULOGD_DEBUG, "%s: ctnetlink connection closed\n", pi->id);
+	upi_log(pi, ULOGD_DEBUG, "ctnetlink connection closed\n");
 
 	if (priv->tcache != NULL) {
 		cache_free(priv->tcache);

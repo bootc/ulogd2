@@ -393,14 +393,14 @@ sync_sig_handler(int signo)
 	}
 
 	if (sig_name != NULL)
-		ulogd_log(ULOGD_INFO, "SIG%s received\n", sig_name);
+		ulogd_log(ULOGD_NOTICE, "SIG%s received\n", sig_name);
 
 	if (ulogd_get_state() != GS_RUNNING)
 		return;
 
 	switch (signo) {
 	case SIGHUP:
-		ulogd_log(ULOGD_INFO, "reconfiguring plugins\n");
+		ulogd_log(ULOGD_DEBUG, "reconfiguring plugins\n");
 
 		ulogd_set_state(GS_INITIALIZING);
 		stack_for_each(__stack_reconfigure, NULL);
@@ -427,11 +427,11 @@ sig_handler(int signo)
 {
 	switch (signo) {
 	case SIGABRT:
-		ulogd_log(ULOGD_INFO, "SIGABRT received\n");
+		ulogd_log(ULOGD_NOTICE, "SIGABRT received\n");
 		exit(EXIT_FAILURE);
 
 	case SIGINT:
-		ulogd_log(ULOGD_INFO, "SIGINT received\n");
+		ulogd_log(ULOGD_NOTICE, "SIGINT received\n");
 		exit(EXIT_SUCCESS);
 		break;
 

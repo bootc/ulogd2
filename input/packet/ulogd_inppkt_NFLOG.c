@@ -330,38 +330,40 @@ nflog_start(struct ulogd_pluginstance *upi)
 	if (!priv->nfulog_buf)
 		goto out_buf;
 
-	ulogd_log(ULOGD_DEBUG, "opening nfnetlink socket\n");
+	upi_log(upi, ULOGD_DEBUG, "opening nfnetlink socket\n");
 	priv->nful_h = nflog_open();
 	if (!priv->nful_h)
 		goto out_handle;
 
 	if (unbind_ce(upi->config_kset).u.value > 0) {
-		ulogd_log(ULOGD_NOTICE, "forcing unbind of existing log "
-			  "handler for protocol %d\n", 
-			  af_ce(upi->config_kset).u.value);
+		upi_log(upi, ULOGD_DEBUG, "forcing unbind of existing log "
+				"handler for protocol %d\n",
+				af_ce(upi->config_kset).u.value);
 		if (nflog_unbind_pf(priv->nful_h,
 				    af_ce(upi->config_kset).u.value) < 0) {
-			ulogd_log(ULOGD_ERROR, "unable to force-unbind "
-				  "existing log handler for protocol %d\n",
-			  	  af_ce(upi->config_kset).u.value);
+			upi_log(upi, ULOGD_ERROR, "unable to force-unbind "
+					"existing log handler for protocol %d\n",
+					af_ce(upi->config_kset).u.value);
 			goto out_handle;
 		}
 	}
 
-	ulogd_log(ULOGD_DEBUG, "binding to protocol family %d\n",
-		  af_ce(upi->config_kset).u.value);
+	upi_log(upi, ULOGD_DEBUG, "binding to protocol family %d\n",
+			af_ce(upi->config_kset).u.value);
+
 	if (nflog_bind_pf(priv->nful_h, af_ce(upi->config_kset).u.value) < 0) {
-		ulogd_log(ULOGD_ERROR, "unable to bind to protocol family %d\n",
-			  af_ce(upi->config_kset).u.value);
+		upi_log(upi, ULOGD_ERROR, "unable to bind to protocol family %d\n",
+				af_ce(upi->config_kset).u.value);
 		goto out_bind_pf;
 	}
 
-	ulogd_log(ULOGD_DEBUG, "binding to log group %d\n",
-		  group_ce(upi->config_kset).u.value);
+	upi_log(upi, ULOGD_DEBUG, "binding to log group %d\n",
+			group_ce(upi->config_kset).u.value);
+
 	priv->nful_gh = nflog_bind_group(priv->nful_h,
 				       group_ce(upi->config_kset).u.value);
 	if (!priv->nful_gh) {
-		ulogd_log(ULOGD_ERROR, "unable to bind to log group %d\n",
+		upi_log(upi, ULOGD_ERROR, "unable to bind to log group %d\n",
 			  group_ce(upi->config_kset).u.value);
 		goto out_bind;
 	}
@@ -379,7 +381,7 @@ nflog_start(struct ulogd_pluginstance *upi)
 		flags |= NFULNL_CFG_F_SEQ_GLOBAL;
 	if (flags) {
 		if (nflog_set_flags(priv->nful_gh, flags) < 0)
-			ulogd_log(ULOGD_ERROR, "unable to set flags 0x%x\n",
+			upi_log(upi, ULOGD_ERROR, "unable to set flags 0x%x\n",
 				  flags);
 	}
 	

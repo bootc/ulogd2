@@ -268,9 +268,7 @@ db_createstmt(struct ulogd_pluginstance *pi)
 	}
 
 	sprintf(stmt_pos, "?)");
-	ulogd_log(ULOGD_DEBUG, "%s: stmt='%s'\n", pi->id, priv->stmt);
-
-	pr_debug("about to prepare statement.\n");
+	upi_log(pi, ULOGD_DEBUG, "stmt='%s'\n", priv->stmt);
 
 	sqlite3_prepare(priv->dbh, priv->stmt, -1, &priv->p_stmt, 0);
 	if (priv->p_stmt == NULL) {
@@ -338,7 +336,7 @@ db_init(struct ulogd_pluginstance *pi)
 
 	num_cols = db_count_cols(pi, &schema_stmt);
 	if (num_cols != DB_NUM_COLS) {
-		ulogd_log(ULOGD_INFO, "%s: (re)creating database\n", pi->id);
+		upi_log(pi, ULOGD_INFO, "(re)creating database\n");
 
 		if (db_create_tbl(pi) < 0)
 			return -1;
@@ -366,12 +364,12 @@ db_init(struct ulogd_pluginstance *pi)
 			continue;
 
 		if ((col->key = ulogd_key_find(&pi->input, buf)) == NULL) {
-			printf(PFX "%s: key not found\n", buf);
+			upi_log(pi, ULOGD_ERROR, "%s: key not found\n", buf);
 			return -1;
 		}
 	}
 
-	ulogd_log(ULOGD_INFO, "%s: database opened\n", pi->id);
+	upi_log(pi, ULOGD_INFO, "database opened\n");
 
 	if (sqlite3_finalize(schema_stmt) != SQLITE_OK) {
 		ulogd_error(PFX "sqlite_finalize: %s\n",
@@ -403,7 +401,7 @@ db_start(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
 
-	ulogd_log(ULOGD_DEBUG, "%s: opening database connection\n", pi->id);
+	upi_log(pi, ULOGD_DEBUG, "opening database connection\n");
 
 	if (sqlite3_open(db_ce(pi), &priv->dbh) != SQLITE_OK) {
 		ulogd_error(PFX "%s\n", sqlite3_errmsg(priv->dbh));
@@ -455,14 +453,13 @@ db_err(struct ulogd_pluginstance *pi, int ret)
 
 				db_createstmt(pi);
 
-				ulogd_log(ULOGD_INFO, "%s: database schema changed\n",
-						  pi->id);
+				upi_log(pi, ULOGD_INFO, "database schema changed\n");
 			}
 			break;
 
 		default:
-			ulogd_error("%s: transaction: %s\n", pi->id,
-						sqlite3_errmsg(priv->dbh));
+			upi_log(pi, ULOGD_ERROR, "transaction: %s\n",
+					sqlite3_errmsg(priv->dbh));
 			break;
 		}
 	}
@@ -673,8 +670,8 @@ sqlite_timer_cb(struct ulogd_timer *t)
 
 	rows = db_commit_rows(pi);
 
-	ulogd_log(ULOGD_DEBUG, "%s: rows=%d commited=%d\n", pi->id,
-			  priv->num_rows, rows);
+	upi_log(pi, ULOGD_DEBUG, "rows=%d commited=%d\n",
+			priv->num_rows, rows);
 }
 
 
@@ -740,7 +737,7 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 	pr_debug("%s: pi=%p\n", __func__, pi);
 
 	if (priv->disable) {
-		ulogd_log(ULOGD_NOTICE, "%s: disabled\n", pi->id);
+		upi_log(pi, ULOGD_NOTICE, "disabled\n");
 		return 0;
 	}
 
@@ -750,7 +747,7 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 	if (db_start(pi) < 0)
 		return -1;
 
-	ulogd_log(ULOGD_INFO, "%s: started\n", pi->id);
+	upi_log(pi, ULOGD_INFO, "started\n");
 
 	return 0;
 }
@@ -787,7 +784,7 @@ sqlite3_signal(struct ulogd_pluginstance *pi, int sig)
 			db_reset(pi);
 
 			if (db_start(pi) < 0) {
-				ulogd_log(ULOGD_FATAL, "%s: database reset failed\n", pi->id);
+				upi_log(pi, ULOGD_FATAL, "database reset failed\n");
 				exit(EXIT_FAILURE);
 			}
 		}

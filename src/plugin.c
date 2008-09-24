@@ -661,7 +661,7 @@ ulogd_register_plugin(struct ulogd_plugin *me)
 
 	llist_add(&me->list, &ulogd_plugins);
 
-	ulogd_log(ULOGD_NOTICE, "registered plugin '%s'\n", me->name);
+	ulogd_log(ULOGD_DEBUG, "registered plugin '%s'\n", me->name);
 }
 
 /**
