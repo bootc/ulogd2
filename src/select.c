@@ -41,7 +41,7 @@ set_nonblock(int fd)
 
 	flags |= O_NONBLOCK;
 
-	if ((flags = fcntl(fd, F_SETFL, flags)) < 0)
+	if (fcntl(fd, F_SETFL, flags) < 0)
 		return -1;
 
 	return 0;

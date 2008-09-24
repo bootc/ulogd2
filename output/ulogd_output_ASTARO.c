@@ -460,11 +460,11 @@ astaro_output(struct ulogd_pluginstance *pi)
 					log_types[type].id, id_to_sub(log_types[type].id),
 					log_types[type].desc, log_types[type].action);
 
-	pch += print_dyn_part(pi, pch, end - pch);
+	print_dyn_part(pi, pch, end - pch);
 	
 	syslog(priv->level | priv->facility, "%s\n", buf);
 
-	return 0;
+	return ULOGD_IRET_OK;
 }
 
 

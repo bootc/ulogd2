@@ -131,7 +131,7 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 		if (*line == '#')
 			continue;
 
-		if (!(wordend = get_word(line, " \t\n[]", (char *) wordbuf)))
+		if (!get_word(line, " \t\n[]", (char *) wordbuf))
 			continue;
 		pr_debug("word: \"%s\"\n", wordbuf);
 		if (!strcmp(wordbuf, section)) {
@@ -172,7 +172,7 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 				continue;
 			}
 
-			wordend = get_word(wordend, " =\t\n", (char *) &wordbuf);
+			get_word(wordend, " =\t\n", (char *) &wordbuf);
 			args = (char *)&wordbuf;
 
 			if (ce->hit && !(ce->options & CONFIG_OPT_MULTI)) {

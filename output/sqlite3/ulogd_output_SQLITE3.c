@@ -531,7 +531,7 @@ db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 		if (ret != SQLITE_OK)
 			break;
 
-		if ((ret = sqlite3_step(priv->p_stmt)) == SQLITE_DONE) {
+		if (sqlite3_step(priv->p_stmt) == SQLITE_DONE) {
 			/* no sqlite3_clear_bindings(), as an unbind will be
 			   implicetely done before next bind. */
 			sqlite3_reset(priv->p_stmt);
