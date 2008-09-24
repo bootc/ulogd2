@@ -84,9 +84,6 @@ static int syslog_configure(struct ulogd_pluginstance *pi)
 	int syslog_facility, syslog_level;
 	char *facility, *level;
 
-	/* FIXME: error handling */
-	config_parse_file(pi->id, pi->config_kset);
-
 	facility = pi->config_kset->ces[0].u.string;
 	level = pi->config_kset->ces[1].u.string;
 

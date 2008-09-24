@@ -124,9 +124,6 @@ nacct_conf(struct ulogd_pluginstance *pi)
 	if ((ret = ulogd_wildcard_inputkeys(pi)) < 0)
 		return ret;
 
-	if ((ret = config_parse_file(pi->id, pi->config_kset)) < 0)
-		return ret;
-
 	return 0;
 }
 

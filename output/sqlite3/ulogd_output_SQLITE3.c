@@ -682,8 +682,6 @@ sqlite3_configure(struct ulogd_pluginstance *pi)
 
 	memset(priv, 0, sizeof(struct sqlite3_priv));
 	
-	config_parse_file(pi->id, pi->config_kset);
-
 	if (ulogd_wildcard_inputkeys(pi) < 0)
 		return -1;
 

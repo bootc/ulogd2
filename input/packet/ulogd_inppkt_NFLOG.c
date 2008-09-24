@@ -311,15 +311,6 @@ msg_cb(struct nflog_g_handle *gh, struct nfgenmsg *nfmsg,
 }
 
 static int
-nflog_configure(struct ulogd_pluginstance *upi)
-{
-	if (config_parse_file(upi->id, upi->config_kset) < 0)
-		return ULOGD_IRET_STOP;
-
-	return 0;
-}
-
-static int
 nflog_start(struct ulogd_pluginstance *upi)
 {
 	struct nflog_priv *priv = upi_priv(upi);
@@ -430,7 +421,6 @@ struct ulogd_plugin libulog_plugin = {
 			.num_keys = ARRAY_SIZE(output_keys),
 		},
 	.priv_size 	= sizeof(struct nflog_priv),
-	.configure 	= &nflog_configure,
 	.start 		= &nflog_start,
 	.stop 		= &nflog_stop,
 	.config_kset = &libulog_kset,

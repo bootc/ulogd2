@@ -517,9 +517,6 @@ astaro_configure(struct ulogd_pluginstance *pi)
 {
 	struct astaro_priv *priv = (struct astaro_priv *)pi->private;
 
-	/* FIXME: error handling */
-	config_parse_file(pi->id, pi->config_kset);
-
 	priv->facility = nv_get_value(nv_facility, CFG_FACILITY(pi), LOG_KERN);
 	if (priv->facility < 0) {
 		upi_log(pi, ULOGD_FATAL, "unknown facility '%s'\n", CFG_FACILITY(pi));

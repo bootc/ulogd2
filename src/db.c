@@ -289,11 +289,6 @@ ulogd_db_configure(struct ulogd_pluginstance *upi)
 	if (check_driver(upi) < 0)
 		return ULOGD_IRET_ERR;
 
-	/* First: Parse configuration file section for this instance */
-	ret = config_parse_file(upi->id, upi->config_kset);
-	if (ret < 0)
-		return ret;
-
 	if (disable_ce(upi->config_kset).u.value != 0) {
 		upi_log(upi, ULOGD_INFO, "disabled in config\n");
 

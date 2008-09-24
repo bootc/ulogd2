@@ -679,12 +679,17 @@ ulogd_upi_configure(struct ulogd_pluginstance *pi)
 
 	ulogd_log(ULOGD_DEBUG, "configuring '%s'\n", pi->id);
 
+	if (pi->config_kset != NULL) {
+		ulogd_upi_reset_cfg(pi);
+
+		if (config_parse_file(pi->id, pi->config_kset) < 0)
+			return ULOGD_IRET_ERR;
+	}
+
 	if (pi->plugin->configure == NULL)
 		goto done;
 
 	ulogd_upi_set_state(pi, PsConfiguring);
-
-	ulogd_upi_reset_cfg(pi);
 
 	if ((ret = pi->plugin->configure(pi)) < 0) {
 		if (ret == ULOGD_IRET_AGAIN)

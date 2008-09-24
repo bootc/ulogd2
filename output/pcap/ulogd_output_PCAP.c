@@ -220,11 +220,6 @@ static int append_create_outfile(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static int configure_pcap(struct ulogd_pluginstance *upi)
-{
-	return config_parse_file(upi->id, upi->config_kset);
-}
-
 static int start_pcap(struct ulogd_pluginstance *upi)
 {
 	return append_create_outfile(upi);
@@ -252,8 +247,6 @@ static struct ulogd_plugin pcap_plugin = {
 	},
 	.config_kset	= &pcap_kset,
 	.priv_size	= sizeof(struct pcap_instance),
-
-	.configure	= &configure_pcap,
 	.start		= &start_pcap,
 	.stop		= &stop_pcap,
 	.interp		= &interp_pcap,

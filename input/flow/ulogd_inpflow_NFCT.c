@@ -981,15 +981,10 @@ nfct_timer_cb(struct ulogd_timer *t)
 static int
 nfct_configure(struct ulogd_pluginstance *upi)
 {
-	struct nfct_pluginstance *priv = (void *)upi->private;
-	int ret;
+	struct nfct_pluginstance *priv = upi_priv(upi);
 
 	memset(priv, 0, sizeof(struct nfct_pluginstance));
 	
-	ret = config_parse_file(upi->id, upi->config_kset);
-	if (ret < 0)
-		return ret;
-
 	return 0;
 }
 

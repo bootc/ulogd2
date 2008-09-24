@@ -122,10 +122,6 @@ static int oprint_configure(struct ulogd_pluginstance *upi)
 	if (ret < 0)
 		return ret;
 
-	ret = config_parse_file(upi->id, upi->config_kset);
-	if (ret < 0)
-		return ret;
-
 	return 0;
 }
 

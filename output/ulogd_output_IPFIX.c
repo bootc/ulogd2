@@ -460,9 +460,6 @@ static int configure_ipfix(struct ulogd_pluginstance *pi)
 	char *proto_str = proto_ce(pi->config_kset).u.string;
 	int ret;
 
-	if (config_parse_file(pi->id, pi->config_kset) < 0)
-		return ULOGD_IRET_ERR;
-
 	/* determine underlying protocol */
 	if (!strcasecmp(proto_str, "udp")) {
 		ii->sock_type = SOCK_DGRAM;
