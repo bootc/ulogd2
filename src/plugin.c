@@ -801,7 +801,7 @@ ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
 	if (pi->plugin->signal == NULL)
 		return;
 
-	if (pi->plugin->signal(pi, signo) < 0) {
+	if ((ret = pi->plugin->signal(pi, signo)) < 0) {
 		ulogd_upi_stop(pi);
 
 		if (ret == ULOGD_IRET_AGAIN)
