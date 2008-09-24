@@ -428,83 +428,86 @@ __interp_db(struct ulogd_pluginstance *upi)
 	di->stmt_ins = di->stmt_val;
 
 	for (i = 0; i < upi->input.num_keys; i++) {
-		struct ulogd_key *res = upi->input.keys[i].u.source;
+		struct ulogd_key *key = &upi->input.keys[i];
+		struct ulogd_key *res = key_src(key);
 
-		if (upi->input.keys[i].flags & ULOGD_KEYF_INACTIVE)
+		if (key->flags & ULOGD_KEYF_INACTIVE)
 			continue;
 
-		if (!res)
+		if (res == NULL) {
 			upi_log(upi, ULOGD_NOTICE, "no source for '%s'\n",
 				  upi->input.keys[i].name);
-
-		if (!key_valid(res)) {
-			/* no result, we have to fake something */
-			di->stmt_ins += sprintf(di->stmt_ins, "NULL,");
 			continue;
 		}
 
-		switch (res->type) {
-			char *tmpstr;
-			struct in_addr addr;
-		case ULOGD_RET_INT8:
-			sprintf(di->stmt_ins, "%d,", res->u.value.i8);
-			break;
-		case ULOGD_RET_INT16:
-			sprintf(di->stmt_ins, "%d,", res->u.value.i16);
-			break;
-		case ULOGD_RET_INT32:
-			sprintf(di->stmt_ins, "%d,", res->u.value.i32);
-			break;
-		case ULOGD_RET_INT64:
-			sprintf(di->stmt_ins, "%lld,", res->u.value.i64);
-			break;
-		case ULOGD_RET_UINT8:
-			sprintf(di->stmt_ins, "%u,", res->u.value.ui8);
-			break;
-		case ULOGD_RET_UINT16:
-			sprintf(di->stmt_ins, "%u,", res->u.value.ui16);
-			break;
-		case ULOGD_RET_IPADDR:
-			if (asstring_ce(upi->config_kset).u.value) {
-				memset(&addr, 0, sizeof(addr));
-				addr.s_addr = ntohl(res->u.value.ui32);
+		if (key_valid(res)) {
+			switch (key->type) {
+				char *tmpstr;
+				struct in_addr addr;
+			case ULOGD_RET_INT8:
+				sprintf(di->stmt_ins, "%d,", res->u.value.i8);
+				break;
+			case ULOGD_RET_INT16:
+				sprintf(di->stmt_ins, "%d,", res->u.value.i16);
+				break;
+			case ULOGD_RET_INT32:
+				sprintf(di->stmt_ins, "%d,", res->u.value.i32);
+				break;
+			case ULOGD_RET_INT64:
+				sprintf(di->stmt_ins, "%lld,", res->u.value.i64);
+				break;
+			case ULOGD_RET_UINT8:
+				sprintf(di->stmt_ins, "%u,", res->u.value.ui8);
+				break;
+			case ULOGD_RET_UINT16:
+				sprintf(di->stmt_ins, "%u,", res->u.value.ui16);
+				break;
+			case ULOGD_RET_IPADDR:
+				if (asstring_ce(upi->config_kset).u.value) {
+					memset(&addr, 0, sizeof(addr));
+					addr.s_addr = ntohl(res->u.value.ui32);
+					*(di->stmt_ins++) = '\'';
+					tmpstr = inet_ntoa(addr);
+					di->driver->escape_string(upi, di->stmt_ins,
+											  tmpstr, strlen(tmpstr));
+					di->stmt_ins = di->stmt + strlen(di->stmt);
+					sprintf(di->stmt_ins, "',");
+					break;
+				}
+				/* fallthrough when logging IP as u_int32_t */
+			case ULOGD_RET_UINT32:
+				sprintf(di->stmt_ins, "%u,", res->u.value.ui32);
+				break;
+			case ULOGD_RET_UINT64:
+				sprintf(di->stmt_ins, "%llu,", res->u.value.ui64);
+				break;
+			case ULOGD_RET_BOOL:
+				sprintf(di->stmt_ins, "'%d',", res->u.value.b);
+				break;
+			case ULOGD_RET_STRING:
 				*(di->stmt_ins++) = '\'';
-				tmpstr = inet_ntoa(addr);
-				di->driver->escape_string(upi, di->stmt_ins,
-							  tmpstr, strlen(tmpstr));
-                                di->stmt_ins = di->stmt + strlen(di->stmt);
+				if (res->u.value.ptr) {
+					di->stmt_ins +=
+						di->driver->escape_string(upi, di->stmt_ins,
+												  res->u.value.ptr,
+												  strlen(res->u.value.ptr));
+				}
 				sprintf(di->stmt_ins, "',");
 				break;
+			case ULOGD_RET_RAW:
+				upi_log(upi, ULOGD_NOTICE, "%s: type RAW not supported by MySQL\n",
+						upi->input.keys[i].name);
+				break;
+			default:
+				upi_log(upi, ULOGD_NOTICE, "unknown type %d for %s\n",
+						res->type, upi->input.keys[i].name);
+				break;
 			}
-			/* fallthrough when logging IP as u_int32_t */
-		case ULOGD_RET_UINT32:
-			sprintf(di->stmt_ins, "%u,", res->u.value.ui32);
-			break;
-		case ULOGD_RET_UINT64:
-			sprintf(di->stmt_ins, "%llu,", res->u.value.ui64);
-			break;
-		case ULOGD_RET_BOOL:
-			sprintf(di->stmt_ins, "'%d',", res->u.value.b);
-			break;
-		case ULOGD_RET_STRING:
-			*(di->stmt_ins++) = '\'';
-			if (res->u.value.ptr) {
-				di->stmt_ins +=
-				di->driver->escape_string(upi, di->stmt_ins,
-							  res->u.value.ptr,
-							strlen(res->u.value.ptr));
-			}
-			sprintf(di->stmt_ins, "',");
-			break;
-		case ULOGD_RET_RAW:
-			upi_log(upi, ULOGD_NOTICE, "%s: type RAW not supported by MySQL\n",
-				upi->input.keys[i].name);
-			break;
-		default:
-			upi_log(upi, ULOGD_NOTICE, "unknown type %d for %s\n",
-				res->type, upi->input.keys[i].name);
-			break;
+		} else {
+			/* no result, we have to fake something */
+			di->stmt_ins += sprintf(di->stmt_ins, "NULL,");
 		}
+
 		di->stmt_ins = di->stmt + strlen(di->stmt);
 	}
 	*(di->stmt_ins - 1) = ')';
