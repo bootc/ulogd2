@@ -569,19 +569,19 @@ ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi)
 
 /* clean results (set all values to 0 and free pointers) */
 static void
-ulogd_clean_results(struct ulogd_pluginstance *pi)
+stack_clean_results(const struct ulogd_pluginstance_stack *stack)
 {
-	struct ulogd_pluginstance *cur;
+	struct ulogd_pluginstance *pi;
 
 	pr_fn_debug("cleaning up results\n");
 
 	/* iterate through plugin stack */
-	llist_for_each_entry(cur, &pi->stack->list, list) {
+	llist_for_each_entry(pi, &stack->list, list) {
 		int i;
 
 		/* iterate through input keys of pluginstance */
-		for (i = 0; i < cur->output.num_keys; i++) {
-			struct ulogd_key *key = &cur->output.keys[i];
+		for (i = 0; i < pi->output.num_keys; i++) {
+			struct ulogd_key *key = &pi->output.keys[i];
 
 			if (!(key->flags & ULOGD_RETF_VALID))
 				continue;
