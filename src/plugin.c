@@ -619,13 +619,14 @@ ulogd_propagate_results(struct ulogd_pluginstance *pi)
 		case ULOGD_IRET_AGAIN:
 		case ULOGD_IRET_STOP:
 			/* we shall abort further iteration of the stack */
-			break;
+			goto out;
 
 		default:
 			ulogd_abort("%s: unknown return value '%d'\n", cur->id, ret);
 		}
 	}
 
+out:
 	stack_clean_results(pi);
 }
 
