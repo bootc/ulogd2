@@ -156,10 +156,22 @@ char *key_get_str(const struct ulogd_key *);
 
 bool key_type_eq(const struct ulogd_key *, const struct ulogd_key *);
 
+static inline struct ulogd_key *
+key_src(const struct ulogd_key *key)
+{
+	return key->u.source;
+}
+
 static inline bool
 key_valid(const struct ulogd_key *key)
 {
-	return key != NULL && (key->flags & ULOGD_RETF_VALID);
+	return key != NULL && key->flags & ULOGD_RETF_VALID;
+}
+
+static inline bool
+key_src_valid(const struct ulogd_key *key)
+{
+	return key_valid(key_src(key));
 }
 
 int ulogd_key_size(const struct ulogd_key *key);
