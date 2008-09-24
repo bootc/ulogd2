@@ -113,6 +113,25 @@ struct ulogd_keyset {
 	unsigned int type;
 };
 
+/* key initializers */
+#define IPFIX(v, f)								\
+		{										\
+			.vendor = IPFIX_VENDOR_ ## v,		\
+			.field_id = IPFIX_ ## f,			\
+		}
+
+#define KEY(t,n)					\
+	{								\
+		.type = ULOGD_RET_ ## t,	\
+		.name = (n),				\
+	}
+#define KEY_IPFIX(t, n, v, f)			\
+	{									\
+		.type = ULOGD_RET_ ## t,		\
+		.name = (n),					\
+		.ipfix = IPFIX(v, f),			\
+	}
+
 /* set key values */
 void key_i8(struct ulogd_key *, int);
 void key_i16(struct ulogd_key *, int);
