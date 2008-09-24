@@ -54,14 +54,13 @@ static int oprint_interp(struct ulogd_pluginstance *upi)
 	
 	fprintf(opi->of, "===>PACKET BOUNDARY\n");
 	for (i = 0; i < upi->input.num_keys; i++) {
-		struct ulogd_key *ret = upi->input.keys[i].u.source;
+		struct ulogd_key *ret = key_src(&upi->input.keys[i]);
 
-		if (!ret)
+		if (ret == NULL || !key_valid(ret)) {
 			upi_log(upi, ULOGD_NOTICE, "no result for '%s'\n",
 				  upi->input.keys[i].name);
-		
-		if (!key_valid(ret))
 			continue;
+		}
 
 		fprintf(opi->of,"%s=", ret->name);
 		switch (ret->type) {
