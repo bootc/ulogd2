@@ -353,6 +353,14 @@ __stack_reconfigure(struct ulogd_pluginstance_stack *stack, void *arg)
 }
 
 static int
+__stop_plugin(struct ulogd_pluginstance *pi, void *arg)
+{
+	ulogd_upi_stop(pi);
+
+	return 1;
+}
+
+static int
 __do_signal(struct ulogd_pluginstance *pi, void *arg)
 {
 	int signo = (int)arg;
@@ -404,7 +412,7 @@ sync_sig_handler(int signo)
 		break;
 
 	case SIGTERM:
-		ulogd_upi_stop_all();
+		upi_for_each(__stop_plugin, NULL);
 		exit(EXIT_SUCCESS);
 		break;
 

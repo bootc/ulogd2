@@ -861,20 +861,6 @@ ulogd_upi_reset_cfg(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-static int
-__upi_stop(struct ulogd_pluginstance *pi, void *arg)
-{
-	ulogd_upi_stop(pi);
-
-	return 1;
-}
-
-int
-ulogd_upi_stop_all(void)
-{
-	return upi_for_each(__upi_stop, NULL);
-}
-
 /* key API */
 static void
 __check_get(const struct ulogd_key *key, unsigned type)
