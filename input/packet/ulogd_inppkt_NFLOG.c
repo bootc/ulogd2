@@ -311,8 +311,7 @@ msg_cb(struct nflog_g_handle *gh, struct nfgenmsg *nfmsg,
 }
 
 static int
-nflog_configure(struct ulogd_pluginstance *upi,
-		  struct ulogd_pluginstance_stack *stack)
+nflog_configure(struct ulogd_pluginstance *upi)
 {
 	if (config_parse_file(upi->id, upi->config_kset) < 0)
 		return ULOGD_IRET_STOP;

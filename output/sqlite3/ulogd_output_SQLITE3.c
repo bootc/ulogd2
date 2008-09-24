@@ -676,8 +676,7 @@ sqlite_timer_cb(struct ulogd_timer *t)
 
 
 static int
-sqlite3_configure(struct ulogd_pluginstance *pi,
-				  struct ulogd_pluginstance_stack *stack)
+sqlite3_configure(struct ulogd_pluginstance *pi)
 {
 	struct sqlite3_priv *priv = (void *)pi->private;
 

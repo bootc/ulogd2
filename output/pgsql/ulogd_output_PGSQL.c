@@ -593,14 +593,13 @@ static struct db_driver db_driver_pgsql = {
 };
 
 static int
-pgsql_configure(struct ulogd_pluginstance *upi,
-				struct ulogd_pluginstance_stack *stack)
+pgsql_configure(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
 
 	pi->db_inst.driver = &db_driver_pgsql;
 
-	return ulogd_db_configure(upi, stack);
+	return ulogd_db_configure(upi);
 }
 
 static struct ulogd_plugin pgsql_plugin = { 

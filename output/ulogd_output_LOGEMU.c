@@ -149,8 +149,7 @@ static int fini_logemu(struct ulogd_pluginstance *pi) {
 	return 0;
 }
 
-static int configure_logemu(struct ulogd_pluginstance *pi,
-			    struct ulogd_pluginstance_stack *stack)
+static int configure_logemu(struct ulogd_pluginstance *pi)
 {
 	/* FIXME: error handling */
 	upi_log(pi, ULOGD_DEBUG, "parsing config file section\n");

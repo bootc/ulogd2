@@ -979,8 +979,7 @@ nfct_timer_cb(struct ulogd_timer *t)
 }
 
 static int
-nfct_configure(struct ulogd_pluginstance *upi,
-			   struct ulogd_pluginstance_stack *stack)
+nfct_configure(struct ulogd_pluginstance *upi)
 {
 	struct nfct_pluginstance *priv = (void *)upi->private;
 	int ret;

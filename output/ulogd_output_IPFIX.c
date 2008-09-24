@@ -454,8 +454,7 @@ static int stop_ipfix(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-static int configure_ipfix(struct ulogd_pluginstance *pi,
-			    struct ulogd_pluginstance_stack *stack)
+static int configure_ipfix(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_instance *ii = (struct ipfix_instance *) &pi->private;
 	char *proto_str = proto_ce(pi->config_kset).u.string;

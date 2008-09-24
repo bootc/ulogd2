@@ -513,8 +513,7 @@ nv_get_value(struct nv *nv, const char *name, int def_val)
 };
 
 static int
-astaro_configure(struct ulogd_pluginstance *pi,
-				 struct ulogd_pluginstance_stack *stack)
+astaro_configure(struct ulogd_pluginstance *pi)
 {
 	struct astaro_priv *priv = (struct astaro_priv *)pi->private;
 

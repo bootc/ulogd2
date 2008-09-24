@@ -208,8 +208,7 @@ struct ulogd_plugin {
 	int (* interp)(struct ulogd_pluginstance *pi);
 
 	/* may return ULOGD_IRET_AGAIN */
-	int (* configure)(struct ulogd_pluginstance *pi,
-					  struct ulogd_pluginstance_stack *stack);
+	int (* configure)(struct ulogd_pluginstance *pi);
 
 	/* may return ULOGD_IRET_AGAIN */
 	int (* start)(struct ulogd_pluginstance *pi);
@@ -327,8 +326,7 @@ struct ulogd_plugin *ulogd_find_plugin(const char *);
 struct ulogd_pluginstance *ulogd_upi_alloc_init(struct ulogd_plugin *,
 			const char *, struct ulogd_pluginstance_stack *);
 
-int ulogd_upi_configure(struct ulogd_pluginstance *,
-						struct ulogd_pluginstance_stack *);
+int ulogd_upi_configure(struct ulogd_pluginstance *);
 int ulogd_upi_start(struct ulogd_pluginstance *);
 int ulogd_upi_stop(struct ulogd_pluginstance *);
 int ulogd_upi_interp(struct ulogd_pluginstance *);

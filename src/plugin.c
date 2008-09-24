@@ -295,7 +295,7 @@ stack_fsm_move(struct ulogd_pluginstance_stack *stack)
 		switch (pi->state) {
 		case PsInit:
 		case PsConfiguring:
-			if ((ret = ulogd_upi_configure(pi, stack)) < 0) {
+			if ((ret = ulogd_upi_configure(pi)) < 0) {
 				if (ret != ULOGD_IRET_AGAIN)
 					goto err;
 			}
@@ -671,8 +671,7 @@ ulogd_register_plugin(struct ulogd_plugin *me)
  * is tried later.
  */
 int
-ulogd_upi_configure(struct ulogd_pluginstance *pi,
-					struct ulogd_pluginstance_stack *stack)
+ulogd_upi_configure(struct ulogd_pluginstance *pi)
 {
 	int ret;
 
@@ -687,7 +686,7 @@ ulogd_upi_configure(struct ulogd_pluginstance *pi,
 
 	ulogd_upi_reset_cfg(pi);
 
-	if ((ret = pi->plugin->configure(pi, stack)) < 0) {
+	if ((ret = pi->plugin->configure(pi)) < 0) {
 		if (ret == ULOGD_IRET_AGAIN)
 			stack_fsm_add(pi->stack);
 

@@ -234,13 +234,12 @@ static struct db_driver db_driver_mysql = {
 	.execute	= &execute_mysql,
 };
 
-static int configure_mysql(struct ulogd_pluginstance *upi,
-			   struct ulogd_pluginstance_stack *stack)
+static int configure_mysql(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = (struct db_instance *) &upi->private;
 	di->driver = &db_driver_mysql;
 
-	return ulogd_db_configure(upi, stack);
+	return ulogd_db_configure(upi);
 }
 
 static struct ulogd_plugin plugin_mysql = {

@@ -279,8 +279,7 @@ check_driver(struct ulogd_pluginstance *pi)
 }
 
 int
-ulogd_db_configure(struct ulogd_pluginstance *upi,
-				   struct ulogd_pluginstance_stack *stack)
+ulogd_db_configure(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *di = upi_priv(upi);
 	int ret;

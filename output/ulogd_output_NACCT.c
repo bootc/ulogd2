@@ -117,8 +117,7 @@ static struct config_keyset nacct_kset = {
 };
 
 static int
-nacct_conf(struct ulogd_pluginstance *pi,
-		   struct ulogd_pluginstance_stack *stack)
+nacct_conf(struct ulogd_pluginstance *pi)
 {
 	int ret;
 
