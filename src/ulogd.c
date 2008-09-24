@@ -263,8 +263,7 @@ create_stack(const char *option)
 	if (stack_fsm(stack) < 0)
 		goto out;
 
-	/* add head of pluginstance stack to list of stacks */
-	llist_add(&stack->stack_list, &ulogd_pi_stacks);
+	stack_add(stack);
 
 	free(buf);
 
@@ -547,9 +546,8 @@ main(int argc, char* argv[])
 	if (parse_conffile("global", &ulogd_kset))
 		exit(EXIT_FAILURE);
 
-	if (llist_empty(&ulogd_pi_stacks)) {
-		ulogd_log(ULOGD_FATAL, 
-			  "not even a single working plugin stack\n");
+	if (!stack_have_stacks()) {
+		ulogd_log(ULOGD_ERROR, "not even a single working plugin stack\n");
 		exit(1);
 	}
 

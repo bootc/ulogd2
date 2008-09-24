@@ -270,9 +270,6 @@ struct ulogd_pluginstance_stack {
 	char *name;
 };
 
-extern struct llist_head ulogd_plugins;
-extern struct llist_head ulogd_pi_stacks;
-
 #define upi_log(pi, lvl, fmt, ...) \
 	ulogd_log((lvl), "%s: " fmt, pi->id, ## __VA_ARGS__)
 
@@ -309,6 +306,8 @@ void ulogd_propagate_results(struct ulogd_pluginstance *pi);
 
 int ulogd_plugin_init(void);
 
+void stack_add(struct ulogd_pluginstance_stack *);
+bool stack_have_stacks(void);
 int stack_for_each(int (*)(struct ulogd_pluginstance_stack *, void *),
 				   void *);
 int stack_fsm(struct ulogd_pluginstance_stack *);

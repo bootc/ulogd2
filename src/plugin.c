@@ -22,8 +22,8 @@
 #include <ulogd/plugin.h>
 
 /* linked list for all registered plugins */
-LLIST_HEAD(ulogd_plugins);
-LLIST_HEAD(ulogd_pi_stacks);
+static LLIST_HEAD(ulogd_plugins);
+static LLIST_HEAD(ulogd_pi_stacks);
 
 static struct ulogd_timer stack_fsm_timer;
 static LLIST_HEAD(stack_fsm_list);
@@ -64,6 +64,19 @@ find_okey_in_stack(const char *name,
 	}
 
 	return NULL;
+}
+
+void
+stack_add(struct ulogd_pluginstance_stack *stack)
+{
+	/* add head of pluginstance stack to list of stacks */
+	llist_add(&stack->stack_list, &ulogd_pi_stacks);
+}
+
+bool
+stack_have_stacks(void)
+{
+	return !llist_empty(&ulogd_pi_stacks);
 }
 
 /**
