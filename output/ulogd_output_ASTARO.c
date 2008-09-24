@@ -300,25 +300,6 @@ log_prefix2type(const struct log_type *t, const char *prefix)
 	return 0;
 }
 
-/* append to string, thereby advancing current pointer */
-static void
-str_append(char **pch, const char *append, int len, int *delim)
-{
-	if (len < 0) len = strlen(append);
-
-	strcat(*pch, append);
-	*pch += len;
-
-	if (delim == NULL)
-		return;
-
-	if (*delim) {
-		strcat(*pch, " ");
-		(*pch)++;
-	} else
-		*delim = 1;
-}
-
 /* print key in standard logging format */
 static int
 print_key(char *buf, size_t len, const struct ulogd_key *key,
@@ -374,20 +355,21 @@ print_proto_tcp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 
 	/* srcport/dstport are handled through generic logging handler */
 
-	str_append(&pch, "tcpflags=\"", 10, NULL);
+	strcpy(buf, "tcpflags=\"");
+	pch = buf + sizeof("tcpflags=\"") - 1;
 
 	if (key_get_bool(&in[InTcpAck]))
-		str_append(&pch, "ACK", 3, &delim);
+		strncat_delim(&pch, "ACK", sizeof("ACK"), &delim);
 	if (key_get_bool(&in[InTcpPsh]))
-		str_append(&pch, "PSH", 3, &delim);
+		strncat_delim(&pch, "PSH", sizeof("PSH"), &delim);
 	if (key_get_bool(&in[InTcpRst]))
-		str_append(&pch, "RST", 3, &delim);
+		strncat_delim(&pch, "RST", sizeof("RST"), &delim);
 	if (key_get_bool(&in[InTcpSyn]))
-		str_append(&pch, "SYN", 3, &delim);
+		strncat_delim(&pch, "SYN", sizeof("SYN"), &delim);
 	if (key_get_bool(&in[InTcpFin]))
-		str_append(&pch, "FIN", 3, &delim);
+		strncat_delim(&pch, "FIN", sizeof("FIN"), &delim);
 
-	str_append(&pch, "\"", 1, NULL);
+	strncat_delim(&pch, "\"", 1, NULL);
 		
 	return pch - buf;
 }

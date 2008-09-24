@@ -58,4 +58,7 @@ int strntr(char *, char, char);
 /* unsigned to string */
 int utoa(unsigned, char *, size_t);
 
+/* append to string with delimiter */
+char *strncat_delim(char **, const char *, size_t, int *);
+
 #endif /* COMMON_H */

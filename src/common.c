@@ -111,3 +111,28 @@ utoa(unsigned v, char *str, size_t len)
 	return len - (end - str);
 }
 
+/**
+ * Append to string with delimiter.
+ *
+ * @arg dst		Address of destination pointer.
+ * @arg src		Source string to be appended.
+ * @arg len		Length of source string (including '\0').
+ * @arg delim	Pointer to delimiter (set to '0' before first call).
+ * @return pointer to newly created string
+ */
+char *
+strncat_delim(char **dst, const char *src, size_t len, int *delim)
+{
+	char *d = *dst;
+
+	if (delim != NULL && *delim)
+		*(*dst)++ = ' ';
+
+	strcpy(*dst, src);
+	*dst += len - 1;
+
+	if (delim != NULL)
+		(*delim)++;
+
+	return d;
+}
