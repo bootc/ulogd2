@@ -614,7 +614,7 @@ ulogd_propagate_results(struct ulogd_pluginstance *pi)
 			goto out;
 
 		default:
-			ulogd_abort("%s: unknown return value '%d'\n", cur->id, ret);
+			ulogd_abort("%s: unknown return value '%d'\n", pi->id, ret);
 		}
 	}
 
