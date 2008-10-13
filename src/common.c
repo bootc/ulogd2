@@ -136,3 +136,15 @@ strncat_delim(char **dst, const char *src, size_t len, int *delim)
 
 	return d;
 }
+
+/**
+ * time diff with second resolution
+ */
+unsigned
+tv_diff_sec(const struct timeval *tv1, const struct timeval *tv2)
+{
+    if (tv2->tv_sec >= tv1->tv_sec)
+        return max(tv2->tv_sec - tv1->tv_sec, 1);
+
+    return tv1->tv_sec - tv2->tv_sec;
+}

@@ -60,4 +60,7 @@ int utoa(unsigned, char *, size_t);
 /* append to string with delimiter */
 char *strncat_delim(char **, const char *, size_t, int *);
 
+/* time diff with second resolution */
+unsigned tv_diff_sec(const struct timeval *, const struct timeval *);
+
 #endif /* COMMON_H */
