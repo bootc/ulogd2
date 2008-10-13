@@ -662,7 +662,10 @@ gc_start(struct ulogd_pluginstance *pi)
 {
 	struct nfct_priv *priv = upi_priv(pi);
 
-	priv->overruns++;
+	/* we want at least two walks over the whole cache before GC
+	   quits */
+	if ((priv->overruns += 2) == 0)
+		priv->overruns = 2;
 
 	if (timer_running(&priv->timer))
 		return 0;
@@ -701,9 +704,7 @@ nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
 			goto err_put_ct;
 		}
 
-		if (cache_add(priv->tcache, ct) < 0) {
-			/* TODO cleanup */
-		}
+		cache_add(priv->tcache, ct);
 		break;
 
 	case NFNLGRP_CONNTRACK_UPDATE:
@@ -837,7 +838,16 @@ out:
 /**
  * Garbage collection timer
  *
- * Removes itself when done.
+ * The GC timer is started if there is some netlink overrun reported,
+ * either via %ENOBUFS from nl_recvmsgs() or if nfct_overrun_cb()
+ * gets called.
+ *
+ * Each time the GC timer is called only a small slice of cache heads
+ * is checked, it therefore takes some time before the GC timer
+ * is gone over the whole cache data.
+ *
+ * The GC timer is stopped if it went over the whole cache data and
+ * no other overrun occured in the meantime.
  */
 static void
 nfct_gc_timer_cb(struct ulogd_timer *t)
@@ -860,14 +870,16 @@ nfct_gc_timer_cb(struct ulogd_timer *t)
             priv->tcache->c_cnt, tc_start, tc_end,
             priv->scache->c_cnt, sc_start, sc_end);
 
-	if (--priv->overruns == 0) {
-		ulogd_unregister_timer(&priv->timer);
+	if (tc_end == 0) {
+		if (--priv->overruns == 0) {
+			ulogd_unregister_timer(&priv->timer);
 
-		upi_log(pi, ULOGD_DEBUG, "GC timer stopped\n");
+			upi_log(pi, ULOGD_DEBUG, "GC timer stopped\n");
+		}
+
+		if (priv->overruns < 0)
+			priv->overruns = 0;
 	}
-
-	if (priv->overruns < 0)
-		priv->overruns = 0;
 }
 
 static int
