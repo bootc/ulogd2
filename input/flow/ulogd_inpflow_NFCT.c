@@ -399,10 +399,56 @@ static int
 propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 {
 	struct nfct_priv *priv = upi_priv(pi);
+	struct ulogd_key *out = pi->output.keys;
+	struct nfnl_ct *nfnl_ct = ct->nfnl_ct;
 
-	/* TODO filter */
+	pr_fn_debug("pi=%p ct=%p\n", pi, ct);
 
 	ct->time[STOP].tv_sec = t_now_local;
+
+	key_u32(&out[O_IP_SADDR], ntohl(ct->tuple.src));
+    key_u32(&out[O_IP_DADDR], ntohl(ct->tuple.dst));
+    key_u8(&out[O_IP_PROTO], ct->tuple.l4proto);
+
+	switch (ct->tuple.l4proto) {
+    case IPPROTO_TCP:
+    case IPPROTO_UDP:
+    case IPPROTO_SCTP:
+        key_u16(&out[O_L4_SPORT], ntohs(nfnl_ct_get_src_port(nfnl_ct, 0)));
+        key_u16(&out[O_L4_DPORT], ntohs(nfnl_ct_get_dst_port(nfnl_ct, 1)));
+		break;
+
+    case IPPROTO_ICMP:
+		key_u8(&out[O_ICMP_CODE], nfnl_ct_get_icmp_code(nfnl_ct, 0));
+        key_u8(&out[O_ICMP_TYPE], nfnl_ct_get_icmp_type(nfnl_ct, 0));
+        break;
+
+	default:
+		break;
+	}
+
+	/* TODO check if counters are there */
+	key_u32(&out[O_RAW_IN_PKTLEN], (uint32_t)nfnl_ct_get_bytes(nfnl_ct, 0));
+	key_u32(&out[O_RAW_IN_PKTCOUNT],
+			(uint32_t)nfnl_ct_get_packets(nfnl_ct, 0));
+
+	key_u32(&out[O_RAW_OUT_PKTLEN], (uint32_t)nfnl_ct_get_bytes(nfnl_ct, 1));
+	key_u32(&out[O_RAW_OUT_PKTCOUNT],
+			(uint32_t)nfnl_ct_get_packets(nfnl_ct, 1));
+
+	if (nfnl_ct_test_mark(nfnl_ct))
+		key_u32(&out[O_CT_MARK], nfnl_ct_get_mark(nfnl_ct));
+	if (nfnl_ct_test_id(nfnl_ct))
+		key_u32(&out[O_CT_ID], nfnl_ct_get_id(nfnl_ct));
+
+	key_u32(&out[O_FLOW_START_SEC], ct->time[START].tv_sec);
+    key_u32(&out[O_FLOW_START_USEC], ct->time[START].tv_usec);
+    key_u32(&out[O_FLOW_END_SEC], ct->time[STOP].tv_sec);
+    key_u32(&out[O_FLOW_END_USEC], ct->time[STOP].tv_usec);
+    key_u32(&out[O_FLOW_DURATION], tv_diff_sec(&ct->time[START],
+                                               &ct->time[STOP]));
+
+	ulogd_propagate_results(pi);
 
 	cache_del(priv->tcache, ct);
 
