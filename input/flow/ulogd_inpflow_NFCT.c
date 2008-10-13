@@ -1,4 +1,5 @@
-/* ulogd_input_CTNL.c, Version $Revision$
+/*
+ * ulogd_input_NFCT.c
  *
  * ulogd input plugin for ctnetlink
  *
@@ -23,6 +24,8 @@
  * 	  small non-hashtable ulogd installations on the firewall boxes, send
  * 	  the messages via IPFX to one aggregator who then runs ulogd with a 
  * 	  network wide connection hash table.
+ *
+ * Use libnl			Holger Eitzenberger <holger@eitzenberger.org> 2008
  */
 #include "config.h"
 #include <ulogd/ulogd.h>
@@ -34,22 +37,21 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 
-#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
-#include <linux/netfilter/nf_conntrack_tcp.h>
+#include <netlink/netfilter/nfnl.h>
+#include <netlink/netfilter/ct.h>
+#include <netlink/attr.h>
+#include <linux/netfilter/nfnetlink_conntrack.h>
 #include "linux_jhash.h"
 
-#define CT_EVENTS		(NF_NETLINK_CONNTRACK_NEW \
-						 | NF_NETLINK_CONNTRACK_UPDATE \
-						 | NF_NETLINK_CONNTRACK_DESTROY)
+#define RCVBUF_LEN		(1 << 18)
+#define SNDBUF_LEN		RCVBUF_LEN
 
+#if 0
 /* configuration defaults */
 #define TCACHE_SIZE		8192
 #define SCACHE_SIZE	    512
 #define TCACHE_REQ_MAX	100
 #define TIMEOUT			30 SEC
-
-#define RCVBUF_LEN		(1 << 18)
-#define SNDBUF_LEN		RCVBUF_LEN
 
 #define INADDR_CLUSTER		0x00fa13c6 /* 198.19.250.0/24 */
 
@@ -984,6 +986,224 @@ nfct_stop(struct ulogd_pluginstance *pi)
 
 	return 0;
 }
+#endif /* 0 */
+
+struct nfct_priv {
+	struct nl_handle *nlh;
+	struct ulogd_fd ufd;
+	struct ulogd_timer timer;
+};
+
+enum {
+	O_IP_SADDR = 0,
+	O_IP_DADDR,
+	O_IP_PROTO,
+	O_L4_SPORT,
+	O_L4_DPORT,
+	O_RAW_IN_PKTLEN,
+	O_RAW_IN_PKTCOUNT,
+	O_RAW_OUT_PKTLEN,
+	O_RAW_OUT_PKTCOUNT,
+	O_ICMP_CODE,
+	O_ICMP_TYPE,
+	O_CT_MARK,
+	O_CT_ID,
+	O_FLOW_START_SEC,
+	O_FLOW_START_USEC,
+	O_FLOW_END_SEC,
+	O_FLOW_END_USEC,
+	O_FLOW_DURATION,
+};
+
+static struct ulogd_key nfct_okeys[] = {
+	[O_IP_SADDR] = KEY_IPFIX(IPADDR, "ip.saddr", IETF, sourceIPv4Address),
+	[O_IP_DADDR] = KEY_IPFIX(IPADDR, "ip.daddr", IETF,destinationIPv4Address),
+	[O_IP_PROTO] = KEY_IPFIX(UINT8, "ip.protocol", IETF, protocolIdentifier),
+	[O_L4_SPORT] = KEY_IPFIX(UINT16, "l4.sport", IETF, sourceTransportPort),
+	[O_L4_DPORT] = KEY_IPFIX(UINT16, "l4.dport", IETF,
+							 destinationTransportPort),
+	/* FIXME: this could also be octetDeltaCount */
+	[O_RAW_IN_PKTLEN] = KEY_IPFIX(UINT32, "raw.in.pktlen", IETF,
+								  octetTotalCount),
+	/* FIXME: this could also be packetDeltaCount */
+	[O_RAW_IN_PKTCOUNT] = KEY_IPFIX(UINT32, "raw.in.pktcount", IETF,
+									packetTotalCount),
+	/* FIXME: this could also be octetDeltaCount */
+	[O_RAW_OUT_PKTLEN] = KEY_IPFIX(UINT32, "raw.out.pktlen", IETF,
+								   octetTotalCount),
+	/* FIXME: this could also be packetDeltaCount */
+	[O_RAW_OUT_PKTCOUNT] = KEY_IPFIX(UINT32, "raw.out.pktcount",
+									 IETF, packetTotalCount),
+	[O_ICMP_CODE] = KEY_IPFIX(UINT8, "icmp.code", IETF, icmpCodeIPv4),
+	[O_ICMP_TYPE] = KEY_IPFIX(UINT8, "icmp.type", IETF, icmpTypeIPv4),
+	[O_CT_MARK] = KEY_IPFIX(UINT32, "ct.mark",NETFILTER, NF_mark),
+	[O_CT_ID] = KEY_IPFIX(UINT32, "ct.id", NETFILTER, NF_conntrack_id),
+	[O_FLOW_START_SEC] = KEY_IPFIX(UINT32, "flow.start.sec", IETF,
+								   flowStartSeconds),
+	[O_FLOW_START_USEC] = KEY_IPFIX(UINT32, "flow.start.usec", IETF,
+									flowStartMicroSeconds),
+	[O_FLOW_END_SEC] = KEY_IPFIX(UINT32, "flow.end.sec", IETF,
+								 flowEndSeconds),
+	[O_FLOW_END_USEC] = KEY_IPFIX(UINT32, "flow.end.usec", IETF,
+								  flowEndSeconds),
+	[O_FLOW_DURATION] = KEY(UINT32, "flow.duration"),
+};
+
+
+static int
+nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
+{
+	struct ulogd_pluginstance *pi = arg;
+	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+	struct nfnl_ct *nfnl_ct;
+	int grp;
+
+	pr_fn_debug("msg=%p pi=%p\n", msg, pi);
+
+	nfnl_ct = nfnlmsg_ct_parse(nlh);
+
+	switch (grp = nfnlmsg_ct_group(nlh)) {
+	case NFNLGRP_CONNTRACK_NEW:
+		break;
+
+	case NFNLGRP_CONNTRACK_UPDATE:
+		break;
+
+	case NFNLGRP_CONNTRACK_DESTROY:
+		break;
+
+	default:
+		upi_log(pi, ULOGD_ERROR, "unsupported group '%d'\n", grp);
+	}
+
+	return 0;
+}
+
+static int
+nfct_overrun_cb(struct nl_msg *msg, void *arg)
+{
+	struct ulogd_pluginstance *pi = arg;
+
+	pr_fn_debug("msg=%p pi=%p\n", msg, pi);
+
+	return 0;
+}
+
+static int
+nfct_ufd_cb(int fd, unsigned what, void *arg)
+{
+	struct ulogd_pluginstance *pi = arg;
+	struct nfct_priv *priv = upi_priv(pi);
+
+	pr_fn_debug("fd=%d what=%u arg=%p\n", fd, what, arg);
+
+	if (what & ULOGD_FD_READ) {
+		if (nl_recvmsgs_default(priv->nlh) < 0) {
+			upi_log(pi, ULOGD_ERROR, "nl_recvmsgs: %s\n", nl_geterror());
+			goto out;
+		}
+	}
+
+	return 0;
+
+out:
+	return -1;
+}
+
+static void
+nfct_timer_cb(struct ulogd_timer *t)
+{
+
+}
+
+static int
+nfct_configure(struct ulogd_pluginstance *pi)
+{
+	pr_fn_debug("pi=%p\n", pi);
+
+	return 0;
+}
+
+static int
+nfct_start(struct ulogd_pluginstance *pi)
+{
+	struct nfct_priv *priv = upi_priv(pi);
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	if ((priv->nlh = nl_handle_alloc()) == NULL) {
+		upi_log(pi, ULOGD_FATAL, "error allocating netlink handle");
+		goto err;
+	}
+
+	nl_socket_modify_cb(priv->nlh, NL_CB_VALID, NL_CB_CUSTOM,
+						nfct_parse_valid_cb, pi);
+	nl_socket_modify_cb(priv->nlh, NL_CB_OVERRUN, NL_CB_CUSTOM,
+						nfct_overrun_cb, pi);
+
+	nl_disable_sequence_check(priv->nlh);
+
+	if (nfnl_connect(priv->nlh) < 0) {
+		upi_log(pi, ULOGD_FATAL, "connect: %s\n", nl_geterror());
+		goto err_handle_destroy;
+    }
+
+	if (set_sockbuf_len(nl_socket_get_fd(priv->nlh),
+						RCVBUF_LEN, SNDBUF_LEN) < 0)
+		goto err_handle_destroy;
+
+	nl_socket_set_nonblocking(priv->nlh);
+
+	nl_socket_add_membership(priv->nlh, NFNLGRP_CONNTRACK_NEW);
+	nl_socket_add_membership(priv->nlh, NFNLGRP_CONNTRACK_UPDATE);
+	nl_socket_add_membership(priv->nlh, NFNLGRP_CONNTRACK_DESTROY);
+
+	priv->ufd.fd = nl_socket_get_fd(priv->nlh);
+	priv->ufd.cb = &nfct_ufd_cb;
+	priv->ufd.data = pi;
+	priv->ufd.when = ULOGD_FD_READ;
+
+	if (ulogd_register_fd(&priv->ufd) < 0)
+		goto err_handle_destroy;
+
+    priv->timer.cb = nfct_timer_cb;
+    priv->timer.ival = 1 SEC;
+    priv->timer.flags = TIMER_F_PERIODIC;
+    priv->timer.data = pi;
+
+    if (ulogd_register_timer(&priv->timer) < 0)
+		goto err_unreg_ufd;
+
+	upi_log(pi, ULOGD_DEBUG, "ctnetlink connection opened\n");
+
+	return ULOGD_IRET_OK;
+
+err_unreg_ufd:
+	ulogd_unregister_fd(&priv->ufd);
+err_handle_destroy:
+	nl_handle_destroy(priv->nlh);
+err:
+	return ULOGD_IRET_ERR;
+}
+
+static int
+nfct_stop(struct ulogd_pluginstance *pi)
+{
+	struct nfct_priv *priv = upi_priv(pi);
+
+	pr_fn_debug("pi=%p\n", pi);
+
+	ulogd_unregister_fd(&priv->ufd);
+
+	if (priv->nlh != NULL) {
+		nl_handle_destroy(priv->nlh);
+		priv->nlh = NULL;
+	}
+
+	upi_log(pi, ULOGD_DEBUG, "ctnetlink connection close\n");
+
+	return 0;
+}
 
 static struct ulogd_plugin nfct_plugin = {
 	.name = "NFCT",
@@ -996,12 +1216,14 @@ static struct ulogd_plugin nfct_plugin = {
 		.num_keys = ARRAY_SIZE(nfct_okeys),
 		.type = ULOGD_DTYPE_FLOW,
 	},
+#if 0
 	.config_kset 	= &nfct_kset,
+#endif /* 0 */
 	.configure	= nfct_configure,
 	.start		= nfct_start,
 	.stop		= nfct_stop,
 	.rev		= ULOGD_PLUGIN_REVISION,
-	.priv_size	= sizeof(struct nfct_pluginstance),
+	.priv_size	= sizeof(struct nfct_priv),
 };
 
 void __upi_ctor init(void);
