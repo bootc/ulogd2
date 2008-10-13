@@ -786,7 +786,7 @@ nfct_err_cb(struct sockaddr_nl *sa, struct nlmsgerr *e, void *arg)
 	if (ct == NULL)
 		return 0;				/* already gone */
 
-	switch (e->error) {
+	switch (-e->error) {
 	case ENOENT:				/* destroy message was lost */
         if (ct->refcnt > 1) {
             struct conntrack *ct_tmp = tcache_find(priv->tcache, &ct->tuple);
