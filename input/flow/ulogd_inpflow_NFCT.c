@@ -218,6 +218,64 @@ ct_put(struct conntrack *ct)
 	}
 }
 
+static int
+ct_tuple_cmp(const struct ct_tuple *t1, const struct ct_tuple *t2)
+{
+	return memcmp(t1, t2, sizeof(struct ct_tuple));
+}
+
+static void
+ct_dump_tuple(const struct ct_tuple *t)
+{
+	printf("IP src=%lu dst=%lu family=%u l4proto=%u dport=%u\n",
+		   (unsigned long)t->src, (unsigned long)t->dst,
+		   t->family, t->l4proto, htons(t->pinfo.tcp.dport));
+}
+
+static int
+nfnl_ct_to_tuple(const struct nfnl_ct *nfnl_ct, struct ct_tuple *t)
+{
+	struct nl_addr *nl_addr;
+
+	if (t == NULL)
+		return -1;
+
+	memset(t, 0, sizeof(*t));
+
+	if ((nl_addr = nfnl_ct_get_src(nfnl_ct, 0 /* orig */)) == NULL)
+		return -1;
+	t->src = *((uint32_t *)nl_addr_get_binary_addr(nl_addr));
+
+	if ((nl_addr = nfnl_ct_get_dst(nfnl_ct, 0 /* orig */)) == NULL)
+		return -1;
+	t->dst = *((uint32_t *)nl_addr_get_binary_addr(nl_addr));
+
+	t->family = nfnl_ct_get_family(nfnl_ct);
+	t->l4proto = nfnl_ct_get_proto(nfnl_ct);
+
+	switch (t->l4proto) {
+	case IPPROTO_TCP:
+	case IPPROTO_UDP:
+		t->pinfo.tcp.sport = nfnl_ct_get_src_port(nfnl_ct, 0);
+		t->pinfo.tcp.dport = nfnl_ct_get_dst_port(nfnl_ct, 0);
+		break;
+
+	case IPPROTO_ICMP:
+		t->pinfo.icmp.type = nfnl_ct_get_icmp_type(nfnl_ct, 0);
+		t->pinfo.icmp.code = nfnl_ct_get_icmp_code(nfnl_ct, 0);
+		break;
+
+	default:
+		break;
+	}
+
+#if 0
+	ct_dump_tuple(t);
+#endif /* 0 */
+
+	return 0;
+}
+
 /* cache API */
 struct cache *
 cache_alloc(int cache_size)
@@ -298,58 +356,6 @@ cache_head_next(const struct cache *c)
     return (c->c_curr_head + 1) % c->c_num_heads;
 }
 
-static void
-ct_dump_tuple(const struct ct_tuple *t)
-{
-	printf("IP src=%lu dst=%lu family=%u l4proto=%u dport=%u\n",
-		   (unsigned long)t->src, (unsigned long)t->dst,
-		   t->family, t->l4proto, htons(t->pinfo.tcp.dport));
-}
-
-static int
-nfnl_ct_to_tuple(const struct nfnl_ct *nfnl_ct, struct ct_tuple *t)
-{
-	struct nl_addr *nl_addr;
-
-	if (t == NULL)
-		return -1;
-
-	memset(t, 0, sizeof(*t));
-
-	if ((nl_addr = nfnl_ct_get_src(nfnl_ct, 0 /* orig */)) == NULL)
-		return -1;
-	t->src = *((uint32_t *)nl_addr_get_binary_addr(nl_addr));
-
-	if ((nl_addr = nfnl_ct_get_dst(nfnl_ct, 0 /* orig */)) == NULL)
-		return -1;
-	t->dst = *((uint32_t *)nl_addr_get_binary_addr(nl_addr));
-
-	t->family = nfnl_ct_get_family(nfnl_ct);
-	t->l4proto = nfnl_ct_get_proto(nfnl_ct);
-
-	switch (t->l4proto) {
-	case IPPROTO_TCP:
-	case IPPROTO_UDP:
-		t->pinfo.tcp.sport = nfnl_ct_get_src_port(nfnl_ct, 0);
-		t->pinfo.tcp.dport = nfnl_ct_get_dst_port(nfnl_ct, 0);
-		break;
-
-	case IPPROTO_ICMP:
-		t->pinfo.icmp.type = nfnl_ct_get_icmp_type(nfnl_ct, 0);
-		t->pinfo.icmp.code = nfnl_ct_get_icmp_code(nfnl_ct, 0);
-		break;
-
-	default:
-		break;
-	}
-
-#if 0
-	ct_dump_tuple(t);
-#endif /* 0 */
-
-	return 0;
-}
-
 /* tuple cache */
 static ct_hash_t
 tcache_hash(const struct cache *c, const struct ct_tuple *t)
@@ -361,12 +367,6 @@ tcache_hash(const struct cache *c, const struct ct_tuple *t)
 
 	return jhash_3words(t->src, t->dst ^ t->l4proto, t->pinfo.all,
 						rnd) % c->c_num_heads;
-}
-
-static int
-ct_tuple_cmp(const struct ct_tuple *t1, const struct ct_tuple *t2)
-{
-	return memcmp(t1, t2, sizeof(struct ct_tuple));
 }
 
 static int
