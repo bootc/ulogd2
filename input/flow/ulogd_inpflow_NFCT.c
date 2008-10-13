@@ -676,8 +676,12 @@ nfct_gc_timer_cb(struct ulogd_timer *t)
             num_conntrack,
             priv->tcache->c_cnt, tc_start, tc_end);
 
-	if (--priv->overruns == 0)
+	if (--priv->overruns == 0) {
 		ulogd_unregister_timer(&priv->timer);
+
+		upi_log(pi, ULOGD_DEBUG, "GC timer stopped\n");
+	}
+
 	if (priv->overruns < 0)
 		priv->overruns = 0;
 }
