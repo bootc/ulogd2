@@ -629,7 +629,7 @@ ulogd_propagate_results(struct ulogd_pluginstance *pi)
 	}
 
 out:
-	stack_clean_results(pi);
+	stack_clean_results(stack);
 }
 
 /* try to lookup a registered plugin for a given name */
