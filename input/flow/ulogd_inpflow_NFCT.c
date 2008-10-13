@@ -997,12 +997,11 @@ static struct ulogd_plugin nfct_plugin = {
 		.type = ULOGD_DTYPE_FLOW,
 	},
 	.config_kset 	= &nfct_kset,
-	.interp 	= NULL,
 	.configure	= nfct_configure,
 	.start		= nfct_start,
 	.stop		= nfct_stop,
-	.priv_size	= sizeof(struct nfct_pluginstance),
 	.rev		= ULOGD_PLUGIN_REVISION,
+	.priv_size	= sizeof(struct nfct_pluginstance),
 };
 
 void __attribute__ ((constructor)) init(void);

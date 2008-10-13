@@ -160,6 +160,7 @@ static struct ulogd_plugin oprint_plugin = {
 	.stop	= &oprint_fini,
 	.config_kset = &oprint_kset,
 	.rev = ULOGD_PLUGIN_REVISION,
+	.priv_size = sizeof(struct oprint_priv),
 };
 
 void __attribute__ ((constructor)) init(void);

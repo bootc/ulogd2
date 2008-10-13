@@ -564,12 +564,12 @@ static struct ulogd_plugin astaro_plugin = {
 		.type = ULOGD_DTYPE_SINK,
 	},
 	.config_kset		= &astaro_kset,
-	
 	.configure	= astaro_configure,
 	.start		= astaro_start,
 	.stop		= astaro_fini,
 	.interp		= astaro_output,
 	.rev		= ULOGD_PLUGIN_REVISION,
+	.priv_size	= sizeof(struct astaro_priv),
 };
 
 void __attribute__ ((constructor)) init(void);

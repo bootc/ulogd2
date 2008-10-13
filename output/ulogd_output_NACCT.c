@@ -165,6 +165,7 @@ static struct ulogd_plugin nacct_plugin = {
 	.stop	= &nacct_fini,
 	.config_kset = &nacct_kset,
 	.rev = ULOGD_PLUGIN_REVISION,
+	.priv_size = sizeof(struct nacct_priv),
 };
 
 void __attribute__ ((constructor)) init(void);

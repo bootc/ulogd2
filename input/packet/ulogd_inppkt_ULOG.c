@@ -269,6 +269,7 @@ struct ulogd_plugin libulog_plugin = {
 	.stop = &fini,
 	.config_kset = &libulog_kset,
 	.rev = ULOGD_PLUGIN_REVISION,
+	.priv_size = sizeof(struct ulog_input),
 };
 
 void __attribute__ ((constructor)) initializer(void)
