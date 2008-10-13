@@ -82,7 +82,7 @@ struct logemu_instance {
 
 static int _output_logemu(struct ulogd_pluginstance *upi)
 {
-	struct logemu_instance *li = (struct logemu_instance *) &upi->private;
+	struct logemu_instance *li = (struct logemu_instance *)upi->private;
 	struct ulogd_key *res = upi->input.keys;
 
 	if (res[0].u.source->flags & ULOGD_RETF_VALID) {
@@ -111,7 +111,7 @@ static int _output_logemu(struct ulogd_pluginstance *upi)
 
 static int start_logemu(struct ulogd_pluginstance *pi)
 {
-	struct logemu_instance *li = (struct logemu_instance *) &pi->private;
+	struct logemu_instance *li = (struct logemu_instance *)pi->private;
 	char *tmp;
 
 	upi_log(pi, ULOGD_INFO, "starting logemu\n");
@@ -141,7 +141,7 @@ static int start_logemu(struct ulogd_pluginstance *pi)
 }
 
 static int fini_logemu(struct ulogd_pluginstance *pi) {
-	struct logemu_instance *li = (struct logemu_instance *) &pi->private;
+	struct logemu_instance *li = (struct logemu_instance *)pi->private;
 
 	if (li->of != stdout)
 		fclose(li->of);

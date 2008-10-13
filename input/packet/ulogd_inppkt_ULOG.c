@@ -186,7 +186,7 @@ static int interp_packet(struct ulogd_pluginstance *ip, ulog_packet_msg_t *pkt)
 static int ulog_read_cb(int fd, unsigned int what, void *param)
 {
 	struct ulogd_pluginstance *upi = (struct ulogd_pluginstance *)param;
-	struct ulog_input *u = (struct ulog_input *) &upi->private;
+	struct ulog_input *u = (struct ulog_input *)upi->private;
 	ulog_packet_msg_t *upkt;
 	int len;
 
@@ -213,7 +213,7 @@ static int ulog_read_cb(int fd, unsigned int what, void *param)
 
 static int init(struct ulogd_pluginstance *upi)
 {
-	struct ulog_input *ui = (struct ulog_input *) &upi->private;
+	struct ulog_input *ui = (struct ulog_input *)upi->private;
 
 	ui->libulog_buf = malloc(upi->config_kset->ces[0].u.value);
 	if (!ui->libulog_buf) {
@@ -253,7 +253,7 @@ static int fini(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-struct ulogd_plugin libulog_plugin = {
+static struct ulogd_plugin libulog_plugin = {
 	.name = "ULOG",
 	.input = {
 		.type = ULOGD_DTYPE_SOURCE,

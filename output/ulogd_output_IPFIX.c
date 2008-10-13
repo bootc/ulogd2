@@ -297,7 +297,7 @@ find_template_for_bitmask(struct ulogd_pluginstance *upi,
 
 static int output_ipfix(struct ulogd_pluginstance *upi)
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *) &upi->private;
+	struct ipfix_instance *ii = (struct ipfix_instance *)upi->private;
 	struct ulogd_ipfix_template *template;
 	unsigned int total_size;
 	int i;
@@ -444,7 +444,7 @@ out_bm_free:
 
 static int stop_ipfix(struct ulogd_pluginstance *pi) 
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *) &pi->private;
+	struct ipfix_instance *ii = (struct ipfix_instance *)pi->private;
 
 	close(ii->fd);
 
@@ -456,7 +456,7 @@ static int stop_ipfix(struct ulogd_pluginstance *pi)
 
 static int configure_ipfix(struct ulogd_pluginstance *pi)
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *) &pi->private;
+	struct ipfix_instance *ii = (struct ipfix_instance *)pi->private;
 	char *proto_str = proto_ce(pi->config_kset).u.string;
 	int ret;
 
