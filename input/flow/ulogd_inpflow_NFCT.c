@@ -39,6 +39,7 @@
 #include <netlink/netfilter/nfnl.h>
 #include <netlink/netfilter/ct.h>
 #include <netlink/attr.h>
+#include <linux/netfilter/nf_conntrack_tcp.h>
 #include <linux/netfilter/nfnetlink_conntrack.h>
 #include "linux_jhash.h"
 
@@ -495,9 +496,13 @@ nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
 
         ct->time[UPDATE].tv_sec = t_now_local;
 
-		/* TODO update conntrack */
-		upi_log(pi, ULOGD_DEBUG, "update ct %p\n", ct);
-		break;
+        /* handle TCP connections differently in order not to bloat CT
+           hash with many TIME_WAIT connections */
+        if (tuple.l4proto == IPPROTO_TCP) {
+            if (nfnl_ct_get_tcp_state(nfnl_ct) == TCP_CONNTRACK_TIME_WAIT)
+                return propagate_ct(pi, ct);
+        }
+        break;
 
 	case NFNLGRP_CONNTRACK_DESTROY:
 		ct = tcache_find(priv->tcache, &tuple);
