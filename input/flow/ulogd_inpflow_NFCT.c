@@ -81,6 +81,7 @@ struct ct_tuple {
 
 struct conntrack {
 	struct llist_head link;
+	struct llist_head seq_link;
 	struct ct_tuple tuple;
 	struct nfnl_ct *nfnl_ct;
 	unsigned refcnt;
@@ -110,6 +111,7 @@ struct nfct_priv {
 	struct ulogd_fd ufd;
 	struct ulogd_timer timer;
 	struct cache *tcache;
+	struct cache *scache;
 
 	/* number of overruns, will be decremented by GC timer */
 	unsigned overruns;
@@ -354,6 +356,72 @@ static inline ct_hash_t
 cache_head_next(const struct cache *c)
 {
     return (c->c_curr_head + 1) % c->c_num_heads;
+}
+
+/* sequence cache */
+static ct_hash_t
+scache_hash(struct cache *c, struct conntrack *ct)
+{
+	static unsigned rnd;
+
+	if (rnd == 0U)
+		rnd = rand();
+
+	return (ct->last_seq ^ rnd) % c->c_num_heads;
+}
+
+static int
+scache_add(struct cache *c, struct conntrack *ct)
+{
+    ct_hash_t h = scache_hash(c, ct);
+
+    llist_add(&ct->seq_link, &c->c_head[h].link);
+    c->c_head[h].cnt++;
+
+    pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
+             c->c_head[h].cnt, c->c_cnt);
+
+    return 0;
+}
+
+static int
+scache_del(struct cache *c, struct conntrack *ct)
+{
+    ct_hash_t h = scache_hash(c, ct);
+
+    assert(c->c_head[h].cnt > 0);
+
+    pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
+             c->c_head[h].cnt, c->c_cnt);
+
+    llist_del(&ct->seq_link);
+    ct->last_seq = 0;
+
+    c->c_head[h].cnt--;
+
+    return 0;
+}
+
+static struct conntrack *
+scache_find(const struct ulogd_pluginstance *pi, unsigned seq)
+{
+    struct nfct_priv *priv = upi_priv(pi);
+    struct cache *c = priv->scache;
+    struct conntrack *ct;
+    ct_hash_t h = scache_hash(c, ct);
+
+    llist_for_each_entry(ct, &c->c_head[h].link, seq_link) {
+        if (ct->last_seq == seq)
+            return ct;
+    }
+
+    return NULL;
+}
+
+static int
+scache_cleanup(struct cache *c)
+{
+	return 0;
 }
 
 /* tuple cache */
@@ -664,17 +732,21 @@ nfct_gc_timer_cb(struct ulogd_timer *t)
 {
 	struct ulogd_pluginstance *pi = t->data;
 	struct nfct_priv *priv = upi_priv(pi);
-	unsigned tc_start, tc_end;
+	unsigned tc_start, tc_end, sc_start, sc_end;
 
     tc_start = priv->tcache->c_curr_head;
+	sc_start = priv->scache->c_curr_head;
 
 	tcache_cleanup(priv->tcache);
+	scache_cleanup(priv->scache);
 
     tc_end = priv->tcache->c_curr_head;
+	sc_end = priv->scache->c_curr_head;
 
-	upi_log(pi, ULOGD_DEBUG, "ct=%u t=%u [%u,%u[\n",
+	upi_log(pi, ULOGD_DEBUG, "ct=%u t=%u [%u,%u[ s=%u [%u,%u[\n",
             num_conntrack,
-            priv->tcache->c_cnt, tc_start, tc_end);
+            priv->tcache->c_cnt, tc_start, tc_end,
+            priv->scache->c_cnt, sc_start, sc_end);
 
 	if (--priv->overruns == 0) {
 		ulogd_unregister_timer(&priv->timer);
@@ -700,6 +772,7 @@ init_caches(struct ulogd_pluginstance *pi)
 	struct nfct_priv *priv = upi_priv(pi);
 	struct cache *c;
 
+	/* tuple cache */
 	c = priv->tcache = cache_alloc(TCACHE_SIZE);
 	if (c == NULL) {
 		upi_log(pi, ULOGD_FATAL, "out of memory\n");
@@ -708,6 +781,16 @@ init_caches(struct ulogd_pluginstance *pi)
 
 	c->c_add = tcache_add;
 	c->c_del = tcache_del;
+
+	/* sequence cache */
+	c = priv->scache = cache_alloc(SCACHE_SIZE);
+	if (c == NULL) {
+		upi_log(pi, ULOGD_FATAL, "out of memory\n");
+		return ULOGD_IRET_ERR;
+	}
+
+	c->c_add = scache_add;
+	c->c_del = scache_del;
 
 	return 0;
 }
@@ -789,6 +872,10 @@ nfct_stop(struct ulogd_pluginstance *pi)
 	if (priv->tcache != NULL) {
 		cache_free(priv->tcache);
 		priv->tcache = NULL;
+	}
+	if (priv->scache != NULL) {
+		cache_free(priv->scache);
+		priv->scache = NULL;
 	}
 
 	upi_log(pi, ULOGD_DEBUG, "ctnetlink connection close\n");
