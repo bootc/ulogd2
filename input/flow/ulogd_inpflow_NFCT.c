@@ -168,6 +168,8 @@ static struct ulogd_key nfct_okeys[] = {
 };
 
 
+static void ct_dump_tuple(const struct ct_tuple *) __ulogd_unused;
+
 static struct conntrack *
 ct_alloc_init(struct nfnl_ct *nfnl_ct, const struct ct_tuple *t)
 {
