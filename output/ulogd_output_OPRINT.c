@@ -49,7 +49,7 @@ struct oprint_priv {
 
 static int oprint_interp(struct ulogd_pluginstance *upi)
 {
-	struct oprint_priv *opi = (struct oprint_priv *)upi->private;
+	struct oprint_priv *opi = upi_priv(upi);
 	unsigned int i;
 	
 	fprintf(opi->of, "===>PACKET BOUNDARY\n");
@@ -126,7 +126,7 @@ static int oprint_configure(struct ulogd_pluginstance *upi)
 
 static int oprint_init(struct ulogd_pluginstance *upi)
 {
-	struct oprint_priv *op = (struct oprint_priv *)upi->private;
+	struct oprint_priv *op = upi_priv(upi);
 
 	op->of = fopen(upi->config_kset->ces[0].u.string, "a");
 	if (!op->of) {
@@ -138,7 +138,7 @@ static int oprint_init(struct ulogd_pluginstance *upi)
 
 static int oprint_fini(struct ulogd_pluginstance *pi)
 {
-	struct oprint_priv *op = (struct oprint_priv *)pi->private;
+	struct oprint_priv *op = upi_priv(pi);
 
 	if (op->of != stdout)
 		fclose(op->of);

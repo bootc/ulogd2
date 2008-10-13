@@ -440,7 +440,7 @@ id_to_sub(unsigned id)
 static int
 astaro_output(struct ulogd_pluginstance *pi)
 {
-	struct astaro_priv *priv = (struct astaro_priv *)pi->private;
+	struct astaro_priv *priv = upi_priv(pi);
 	const struct ulogd_key *in = pi->input.keys;
 	struct ulogd_key *ces = pi->input.keys;
 	static char buf[1024];
@@ -515,7 +515,7 @@ nv_get_value(struct nv *nv, const char *name, int def_val)
 static int
 astaro_configure(struct ulogd_pluginstance *pi)
 {
-	struct astaro_priv *priv = (struct astaro_priv *)pi->private;
+	struct astaro_priv *priv = upi_priv(pi);
 
 	priv->facility = nv_get_value(nv_facility, CFG_FACILITY(pi), LOG_KERN);
 	if (priv->facility < 0) {

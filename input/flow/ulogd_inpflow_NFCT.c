@@ -191,7 +191,7 @@ static struct conntrack *scache_find(const struct ulogd_pluginstance *,
 static int
 nl_error(struct ulogd_pluginstance *pi, struct nlmsghdr *nlh, int *err)
 {
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 	struct nlmsgerr *e = NLMSG_DATA(nlh);
 	struct conntrack *ct;
 
@@ -236,7 +236,7 @@ nfnl_recv_msgs(struct nfnl_handle *nfnlh,
 {
 	static unsigned char buf[NFNL_BUFFSIZE];
 	struct ulogd_pluginstance *pi = arg;
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 
 	for (;;) {
 		struct nlmsghdr *nlh = (void *)buf;
@@ -491,7 +491,7 @@ static struct conntrack *
 tcache_find(const struct ulogd_pluginstance *pi,
 			const struct nfct_tuple *tuple)
 {
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 	struct cache *c = priv->tcache;
 	struct conntrack *ct;
 	conntrack_hash_t h;
@@ -511,7 +511,7 @@ tcache_find(const struct ulogd_pluginstance *pi,
 static int
 tcache_cleanup(struct ulogd_pluginstance *pi)
 {
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 	struct cache *c = priv->tcache;
 	conntrack_hash_t end = cache_slice_end(c, 32);
 	struct conntrack *ct;
@@ -603,7 +603,7 @@ scache_del(struct cache *c, struct conntrack *ct)
 static struct conntrack *
 scache_find(const struct ulogd_pluginstance *pi, unsigned seq)
 {
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 	struct cache *c = priv->scache;
 	struct conntrack *ct;
 	conntrack_hash_t h;
@@ -622,7 +622,7 @@ scache_find(const struct ulogd_pluginstance *pi, unsigned seq)
 static int
 scache_cleanup(struct ulogd_pluginstance *pi)
 {
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 	struct cache *c = priv->scache;
 	conntrack_hash_t end = cache_slice_end(c, 16);
 	struct conntrack *ct;
@@ -711,7 +711,7 @@ static int
 propagate_ct(struct ulogd_pluginstance *upi, struct nfct_conntrack *nfct,
 			 struct conntrack *ct, unsigned int flags)
 {
-	struct nfct_pluginstance *priv = (void *)upi->private;
+	struct nfct_pluginstance *priv = upi_priv(upi);
 
 	do {
 		if (nfct->tuple[NFCT_DIR_ORIGINAL].src.v4 == htonl(INADDR_LOOPBACK)
@@ -738,7 +738,7 @@ static int
 do_nfct_msg(struct nlmsghdr *nlh, void *arg)
 {
 	struct ulogd_pluginstance *pi = arg;
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 	struct nfgenmsg *nfh = NLMSG_DATA(nlh);
 	struct nfct_conntrack nfct;
 	struct conntrack *ct;
@@ -812,7 +812,7 @@ static int
 read_cb_nfct(int fd, unsigned what, void *param)
 {
 	struct ulogd_pluginstance *pi = param;
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 
 	if (!(what & ULOGD_FD_READ))
 		return 0;
@@ -829,7 +829,7 @@ static void
 nfct_timer_cb(struct ulogd_timer *t)
 {
 	struct ulogd_pluginstance *pi = t->data;
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 	unsigned sc_start, sc_end, tc_start, tc_end;
 
 	sc_start = priv->scache->c_curr_head;
@@ -860,7 +860,7 @@ nfct_configure(struct ulogd_pluginstance *upi)
 static int
 init_caches(struct ulogd_pluginstance *pi)
 {
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 	struct cache *c;
 
 	assert(priv->tcache == NULL && priv->scache == NULL);
@@ -897,7 +897,7 @@ init_caches(struct ulogd_pluginstance *pi)
 static int
 nfct_start(struct ulogd_pluginstance *upi)
 {
-	struct nfct_pluginstance *priv = (void *)upi->private;
+	struct nfct_pluginstance *priv = upi_priv(upi);
 
 	pr_debug("%s: pi=%p\n", __func__, upi);
 
@@ -956,7 +956,7 @@ nfct_start(struct ulogd_pluginstance *upi)
 static int
 nfct_stop(struct ulogd_pluginstance *pi)
 {
-	struct nfct_pluginstance *priv = (void *)pi->private;
+	struct nfct_pluginstance *priv = upi_priv(pi);
 
 	pr_debug("%s: pi=%p\n", __func__, pi);
 

@@ -284,7 +284,7 @@ static struct ulogd_ipfix_template *
 find_template_for_bitmask(struct ulogd_pluginstance *upi,
 			  struct bitmask *bm)
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *) &upi->private;
+	struct ipfix_instance *ii = upi_priv(upi);
 	struct ulogd_ipfix_template *tmpl;
 	
 	/* FIXME: this can be done more efficient! */
@@ -297,7 +297,7 @@ find_template_for_bitmask(struct ulogd_pluginstance *upi,
 
 static int output_ipfix(struct ulogd_pluginstance *upi)
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *)upi->private;
+	struct ipfix_instance *ii = upi_priv(upi);
 	struct ulogd_ipfix_template *template;
 	unsigned int total_size;
 	int i;
@@ -344,7 +344,7 @@ static int output_ipfix(struct ulogd_pluginstance *upi)
 
 static int open_connect_socket(struct ulogd_pluginstance *pi)
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *) &pi->private;
+	struct ipfix_instance *ii = upi_priv(pi);
 	struct addrinfo hint, *res, *resave;
 	int ret;
 
@@ -444,7 +444,7 @@ out_bm_free:
 
 static int stop_ipfix(struct ulogd_pluginstance *pi) 
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *)pi->private;
+	struct ipfix_instance *ii = upi_priv(pi);
 
 	close(ii->fd);
 
@@ -456,7 +456,7 @@ static int stop_ipfix(struct ulogd_pluginstance *pi)
 
 static int configure_ipfix(struct ulogd_pluginstance *pi)
 {
-	struct ipfix_instance *ii = (struct ipfix_instance *)pi->private;
+	struct ipfix_instance *ii = upi_priv(pi);
 	char *proto_str = proto_ce(pi->config_kset).u.string;
 	int ret;
 
@@ -496,7 +496,6 @@ static struct ulogd_plugin ipfix_plugin = {
 	},
 	.config_kset 	= &ipfix_kset,
 	.priv_size 	= sizeof(struct ipfix_instance),
-
 	.configure	= &configure_ipfix,
 	.start	 	= &start_ipfix,
 	.stop	 	= &stop_ipfix,

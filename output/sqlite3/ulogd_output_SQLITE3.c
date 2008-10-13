@@ -214,7 +214,7 @@ row_add(struct sqlite3_priv *priv, struct row *row)
 static void
 set_commit_time(const struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 
 	priv->commit_time = t_now + 1;
 
@@ -227,7 +227,7 @@ set_commit_time(const struct ulogd_pluginstance *pi)
 static int
 db_createstmt(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	char buf[ULOGD_MAX_KEYLEN];
 	char *underscore;
 	char *stmt_pos;
@@ -287,7 +287,7 @@ db_createstmt(struct ulogd_pluginstance *pi)
 static int
 db_count_cols(struct ulogd_pluginstance *pi, sqlite3_stmt **stmt)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	char query[SELECT_ALL_LEN + CONFIG_VAL_STRING_LEN] = SELECT_ALL_STR;
 
 	strncat(query, table_ce(pi), LINE_LEN);
@@ -303,7 +303,7 @@ db_count_cols(struct ulogd_pluginstance *pi, sqlite3_stmt **stmt)
 static int
 db_create_tbl(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	char *errmsg;
 	int ret;
 
@@ -325,7 +325,7 @@ db_create_tbl(struct ulogd_pluginstance *pi)
 static int
 db_init(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	char buf[ULOGD_MAX_KEYLEN];
 	char *underscore;
 	sqlite3_stmt *schema_stmt;
@@ -384,7 +384,7 @@ db_init(struct ulogd_pluginstance *pi)
 static void
 db_reset(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 
 	sqlite3_finalize(priv->p_stmt);
 
@@ -399,7 +399,7 @@ db_reset(struct ulogd_pluginstance *pi)
 static int
 db_start(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 
 	upi_log(pi, ULOGD_DEBUG, "opening database connection\n");
 
@@ -431,7 +431,7 @@ db_start(struct ulogd_pluginstance *pi)
 static int
 db_err(struct ulogd_pluginstance *pi, int ret)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 
 	pr_debug("%s: ret=%d (errcode %d)\n", __func__, ret,
 			 sqlite3_errcode(priv->dbh));
@@ -477,7 +477,7 @@ db_err(struct ulogd_pluginstance *pi, int ret)
 static int
 db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	int db_col = 1, ret;
 
 	do {
@@ -552,7 +552,7 @@ db_add_row(struct ulogd_pluginstance *pi, const struct row *row)
 static int
 delete_rows(struct ulogd_pluginstance *pi, int rows)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	struct llist_head *curr, *tmp;
 
     llist_for_each_prev_safe(curr, tmp, &priv->rows) {
@@ -578,7 +578,7 @@ delete_rows(struct ulogd_pluginstance *pi, int rows)
 static int
 db_commit_rows(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	struct row *row;
 	int ret, rows = 0, max_commit;
 
@@ -624,7 +624,7 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 static int
 sqlite3_interp(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	struct col *cols = priv->cols;
 	struct row *row;
 
@@ -657,7 +657,7 @@ static void
 sqlite_timer_cb(struct ulogd_timer *t)
 {
 	struct ulogd_pluginstance *pi = t->data;
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 	int rows;
 
 	pr_debug("%s: timer=%p\n", __func__, t);
@@ -678,7 +678,7 @@ sqlite_timer_cb(struct ulogd_timer *t)
 static int
 sqlite3_configure(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 
 	memset(priv, 0, sizeof(struct sqlite3_priv));
 	
@@ -729,7 +729,7 @@ sqlite3_configure(struct ulogd_pluginstance *pi)
 static int
 sqlite3_start(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 
 	pr_debug("%s: pi=%p\n", __func__, pi);
 
@@ -754,7 +754,7 @@ sqlite3_start(struct ulogd_pluginstance *pi)
 static int
 sqlite3_stop(struct ulogd_pluginstance *pi)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 
 	pr_debug("%s: pi=%p\n", __func__, pi);
 
@@ -773,7 +773,7 @@ sqlite3_stop(struct ulogd_pluginstance *pi)
 static int
 sqlite3_signal(struct ulogd_pluginstance *pi, int sig)
 {
-	struct sqlite3_priv *priv = (void *)pi->private;
+	struct sqlite3_priv *priv = upi_priv(pi);
 
 	switch (sig) {
 	case SIGUSR1:

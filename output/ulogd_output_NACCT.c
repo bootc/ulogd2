@@ -61,7 +61,7 @@ struct nacct_priv {
 static int
 nacct_interp(struct ulogd_pluginstance *pi)
 {
-	struct nacct_priv *priv = (struct nacct_priv *)pi->private;
+	struct nacct_priv *priv = upi_priv(pi);
 	static char buf[80];
 
 	/* try to be as close to nacct as possible.  Instead of nacct's
@@ -130,7 +130,7 @@ nacct_conf(struct ulogd_pluginstance *pi)
 static int
 nacct_init(struct ulogd_pluginstance *pi)
 {
-	struct nacct_priv *op = (struct nacct_priv *)pi->private;
+	struct nacct_priv *op = upi_priv(pi);
 
 	if ((op->of = fopen(NACCT_CFG_FILE(pi), "a")) == NULL) {
 		upi_log(pi, ULOGD_FATAL, "%s: %s\n",
@@ -143,7 +143,7 @@ nacct_init(struct ulogd_pluginstance *pi)
 static int
 nacct_fini(struct ulogd_pluginstance *pi)
 {
-	struct nacct_priv *op = (struct nacct_priv *)pi->private;
+	struct nacct_priv *op = upi_priv(pi);
 
 	if (op->of != stdout)
 		fclose(op->of);

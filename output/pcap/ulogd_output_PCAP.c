@@ -126,7 +126,7 @@ static struct ulogd_key pcap_keys[INTR_IDS] = {
 
 static int interp_pcap(struct ulogd_pluginstance *upi)
 {
-	struct pcap_instance *pi = (struct pcap_instance *)upi->private;
+	struct pcap_instance *pi = upi_priv(upi);
 	struct ulogd_key *res = upi->input.keys;
 	struct pcap_sf_pkthdr pchdr;
 
@@ -188,7 +188,7 @@ static int write_pcap_header(struct pcap_instance *pi)
 
 static int append_create_outfile(struct ulogd_pluginstance *upi)
 {
-	struct pcap_instance *pi = (struct pcap_instance *)upi->private;
+	struct pcap_instance *pi = upi_priv(upi);
 	char *filename = upi->config_kset->ces[0].u.string;
 	struct stat st_dummy;
 	int exist = 0;
@@ -227,7 +227,7 @@ static int start_pcap(struct ulogd_pluginstance *upi)
 
 static int stop_pcap(struct ulogd_pluginstance *upi)
 {
-	struct pcap_instance *pi = (struct pcap_instance *)upi->private;
+	struct pcap_instance *pi = upi_priv(upi);
 
 	if (pi->of)
 		fclose(pi->of);

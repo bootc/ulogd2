@@ -97,7 +97,7 @@ static struct config_keyset kset_mysql = {
 /* find out which columns the table has */
 static int get_columns_mysql(struct ulogd_pluginstance *upi)
 {
-	struct mysql_instance *mi = (struct mysql_instance *) upi->private;
+	struct mysql_instance *mi = upi_priv(upi);
 	MYSQL_RES *result;
 	MYSQL_FIELD *field;
 	struct ulogd_key *f, *f2;
@@ -163,7 +163,7 @@ static int get_columns_mysql(struct ulogd_pluginstance *upi)
 
 static int close_db_mysql(struct ulogd_pluginstance *upi)
 {
-	struct mysql_instance *mi = (struct mysql_instance *) upi->private;
+	struct mysql_instance *mi = upi_priv(upi);
 	mysql_close(mi->dbh);
 	return 0;
 }
@@ -171,7 +171,7 @@ static int close_db_mysql(struct ulogd_pluginstance *upi)
 /* make connection and select database */
 static int open_db_mysql(struct ulogd_pluginstance *upi)
 {
-	struct mysql_instance *mi = (struct mysql_instance *) upi->private;
+	struct mysql_instance *mi = upi_priv(upi);
 	unsigned int connect_timeout = timeout_ce(upi->config_kset).u.value;
 	char *server = host_ce(upi->config_kset).u.string;
 	u_int16_t port = port_ce(upi->config_kset).u.value;
@@ -201,7 +201,7 @@ static int open_db_mysql(struct ulogd_pluginstance *upi)
 static int escape_string_mysql(struct ulogd_pluginstance *upi,
 				char *dst, const char *src, unsigned int len)
 {
-	struct mysql_instance *mi = (struct mysql_instance *) upi->private;
+	struct mysql_instance *mi = upi_priv(upi);
 
 #ifdef OLD_MYSQL
 	return mysql_escape_string(dst, src, len);
@@ -213,7 +213,7 @@ static int escape_string_mysql(struct ulogd_pluginstance *upi,
 static int execute_mysql(struct ulogd_pluginstance *upi,
 			 const char *stmt, unsigned int len)
 {
-	struct mysql_instance *mi = (struct mysql_instance *) upi->private;
+	struct mysql_instance *mi = upi_priv(upi);
 	int ret;
 
 	ret = mysql_real_query(mi->dbh, stmt, len);
@@ -236,7 +236,8 @@ static struct db_driver db_driver_mysql = {
 
 static int configure_mysql(struct ulogd_pluginstance *upi)
 {
-	struct db_instance *di = (struct db_instance *) &upi->private;
+	struct db_instance *di = upi_priv(upi);
+
 	di->driver = &db_driver_mysql;
 
 	return ulogd_db_configure(upi);

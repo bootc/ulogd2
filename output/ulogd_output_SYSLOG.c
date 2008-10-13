@@ -69,7 +69,7 @@ struct syslog_instance {
 
 static int _output_syslog(struct ulogd_pluginstance *upi)
 {
-	struct syslog_instance *li = (struct syslog_instance *)upi->private;
+	struct syslog_instance *li = upi_priv(upi);
 	struct ulogd_key *res = upi->input.keys;
 
 	if (res[0].u.source->flags & ULOGD_RETF_VALID)
