@@ -204,19 +204,48 @@ struct ulogd_plugin {
 	const struct ulogd_keyset input;
 	const struct ulogd_keyset output;
 
-	/* called per packet, may return ULOGD_IRET_AGAIN */
+	/**
+	 * Per-packet interpreter function
+	 *
+	 * Usually not used by input plugins, which usually ahve their own
+	 * event sources.
+	 *
+	 * May return ULOGD_IRET_AGAIN.
+	 */
 	int (* interp)(struct ulogd_pluginstance *pi);
 
-	/* may return ULOGD_IRET_AGAIN */
+	/**
+	 * Configuration handler for a %ulogd_pluginstance
+	 *
+	 * This function should be completely stateless as there currently
+	 * is no %unconfigure handler.  Instead you should add such code
+	 * to the %start handler of the plugin, which is called later.
+	 *
+	 * May return ULOGD_IRET_AGAIN.
+	 */
 	int (* configure)(struct ulogd_pluginstance *pi);
 
-	/* may return ULOGD_IRET_AGAIN */
+	/**
+	 * Start a pluginstance
+	 *
+	 * May return ULOGD_IRET_AGAIN, in which case a start is triggered
+	 * later.
+	 */
 	int (* start)(struct ulogd_pluginstance *pi);
 
-	/* function to destruct an existing pluginstance */
+	/**
+	 * Stop an %ulogd_pluginstance
+	 *
+	 * Usually reverts everything which was done in the %start handler.
+	 */
 	int (* stop)(struct ulogd_pluginstance *pi);
 
-	/* function to receive a signal, may return ULOGD_IRET_AGAIN */
+	/**
+	 * Signal handler for a %ulogd_pluginstance
+	 *
+	 * On error the plugin is stopped.  May return %ULOGD_IRET_AGAIN,
+	 * in which case a restart is triggered later.
+	 */
 	int (* signal)(struct ulogd_pluginstance *pi, int signal);
 
 	/* configuration parameters */

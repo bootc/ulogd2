@@ -187,10 +187,6 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 }
 
 /**
- * State handling
- *
- * The notion P>start means "call function 'start' of plugin P".
- *
  * STATE DIAGRAM
  *
  *      ^        PsInit
@@ -215,33 +211,10 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
  *           ^---------
  *              to PsInit
  *
- * TRANSITIONS
+ * The notion P>start means "call function 'start' of plugin P".
  *
- *   T: <state>
- *   T_fail: <state_fail>
- *   A: <action>
- *
- * Conceptually <state> is reached after successfully doing
- * <action>.  <state_fail> is reached if an error occurs.
- *
- *  I       the plugin instance
- *  P       the plugin
- *
- *
- *              PsInit          PsConfigured    PsStarting		PsStarted
- *
- * configure()  A: P>config     ---             ---            ---
- *              T: PsConfigured
- *
- * start()      ---             T: PsStarting   ---            ---
- *
- *              ---             ---             A: P>start     ---
- *                                              T: PsStarted
- *                                              T_fail: PsInit
-                                                  or PsStarting
- *
- * I>interp     ---             ---             ---            A: P>interp
- *                                                             T_fail: PsInit
+ * Note that currently the action in I>configure handler should be
+ * completely stateless, as there currently is no I>unconfigure handler.
  */
 static const enum UpiState next_state[__PsMax + 1] = {
 	[PsInit] = PsConfigured,
