@@ -146,168 +146,37 @@ enum {
 };
 
 static struct ulogd_key nfct_okeys[] = {
-	[O_IP_SADDR] = {
-		.type 	= ULOGD_RET_IPADDR,
-		.flags 	= ULOGD_RETF_NONE,
-		.name	= "ip.saddr",
-		.ipfix	= { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_sourceIPv4Address,
-		},
-	},
-	[O_IP_DADDR] = {
-		.type	= ULOGD_RET_IPADDR,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "ip.daddr",
-		.ipfix	= {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_destinationIPv4Address,
-		},
-	},
-	[O_IP_PROTO] = {
-		.type	= ULOGD_RET_UINT8,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "ip.protocol",
-		.ipfix	= { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_protocolIdentifier,
-		},
-	},
-	[O_L4_SPORT] = {
-		.type	= ULOGD_RET_UINT16,
-		.flags 	= ULOGD_RETF_NONE,
-		.name	= "l4.sport",
-		.ipfix	= {
-			.vendor 	= IPFIX_VENDOR_IETF,
-			.field_id 	= IPFIX_sourceTransportPort,
-		},
-	},
-	[O_L4_DPORT] = {
-		.type	= ULOGD_RET_UINT16,
-		.flags 	= ULOGD_RETF_NONE,
-		.name	= "l4.dport",
-		.ipfix	= {
-			.vendor 	= IPFIX_VENDOR_IETF,
-			.field_id 	= IPFIX_destinationTransportPort,
-		},
-	},
-	[O_RAW_IN_PKTLEN] = {
-		.type	= ULOGD_RET_UINT32,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.in.pktlen",
-		.ipfix	= { 
-			.vendor 	= IPFIX_VENDOR_IETF,
-			.field_id 	= IPFIX_octetTotalCount,
-			/* FIXME: this could also be octetDeltaCount */
-		},
-	},
-	[O_RAW_IN_PKTCOUNT] = {
-		.type	= ULOGD_RET_UINT32,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.in.pktcount",
-		.ipfix	= { 
-			.vendor 	= IPFIX_VENDOR_IETF,
-			.field_id 	= IPFIX_packetTotalCount,
-			/* FIXME: this could also be packetDeltaCount */
-		},
-	},
-	[O_RAW_OUT_PKTLEN] = {
-		.type	= ULOGD_RET_UINT32,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.out.pktlen",
-		.ipfix	= { 
-			.vendor 	= IPFIX_VENDOR_IETF,
-			.field_id 	= IPFIX_octetTotalCount,
-			/* FIXME: this could also be octetDeltaCount */
-		},
-	},
-	[O_RAW_OUT_PKTCOUNT] = {
-		.type	= ULOGD_RET_UINT32,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "raw.out.pktcount",
-		.ipfix	= { 
-			.vendor 	= IPFIX_VENDOR_IETF,
-			.field_id 	= IPFIX_packetTotalCount,
-			/* FIXME: this could also be packetDeltaCount */
-		},
-	},
-	[O_ICMP_CODE] = {
-		.type	= ULOGD_RET_UINT8,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "icmp.code",
-		.ipfix	= {
-			.vendor		= IPFIX_VENDOR_IETF,
-			.field_id	= IPFIX_icmpCodeIPv4,
-		},
-	},
-	[O_ICMP_TYPE] = {
-		.type	= ULOGD_RET_UINT8,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "icmp.type",
-		.ipfix	= {
-			.vendor		= IPFIX_VENDOR_IETF,
-			.field_id	= IPFIX_icmpTypeIPv4,
-		},
-	},
-	[O_CT_MARK] = {
-		.type	= ULOGD_RET_UINT32,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "ct.mark",
-		.ipfix	= {
-			.vendor		= IPFIX_VENDOR_NETFILTER,
-			.field_id	= IPFIX_NF_mark,
-		},
-	},
-	[O_CT_ID] = {
-		.type	= ULOGD_RET_UINT32,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "ct.id",
-		.ipfix	= {
-			.vendor		= IPFIX_VENDOR_NETFILTER,
-			.field_id	= IPFIX_NF_conntrack_id,
-		},
-	},
-	[O_FLOW_START_SEC] = {
-		.type 	= ULOGD_RET_UINT32,
-		.flags 	= ULOGD_RETF_NONE,
-		.name	= "flow.start.sec",
-		.ipfix	= {
-			.vendor		= IPFIX_VENDOR_IETF,
-			.field_id	= IPFIX_flowStartSeconds,
-		},
-	},
-	[O_FLOW_START_USEC] = {
-		.type 	= ULOGD_RET_UINT32,
-		.flags 	= ULOGD_RETF_NONE,
-		.name	= "flow.start.usec",
-		.ipfix	= {
-			.vendor		= IPFIX_VENDOR_IETF,
-			.field_id	= IPFIX_flowStartMicroSeconds,
-		},
-	},
-	[O_FLOW_END_SEC] = {
-		.type	= ULOGD_RET_UINT32,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "flow.end.sec",
-		.ipfix	= {
-			.vendor		= IPFIX_VENDOR_IETF,
-			.field_id	= IPFIX_flowEndSeconds,
-		},
-	},
-	[O_FLOW_END_USEC] = {
-		.type	= ULOGD_RET_UINT32,
-		.flags	= ULOGD_RETF_NONE,
-		.name	= "flow.end.usec",
-		.ipfix	= {
-			.vendor		= IPFIX_VENDOR_IETF,
-			.field_id	= IPFIX_flowEndSeconds,
-		},
-	},
-	[O_FLOW_DURATION] = {
-		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
-		.name = "flow.duration",
-	},
+	[O_IP_SADDR] = KEY_IPFIX(IPADDR, "ip.saddr", IETF, sourceIPv4Address),
+	[O_IP_DADDR] = KEY_IPFIX(IPADDR, "ip.daddr", IETF,destinationIPv4Address),
+	[O_IP_PROTO] = KEY_IPFIX(UINT8, "ip.protocol", IETF, protocolIdentifier),
+	[O_L4_SPORT] = KEY_IPFIX(UINT16, "l4.sport", IETF, sourceTransportPort),
+	[O_L4_DPORT] = KEY_IPFIX(UINT16, "l4.dport", IETF,
+							 destinationTransportPort),
+	/* FIXME: this could also be octetDeltaCount */
+	[O_RAW_IN_PKTLEN] = KEY_IPFIX(UINT32, "raw.in.pktlen", IETF,
+								  octetTotalCount),
+	/* FIXME: this could also be packetDeltaCount */
+	[O_RAW_IN_PKTCOUNT] = KEY_IPFIX(UINT32, "raw.in.pktcount", IETF,
+									packetTotalCount),
+	/* FIXME: this could also be octetDeltaCount */
+	[O_RAW_OUT_PKTLEN] = KEY_IPFIX(UINT32, "raw.out.pktlen", IETF,
+								   octetTotalCount),
+	/* FIXME: this could also be packetDeltaCount */
+	[O_RAW_OUT_PKTCOUNT] = KEY_IPFIX(UINT32, "raw.out.pktcount",
+									 IETF, packetTotalCount),
+	[O_ICMP_CODE] = KEY_IPFIX(UINT8, "icmp.code", IETF, icmpCodeIPv4),
+	[O_ICMP_TYPE] = KEY_IPFIX(UINT8, "icmp.type", IETF, icmpTypeIPv4),
+	[O_CT_MARK] = KEY_IPFIX(UINT32, "ct.mark",NETFILTER, NF_mark),
+	[O_CT_ID] = KEY_IPFIX(UINT32, "ct.id", NETFILTER, NF_conntrack_id),
+	[O_FLOW_START_SEC] = KEY_IPFIX(UINT32, "flow.start.sec", IETF,
+								   flowStartSeconds),
+	[O_FLOW_START_USEC] = KEY_IPFIX(UINT32, "flow.start.usec", IETF,
+									flowStartMicroSeconds),
+	[O_FLOW_END_SEC] = KEY_IPFIX(UINT32, "flow.end.sec", IETF,
+								 flowEndSeconds),
+	[O_FLOW_END_USEC] = KEY_IPFIX(UINT32, "flow.end.usec", IETF,
+								  flowEndSeconds),
+	[O_FLOW_DURATION] = KEY(UINT32, "flow.duration"),
 };
 
 
