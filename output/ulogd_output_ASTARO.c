@@ -572,7 +572,7 @@ static struct ulogd_plugin astaro_plugin = {
 	.priv_size	= sizeof(struct astaro_priv),
 };
 
-void __attribute__ ((constructor)) init(void);
+void __upi_ctor init(void);
 
 void
 init(void)

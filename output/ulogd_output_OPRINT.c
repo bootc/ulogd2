@@ -163,7 +163,7 @@ static struct ulogd_plugin oprint_plugin = {
 	.priv_size = sizeof(struct oprint_priv),
 };
 
-void __attribute__ ((constructor)) init(void);
+void __upi_ctor init(void);
 
 void init(void)
 {

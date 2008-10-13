@@ -395,7 +395,7 @@ struct ulogd_plugin nflog_plugin = {
 	.rev		= ULOGD_PLUGIN_REVISION,
 };
 
-void __attribute__ ((constructor)) init(void);
+void __upi_ctor init(void);
 
 void init(void)
 {

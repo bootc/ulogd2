@@ -307,6 +307,9 @@ struct ulogd_pluginstance_stack {
 	char *name;
 };
 
+/* all plugin initializers should be tagged with this */
+#define __upi_ctor		__attribute__((constructor))
+
 #define upi_log(pi, lvl, fmt, ...) \
 	ulogd_log((lvl), "%s: " fmt, pi->id, ## __VA_ARGS__)
 

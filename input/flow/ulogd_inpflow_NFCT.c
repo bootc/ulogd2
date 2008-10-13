@@ -1004,7 +1004,7 @@ static struct ulogd_plugin nfct_plugin = {
 	.priv_size	= sizeof(struct nfct_pluginstance),
 };
 
-void __attribute__ ((constructor)) init(void);
+void __upi_ctor init(void);
 
 void
 init(void)

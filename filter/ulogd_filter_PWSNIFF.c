@@ -171,7 +171,7 @@ static struct ulogd_plugin pwsniff_plugin = {
 	.rev = ULOGD_PLUGIN_REVISION,
 };
 
-void __attribute__ ((constructor)) init(void)
+void __upi_ctor init(void)
 {
 	ulogd_register_plugin(&pwsniff_plugin);
 }

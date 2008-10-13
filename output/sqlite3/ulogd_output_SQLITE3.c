@@ -814,7 +814,7 @@ static struct ulogd_plugin sqlite3_plugin = {
 	.rev = ULOGD_PLUGIN_REVISION,
 };
 
-static void init(void) __attribute__((constructor));
+static void init(void) __upi_ctor;
 
 static void
 init(void) 

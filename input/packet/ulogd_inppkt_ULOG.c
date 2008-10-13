@@ -272,7 +272,7 @@ static struct ulogd_plugin libulog_plugin = {
 	.priv_size = sizeof(struct ulog_input),
 };
 
-void __attribute__ ((constructor)) initializer(void)
+void __upi_ctor initializer(void)
 {
 	ulogd_register_plugin(&libulog_plugin);
 }
