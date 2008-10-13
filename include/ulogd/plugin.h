@@ -346,6 +346,7 @@ void ulogd_propagate_results(struct ulogd_pluginstance *pi);
 int ulogd_plugin_init(void);
 
 void stack_add(struct ulogd_pluginstance_stack *);
+void stack_dump(const struct ulogd_pluginstance_stack *);
 bool stack_have_stacks(void);
 int stack_for_each(int (*)(struct ulogd_pluginstance_stack *, void *),
 				   void *);

@@ -73,6 +73,16 @@ stack_add(struct ulogd_pluginstance_stack *stack)
 	llist_add(&stack->stack_list, &ulogd_pi_stacks);
 }
 
+void
+stack_dump(const struct ulogd_pluginstance_stack *stack)
+{
+	const struct ulogd_pluginstance *pi;
+
+	llist_for_each_entry(pi, &stack->list, list) {
+		ulogd_log(ULOGD_INFO, " stack: pi=%p/%s\n", pi, pi->id);
+	}
+}
+
 bool
 stack_have_stacks(void)
 {
