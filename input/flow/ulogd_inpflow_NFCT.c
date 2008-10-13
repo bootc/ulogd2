@@ -360,7 +360,7 @@ cache_head_next(const struct cache *c)
 
 /* sequence cache */
 static ct_hash_t
-scache_hash(struct cache *c, unsigned seq)
+scache_hash(const struct cache *c, unsigned seq)
 {
 	static unsigned rnd;
 
