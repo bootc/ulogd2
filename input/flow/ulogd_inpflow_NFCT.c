@@ -649,6 +649,8 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 
 	ulogd_propagate_results(pi);
 
+	if (ct->refcnt > 1)
+		cache_del(priv->scache, ct);
 	cache_del(priv->tcache, ct);
 
 	return 0;
@@ -693,6 +695,14 @@ nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
 
 	nfnl_ct = nfnlmsg_ct_parse(hdr);
 
+	/* check if it's a response to our queries and remove the entry from
+	   the scache.  Note that it's perfectly fine if this deletes the
+	   conntrack. */
+	if (hdr->nlmsg_seq != 0) {
+		if ((ct = scache_find(priv->scache, hdr->nlmsg_seq)) != NULL)
+			cache_del(priv->scache, ct);
+	}
+
 	nfnl_ct_to_tuple(nfnl_ct, &tuple);
 
 	switch (grp = nfnlmsg_ct_group(hdr)) {
@@ -715,20 +725,6 @@ nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
 		}
 
         ct->time[UPDATE].tv_sec = t_now_local;
-
-        if (ct->refcnt > 1) {
-            struct conntrack *ct_tmp;
-
-			assert(hdr->nlmsg_seq != 0);
-
-			ct_tmp = scache_find(priv->scache, hdr->nlmsg_seq);
-            if (ct_tmp != NULL) {
-                assert(ct_tmp == ct);
-				assert(ct_tmp->last_seq != 0);
-
-                cache_del(priv->scache, ct);
-            }
-        }
 
         /* handle TCP connections differently in order not to bloat CT
            hash with many TIME_WAIT connections */
