@@ -798,7 +798,7 @@ nfct_err_cb(struct sockaddr_nl *sa, struct nlmsgerr *e, void *arg)
 		break;
 
 	default:
-		upi_log(pi, ULOGD_ERROR, "netlink error: %m\n");
+		upi_log(pi, ULOGD_ERROR, "netlink error: %s\n", strerror(-e->error));
 		break;
 	}
 
