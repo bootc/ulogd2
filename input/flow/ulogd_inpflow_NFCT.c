@@ -85,6 +85,8 @@ struct conntrack {
 	struct nfnl_ct *nfnl_ct;
 	unsigned refcnt;
 	struct timeval time[__TIME_MAX];
+	time_t t_req;
+	unsigned last_seq;
 };
 
 typedef unsigned ct_hash_t;
@@ -108,6 +110,9 @@ struct nfct_priv {
 	struct ulogd_fd ufd;
 	struct ulogd_timer timer;
 	struct cache *tcache;
+
+	/* number of overruns, will be decremented by GC timer */
+	unsigned overruns;
 };
 
 enum {
@@ -281,6 +286,18 @@ cache_del(struct cache *c, struct conntrack *ct)
 	return 0;
 }
 
+static inline ct_hash_t
+cache_slice_end(const struct cache *c, unsigned n)
+{
+    return (c->c_curr_head + n) % c->c_num_heads;
+}
+
+static inline ct_hash_t
+cache_head_next(const struct cache *c)
+{
+    return (c->c_curr_head + 1) % c->c_num_heads;
+}
+
 static void
 ct_dump_tuple(const struct ct_tuple *t)
 {
@@ -399,6 +416,58 @@ tcache_find(struct cache *c, const struct ct_tuple *t)
 }
 
 static int
+tcache_cleanup(struct cache *c)
+{
+    ct_hash_t end = cache_slice_end(c, 32);
+    struct conntrack *ct;
+    int req = 0;
+
+	do {
+		int ret;
+
+		llist_for_each_entry_reverse(ct, &c->c_head[c->c_curr_head].link,
+									 link) {
+			if (tv_diff_sec(&ct->time[UPDATE], &tv_now) < TIMEOUT)
+				continue;
+
+#if 0
+			/* check if its still there */
+			ret = nfct_get_conntrack_x(priv->cth, &ct->tuple,
+									   NFCT_DIR_ORIGINAL, &ct->last_seq);
+			if (ret < 0) {
+				if (errno == EWOULDBLOCK)
+					break;
+
+				upi_log(pi, ULOGD_ERROR, "nfct_get_conntrack: ct=%p: %m\n",
+						ct);
+				break;
+			}
+#endif /* 0 */
+
+			if (&ct->last_seq != 0) {
+				ct->t_req = t_now;
+
+#if 0
+				assert(scache_find(pi, ct->last_seq) == NULL);
+
+				cache_add(priv->scache, ct);
+#endif /* 0 */
+			}
+
+			if (++req > TCACHE_REQ_MAX)
+				break;
+		}
+
+		c->c_curr_head = cache_head_next(c);
+
+		if (req > TCACHE_REQ_MAX)
+			break;
+	} while (c->c_curr_head != end);
+
+	return req;
+}
+
+static int
 propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 {
 	struct nfct_priv *priv = upi_priv(pi);
@@ -454,6 +523,27 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 	ulogd_propagate_results(pi);
 
 	cache_del(priv->tcache, ct);
+
+	return 0;
+}
+
+/**
+ * Start garbage collection
+ */
+static int
+gc_start(struct ulogd_pluginstance *pi)
+{
+	struct nfct_priv *priv = upi_priv(pi);
+
+	priv->overruns++;
+
+	if (timer_running(&priv->timer))
+		return 0;
+
+	if (ulogd_register_timer(&priv->timer) < 0)
+		return -1;
+
+	upi_log(pi, ULOGD_DEBUG, "GC timer started\n");
 
 	return 0;
 }
@@ -535,9 +625,7 @@ nfct_overrun_cb(struct nl_msg *msg, void *arg)
 {
 	struct ulogd_pluginstance *pi = arg;
 
-	/* TODO start timer */
-
-	return 0;
+	return gc_start(pi);
 }
 
 static int
@@ -545,13 +633,18 @@ nfct_ufd_cb(int fd, unsigned what, void *arg)
 {
 	struct ulogd_pluginstance *pi = arg;
 	struct nfct_priv *priv = upi_priv(pi);
+	int ret;
 
 	pr_fn_debug("fd=%d what=%u arg=%p\n", fd, what, arg);
 
 	if (what & ULOGD_FD_READ) {
-		if (nl_recvmsgs_default(priv->nlh) < 0) {
-			upi_log(pi, ULOGD_ERROR, "nl_recvmsgs: %s\n", nl_geterror());
-			goto out;
+		if ((ret = nl_recvmsgs_default(priv->nlh)) < 0) {
+			if (ret == -ENOBUFS || nl_get_errno() == ENOBUFS)
+				gc_start(pi);
+			else {
+				upi_log(pi, ULOGD_ERROR, "nl_recvmsgs: %s\n", nl_geterror());
+				goto out;
+			}
 		}
 	}
 
@@ -561,10 +654,32 @@ out:
 	return -1;
 }
 
+/**
+ * Garbage collection timer
+ *
+ * Removes itself when done.
+ */
 static void
-nfct_timer_cb(struct ulogd_timer *t)
+nfct_gc_timer_cb(struct ulogd_timer *t)
 {
+	struct ulogd_pluginstance *pi = t->data;
+	struct nfct_priv *priv = upi_priv(pi);
+	unsigned tc_start, tc_end;
 
+    tc_start = priv->tcache->c_curr_head;
+
+	tcache_cleanup(priv->tcache);
+
+    tc_end = priv->tcache->c_curr_head;
+
+	upi_log(pi, ULOGD_DEBUG, "ct=%u t=%u [%u,%u[\n",
+            num_conntrack,
+            priv->tcache->c_cnt, tc_start, tc_end);
+
+	if (--priv->overruns == 0)
+		ulogd_unregister_timer(&priv->timer);
+	if (priv->overruns < 0)
+		priv->overruns = 0;
 }
 
 static int
@@ -638,20 +753,15 @@ nfct_start(struct ulogd_pluginstance *pi)
 	if (ulogd_register_fd(&priv->ufd) < 0)
 		goto err_handle_destroy;
 
-    priv->timer.cb = nfct_timer_cb;
+    priv->timer.cb = nfct_gc_timer_cb;
     priv->timer.ival = 1 SEC;
     priv->timer.flags = TIMER_F_PERIODIC;
     priv->timer.data = pi;
-
-    if (ulogd_register_timer(&priv->timer) < 0)
-		goto err_unreg_ufd;
 
 	upi_log(pi, ULOGD_DEBUG, "ctnetlink connection opened\n");
 
 	return ULOGD_IRET_OK;
 
-err_unreg_ufd:
-	ulogd_unregister_fd(&priv->ufd);
 err_handle_destroy:
 	nl_handle_destroy(priv->nlh);
 err:
