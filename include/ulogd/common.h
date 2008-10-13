@@ -38,7 +38,7 @@
 #define HOUR	* 60 MIN
 #define DAY		* 24 HOUR
 
-#define unused		__attribute__((unused))
+#define __ulogd_unused		__attribute__((unused))
 
 #ifdef DEBUG
 #define pr_debug(fmt, ...)		ulogd_log(ULOGD_DEBUG, fmt, ## __VA_ARGS__)

@@ -125,7 +125,7 @@ ifi_del(unsigned idx)
 }
 
 
-static void dump_bytes(const char *, unsigned char *, size_t) unused;
+static void dump_bytes(const char *, unsigned char *, size_t) __ulogd_unused;
 
 static void
 dump_bytes(const char *prefix, unsigned char *data, size_t len)
@@ -144,7 +144,7 @@ dump_bytes(const char *prefix, unsigned char *data, size_t len)
 }
 
 
-static void dump_nlmsg(FILE *, struct nlmsghdr *) unused;
+static void dump_nlmsg(FILE *, struct nlmsghdr *) __ulogd_unused;
 
 static void
 dump_nlmsg(FILE *fp, struct nlmsghdr *nlh)
@@ -155,7 +155,8 @@ dump_nlmsg(FILE *fp, struct nlmsghdr *nlh)
 }
 
 
-static ssize_t sprint_lladdr(char *, size_t, const unsigned char *) unused;
+static ssize_t sprint_lladdr(char *, size_t, const unsigned char *)
+	__ulogd_unused;
 
 static ssize_t
 sprint_lladdr(char *buf, size_t len, const unsigned char *addr)
