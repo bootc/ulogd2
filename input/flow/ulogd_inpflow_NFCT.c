@@ -47,10 +47,12 @@
 #define SNDBUF_LEN		RCVBUF_LEN
 
 /* configuration defaults */
-#define TCACHE_SIZE		8192
-#define SCACHE_SIZE	    512
+#define TCACHE_MIN_SIZE	512
+#define TCACHE_SIZE		1024
+#define SCACHE_SIZE	    256
 #define TCACHE_REQ_MAX	100
-#define TIMEOUT			30 SEC
+#define TIMEOUT_MIN		30 SEC
+#define TIMEOUT			TIMEOUT_MIN
 
 
 typedef enum { START, UPDATE, STOP, __TIME_MAX } TIMES;
@@ -173,6 +175,34 @@ static struct ulogd_key nfct_okeys[] = {
 								  flowEndSeconds),
 	[O_FLOW_DURATION] = KEY(UINT32, "flow.duration"),
 };
+
+static const struct config_keyset nfct_kset = {
+	.num_ces = 3,
+	.ces = {
+		{
+			.key	 = "hash_buckets",
+			.type	 = CONFIG_TYPE_INT,
+			.options = CONFIG_OPT_NONE,
+			.u.value = TCACHE_SIZE,
+		},
+		{
+			.key	 = "disable",
+			.type	 = CONFIG_TYPE_INT,
+			.options = CONFIG_OPT_NONE,
+			.u.value = 0,
+		},
+		{
+			.key	 = "timeout",
+			.type	 = CONFIG_TYPE_INT,
+			.options = CONFIG_OPT_NONE,
+			.u.value = TIMEOUT,
+		},
+	},
+};
+
+#define buckets_ce(pi)	((pi)->config_kset->ces[0].u.value)
+#define disable_ce(pi)	((pi)->config_kset->ces[1].u.value)
+#define timeout_ce(pi)	((pi)->config_kset->ces[2].u.value)
 
 
 static void ct_dump_tuple(const struct ct_tuple *) __ulogd_unused;
@@ -560,7 +590,7 @@ tcache_cleanup(struct ulogd_pluginstance *pi)
 
 		llist_for_each_entry_reverse(ct, &c->c_head[c->c_curr_head].link,
 									 link) {
-			if (tv_diff_sec(&ct->time[UPDATE], &tv_now) < TIMEOUT)
+			if (tv_diff_sec(&ct->time[UPDATE], &tv_now) < timeout_ce(pi))
 				continue;
 
 			/* check if its still there */
@@ -883,7 +913,24 @@ nfct_configure(struct ulogd_pluginstance *pi)
 {
 	pr_fn_debug("pi=%p\n", pi);
 
-	return 0;
+    if (disable_ce(pi) != 0) {
+        upi_log(pi, ULOGD_INFO, "disabled on user request\n");
+        return ULOGD_IRET_STOP;
+    }
+
+	if (buckets_ce(pi) < TCACHE_MIN_SIZE) {
+		buckets_ce(pi) = TCACHE_MIN_SIZE;
+		upi_log(pi, ULOGD_NOTICE, "cache too small, set to %d\n",
+				TCACHE_MIN_SIZE);
+	}
+
+	if (timeout_ce(pi) < TIMEOUT) {
+		timeout_ce(pi) = TIMEOUT;
+		upi_log(pi, ULOGD_NOTICE, "timeout too small, set to %d\n",
+				TCACHE_MIN_SIZE);
+	}
+
+	return ULOGD_IRET_OK;
 }
 
 static int
@@ -893,7 +940,7 @@ init_caches(struct ulogd_pluginstance *pi)
 	struct cache *c;
 
 	/* tuple cache */
-	c = priv->tcache = cache_alloc(TCACHE_SIZE);
+	c = priv->tcache = cache_alloc(buckets_ce(pi));
 	if (c == NULL) {
 		upi_log(pi, ULOGD_FATAL, "out of memory\n");
 		return ULOGD_IRET_ERR;
@@ -1006,6 +1053,9 @@ nfct_stop(struct ulogd_pluginstance *pi)
 
 	pr_fn_debug("pi=%p\n", pi);
 
+    if (disable_ce(pi) != 0)
+        return ULOGD_IRET_OK;               /* wasn't started */
+
 	ulogd_unregister_fd(&priv->ufd);
 
 	if (priv->nlh != NULL) {
@@ -1024,7 +1074,7 @@ nfct_stop(struct ulogd_pluginstance *pi)
 
 	upi_log(pi, ULOGD_DEBUG, "ctnetlink connection close\n");
 
-	return 0;
+	return ULOGD_IRET_OK;
 }
 
 static struct ulogd_plugin nfct_plugin = {
@@ -1038,12 +1088,10 @@ static struct ulogd_plugin nfct_plugin = {
 		.num_keys = ARRAY_SIZE(nfct_okeys),
 		.type = ULOGD_DTYPE_FLOW,
 	},
-#if 0
-	.config_kset 	= &nfct_kset,
-#endif /* 0 */
 	.configure	= nfct_configure,
 	.start		= nfct_start,
 	.stop		= nfct_stop,
+	.config_kset 	= &nfct_kset,
 	.rev		= ULOGD_PLUGIN_REVISION,
 	.priv_size	= sizeof(struct nfct_priv),
 };
