@@ -162,6 +162,12 @@ key_src(const struct ulogd_key *key)
 	return key->u.source;
 }
 
+static inline void
+key_set_src(struct ulogd_key *key, struct ulogd_key *src_key)
+{
+	key->u.source = src_key;
+}
+
 static inline bool
 key_valid(const struct ulogd_key *key)
 {
