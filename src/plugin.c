@@ -872,7 +872,7 @@ __check(const struct ulogd_key *key, unsigned type)
 }
 
 void
-key_i8(struct ulogd_key *key, int v)
+key_set_i8(struct ulogd_key *key, int v)
 {
 	__check(key, ULOGD_RET_INT8);
 
@@ -881,7 +881,7 @@ key_i8(struct ulogd_key *key, int v)
 }
 
 void
-key_i16(struct ulogd_key *key, int v)
+key_set_i16(struct ulogd_key *key, int v)
 {
 	__check(key, ULOGD_RET_INT16);
 
@@ -890,7 +890,7 @@ key_i16(struct ulogd_key *key, int v)
 }
 
 void
-key_i32(struct ulogd_key *key, int v)
+key_set_i32(struct ulogd_key *key, int v)
 {
 	__check(key, ULOGD_RET_INT32);
 
@@ -899,7 +899,7 @@ key_i32(struct ulogd_key *key, int v)
 }
 
 void
-key_u8(struct ulogd_key *key, unsigned v)
+key_set_u8(struct ulogd_key *key, unsigned v)
 {
 	__check(key, ULOGD_RET_UINT8);
 
@@ -908,7 +908,7 @@ key_u8(struct ulogd_key *key, unsigned v)
 }
 
 void
-key_u16(struct ulogd_key *key, unsigned v)
+key_set_u16(struct ulogd_key *key, unsigned v)
 {
 	__check(key, ULOGD_RET_UINT16);
 
@@ -917,7 +917,7 @@ key_u16(struct ulogd_key *key, unsigned v)
 }
 
 void
-key_u32(struct ulogd_key *key, unsigned v)
+key_set_u32(struct ulogd_key *key, unsigned v)
 {
 	__check(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
 
@@ -926,7 +926,7 @@ key_u32(struct ulogd_key *key, unsigned v)
 }
 
 void
-key_bool(struct ulogd_key *key, bool v)
+key_set_bool(struct ulogd_key *key, bool v)
 {
 	__check(key, ULOGD_RET_BOOL);
 
@@ -935,7 +935,7 @@ key_bool(struct ulogd_key *key, bool v)
 }
 
 void
-key_ptr(struct ulogd_key *key, void *ptr)
+key_set_ptr(struct ulogd_key *key, void *ptr)
 {
 	__check(key, ULOGD_RET_RAW);
 
@@ -944,7 +944,7 @@ key_ptr(struct ulogd_key *key, void *ptr)
 }
 
 void
-key_str(struct ulogd_key *key, char *str)
+key_set_str(struct ulogd_key *key, char *str)
 {
 	__check(key, ULOGD_RET_STRING);
 
@@ -953,7 +953,7 @@ key_str(struct ulogd_key *key, char *str)
 }
 
 int
-key_get_i8(const struct ulogd_key *key)
+key_i8(const struct ulogd_key *key)
 {
 	__check_get(key, ULOGD_RET_INT8);
 
@@ -961,7 +961,7 @@ key_get_i8(const struct ulogd_key *key)
 }
 
 int
-key_get_i16(const struct ulogd_key *key)
+key_i16(const struct ulogd_key *key)
 {
 	__check_get(key, ULOGD_RET_INT16);
 
@@ -969,7 +969,7 @@ key_get_i16(const struct ulogd_key *key)
 }
 
 int
-key_get_i32(const struct ulogd_key *key)
+key_i32(const struct ulogd_key *key)
 {
 	__check_get(key, ULOGD_RET_INT32);
 
@@ -977,7 +977,7 @@ key_get_i32(const struct ulogd_key *key)
 }
 
 unsigned
-key_get_u8(const struct ulogd_key *key)
+key_u8(const struct ulogd_key *key)
 {
 	__check_get(key, ULOGD_RET_UINT8);
 
@@ -985,7 +985,7 @@ key_get_u8(const struct ulogd_key *key)
 }
 
 unsigned
-key_get_u16(const struct ulogd_key *key)
+key_u16(const struct ulogd_key *key)
 {
 	__check_get(key, ULOGD_RET_UINT16);
 
@@ -993,7 +993,7 @@ key_get_u16(const struct ulogd_key *key)
 }
 
 unsigned
-key_get_u32(const struct ulogd_key *key)
+key_u32(const struct ulogd_key *key)
 {
 	/* currently, IP addresses are encoded as u32.  A strong typesafety
 	   might require to add key_get_ipaddr() as well. */
@@ -1003,7 +1003,7 @@ key_get_u32(const struct ulogd_key *key)
 }
 
 bool
-key_get_bool(const struct ulogd_key *key)
+key_bool(const struct ulogd_key *key)
 {
 	__check_get(key, ULOGD_RET_BOOL);
 
@@ -1011,7 +1011,7 @@ key_get_bool(const struct ulogd_key *key)
 }
 
 void *
-key_get_ptr(const struct ulogd_key *key)
+key_ptr(const struct ulogd_key *key)
 {
 	__check_get(key, ULOGD_RET_RAW);
 
@@ -1019,7 +1019,7 @@ key_get_ptr(const struct ulogd_key *key)
 }
 
 char *
-key_get_str(const struct ulogd_key *key)
+key_str(const struct ulogd_key *key)
 {
 	__check_get(key, ULOGD_RET_STRING);
 

@@ -133,26 +133,26 @@ struct ulogd_keyset {
 	}
 
 /* set key values */
-void key_i8(struct ulogd_key *, int);
-void key_i16(struct ulogd_key *, int);
-void key_i32(struct ulogd_key *, int);
-void key_u8(struct ulogd_key *, unsigned);
-void key_u16(struct ulogd_key *, unsigned);
-void key_u32(struct ulogd_key *, unsigned);
-void key_bool(struct ulogd_key *, bool);
-void key_ptr(struct ulogd_key *, void *);
-void key_str(struct ulogd_key *, char *);
+void key_set_i8(struct ulogd_key *, int);
+void key_set_i16(struct ulogd_key *, int);
+void key_set_i32(struct ulogd_key *, int);
+void key_set_u8(struct ulogd_key *, unsigned);
+void key_set_u16(struct ulogd_key *, unsigned);
+void key_set_u32(struct ulogd_key *, unsigned);
+void key_set_bool(struct ulogd_key *, bool);
+void key_set_ptr(struct ulogd_key *, void *);
+void key_set_str(struct ulogd_key *, char *);
 
 /* get key values */
-int key_get_i8(const struct ulogd_key *);
-int key_get_i16(const struct ulogd_key *);
-int key_get_i32(const struct ulogd_key *);
-unsigned key_get_u8(const struct ulogd_key *);
-unsigned key_get_u16(const struct ulogd_key *);
-unsigned key_get_u32(const struct ulogd_key *);
-bool key_get_bool(const struct ulogd_key *);
-void *key_get_ptr(const struct ulogd_key *);
-char *key_get_str(const struct ulogd_key *);
+int key_i8(const struct ulogd_key *);
+int key_i16(const struct ulogd_key *);
+int key_i32(const struct ulogd_key *);
+unsigned key_u8(const struct ulogd_key *);
+unsigned key_u16(const struct ulogd_key *);
+unsigned key_u32(const struct ulogd_key *);
+bool key_bool(const struct ulogd_key *);
+void *key_ptr(const struct ulogd_key *);
+char *key_str(const struct ulogd_key *);
 
 bool key_type_eq(const struct ulogd_key *, const struct ulogd_key *);
 
