@@ -67,7 +67,7 @@ struct syslog_instance {
 	int syslog_facility;
 };
 
-static int _output_syslog(struct ulogd_pluginstance *upi)
+static int syslog_interp(struct ulogd_pluginstance *upi)
 {
 	struct syslog_instance *li = upi_priv(upi);
 	struct ulogd_key *res = upi->input.keys;
@@ -138,10 +138,6 @@ static int syslog_configure(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-static void syslog_fini(void)
-{
-	closelog();
-}
 static int syslog_start(struct ulogd_pluginstance *pi)
 {
 	openlog("ulogd", LOG_NDELAY|LOG_PID, LOG_DAEMON);
@@ -149,8 +145,14 @@ static int syslog_start(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
+static void syslog_stop(struct ulogd_pluginstance *pi)
+{
+	closelog();
+}
+
 static struct ulogd_plugin syslog_plugin = {
 	.name = "SYSLOG",
+	.flags = ULOGD_PF_RECONF,
 	.input = {
 		.keys = syslog_inp,
 		.num_keys = ARRAY_SIZE(syslog_inp),
@@ -161,10 +163,10 @@ static struct ulogd_plugin syslog_plugin = {
 	},
 	.config_kset	= &syslog_kset,
 	.priv_size	= sizeof(struct syslog_instance),
-	
 	.configure	= &syslog_configure,
 	.start		= &syslog_start,
-	.interp		= &_output_syslog,
+	.stop		= &syslog_stop,
+	.interp		= &syslog_interp,
 	.rev		= ULOGD_PLUGIN_REVISION,
 };
 
