@@ -65,8 +65,8 @@ static_interp(struct ulogd_pluginstance *pi)
 
 	pr_debug("%s: pi=%p\n", __func__, pi);
 
-	key_i32(&out[OutFlowCount], 1);
-	key_u32(&out[OutFlowStartDay], key_get_u32(&in[InFlowStartSec])
+	key_set_i32(&out[OutFlowCount], 1);
+	key_set_u32(&out[OutFlowStartDay], key_u32(&in[InFlowStartSec])
 			/ (1 DAY) + DAY_OFFSET);
 
 	return 0;

@@ -57,8 +57,8 @@ static int interp_ifindex(struct ulogd_pluginstance *pi)
 	struct ulogd_key *ret = pi->output.keys;
 	struct ulogd_key *inp = pi->input.keys;
 
-	key_str(&ret[0], ifindex_2name(key_get_u32(&inp[0])));
-	key_str(&ret[1], ifindex_2name(key_get_u32(&inp[1])));
+	key_set_str(&ret[0], ifindex_2name(key_u32(&inp[0])));
+	key_set_str(&ret[1], ifindex_2name(key_u32(&inp[1])));
 
 	return 0;
 }

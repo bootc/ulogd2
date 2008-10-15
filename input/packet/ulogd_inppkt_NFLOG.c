@@ -228,32 +228,32 @@ nflog_handle_msg(struct nl_object *obj, void *arg)
 
 	pr_fn_debug("pi=%p\n", upi);
 
-	key_u8(&out[K_OOB_HOOK], nfnl_log_get_hook(nflog_obj));
+	key_set_u8(&out[K_OOB_HOOK], nfnl_log_get_hook(nflog_obj));
 
-	key_ptr(&out[K_RAW_MAC], (void *)nfnl_log_get_hwaddr(nflog_obj, &len));
-	key_u16(&out[K_RAW_MAC_LEN], len);
+	key_set_ptr(&out[K_RAW_MAC], (void*)nfnl_log_get_hwaddr(nflog_obj, &len));
+	key_set_u16(&out[K_RAW_MAC_LEN], len);
 
-	key_ptr(&out[K_RAW_PKT], (void *)nfnl_log_get_payload(nflog_obj, &len));
-	key_u32(&out[K_RAW_PKTLEN], len);
+	key_set_ptr(&out[K_RAW_PKT], (void*)nfnl_log_get_payload(nflog_obj, &len));
+	key_set_u32(&out[K_RAW_PKTLEN], len);
 
-	key_u32(&out[K_RAW_PKTCNT], 1);
+	key_set_u32(&out[K_RAW_PKTCNT], 1);
 
 	if (nfnl_log_get_prefix(nflog_obj) != NULL)
-		key_ptr(&out[K_OOB_PREFIX], (void *)nfnl_log_get_prefix(nflog_obj));
+		key_set_ptr(&out[K_OOB_PREFIX], (void*)nfnl_log_get_prefix(nflog_obj));
 
 	if ((tv = nfnl_log_get_timestamp(nflog_obj)) != NULL) {
 		/* FIXME: convert endianness */
-		key_u32(&out[K_OOB_TIME_SEC], tv->tv_sec);
-		key_u32(&out[K_OOB_TIME_USEC], tv->tv_usec);
+		key_set_u32(&out[K_OOB_TIME_SEC], tv->tv_sec);
+		key_set_u32(&out[K_OOB_TIME_USEC], tv->tv_usec);
 	}
 
-	key_u32(&out[K_OOB_IFI_IN], nfnl_log_get_indev(nflog_obj));
-	key_u32(&out[K_OOB_IFI_OUT], nfnl_log_get_outdev(nflog_obj));
+	key_set_u32(&out[K_OOB_IFI_IN], nfnl_log_get_indev(nflog_obj));
+	key_set_u32(&out[K_OOB_IFI_OUT], nfnl_log_get_outdev(nflog_obj));
 
-	key_u32(&out[K_OOB_SEQ], nfnl_log_get_seq(nflog_obj));
-	key_u32(&out[K_OOB_SEQ_GLOBAL], nfnl_log_get_seq_global(nflog_obj));
+	key_set_u32(&out[K_OOB_SEQ], nfnl_log_get_seq(nflog_obj));
+	key_set_u32(&out[K_OOB_SEQ_GLOBAL], nfnl_log_get_seq_global(nflog_obj));
 
-	key_u32(&out[K_OOB_LOGMARK], nfnl_log_get_mark(nflog_obj));
+	key_set_u32(&out[K_OOB_LOGMARK], nfnl_log_get_mark(nflog_obj));
 
 	ulogd_propagate_results(upi);
 }

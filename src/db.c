@@ -575,17 +575,17 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi)
 	if ((row = db_row_new(pi)) == NULL)
 		return ULOGD_IRET_ERR;
 
-	row->ip_saddr = key_get_u32(&pi->input.keys[0]);
-	row->ip_daddr = key_get_u32(&pi->input.keys[1]);
-	row->ip_proto = key_get_u8(&pi->input.keys[2]);
-	row->l4_dport = key_get_u16(&pi->input.keys[3]);
-	row->raw_in_pktlen = key_get_u32(&pi->input.keys[4]);
-	row->raw_in_pktcount = key_get_u32(&pi->input.keys[5]);
-	row->raw_out_pktlen = key_get_u32(&pi->input.keys[6]);
-	row->raw_out_pktcount = key_get_u32(&pi->input.keys[7]);
-	row->flow_start_day = key_get_u32(&pi->input.keys[8]);
-	row->flow_start_sec = key_get_u32(&pi->input.keys[9]);
-	row->flow_duration = key_get_u32(&pi->input.keys[10]);
+	row->ip_saddr = key_u32(&pi->input.keys[0]);
+	row->ip_daddr = key_u32(&pi->input.keys[1]);
+	row->ip_proto = key_u8(&pi->input.keys[2]);
+	row->l4_dport = key_u16(&pi->input.keys[3]);
+	row->raw_in_pktlen = key_u32(&pi->input.keys[4]);
+	row->raw_in_pktcount = key_u32(&pi->input.keys[5]);
+	row->raw_out_pktlen = key_u32(&pi->input.keys[6]);
+	row->raw_out_pktcount = key_u32(&pi->input.keys[7]);
+	row->flow_start_day = key_u32(&pi->input.keys[8]);
+	row->flow_start_sec = key_u32(&pi->input.keys[9]);
+	row->flow_duration = key_u32(&pi->input.keys[10]);
 
 	if (db_row_add(pi, row) < 0)
 		return ULOGD_IRET_OK;

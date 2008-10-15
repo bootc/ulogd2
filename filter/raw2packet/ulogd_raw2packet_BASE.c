@@ -344,25 +344,25 @@ _interp_tcp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 
 	assert(iph->protocol == IPPROTO_TCP);
 
-	key_u16(&ret[O_TcpSPort], ntohs(tcph->source));
-	key_u16(&ret[O_TcpDPort], ntohs(tcph->dest));
-	key_u32(&ret[O_TcpSeq], ntohl(tcph->seq));
-	key_u32(&ret[O_TcpAckSeq], ntohl(tcph->ack_seq));
-	key_u8(&ret[O_TcpOff], ntohs(tcph->doff));
-	key_u8(&ret[O_TcpReserved], ntohs(tcph->res1));
-	key_u16(&ret[O_TcpWin],ntohs(tcph->window));
+	key_set_u16(&ret[O_TcpSPort], ntohs(tcph->source));
+	key_set_u16(&ret[O_TcpDPort], ntohs(tcph->dest));
+	key_set_u32(&ret[O_TcpSeq], ntohl(tcph->seq));
+	key_set_u32(&ret[O_TcpAckSeq], ntohl(tcph->ack_seq));
+	key_set_u8(&ret[O_TcpOff], ntohs(tcph->doff));
+	key_set_u8(&ret[O_TcpReserved], ntohs(tcph->res1));
+	key_set_u16(&ret[O_TcpWin], ntohs(tcph->window));
 
-	key_bool(&ret[O_TcpUrg], tcph->urg);
+	key_set_bool(&ret[O_TcpUrg], tcph->urg);
 	if (tcph->urg)
-		key_u16(&ret[O_TcpUrgp], ntohs(tcph->urg_ptr));
-	key_bool(&ret[O_TcpAck], tcph->ack);
-	key_bool(&ret[O_TcpPsh],  tcph->psh);
-	key_bool(&ret[O_TcpRst], tcph->rst);
-	key_bool(&ret[O_TcpSyn], tcph->syn);
-	key_bool(&ret[O_TcpFin], tcph->fin);
-	key_bool(&ret[O_TcpRes1], tcph->res1);
-	key_bool(&ret[O_TcpRes2], tcph->res2);
-	key_bool(&ret[O_TcpCsum], ntohs(tcph->check));
+		key_set_u16(&ret[O_TcpUrgp], ntohs(tcph->urg_ptr));
+	key_set_bool(&ret[O_TcpAck], tcph->ack);
+	key_set_bool(&ret[O_TcpPsh], tcph->psh);
+	key_set_bool(&ret[O_TcpRst], tcph->rst);
+	key_set_bool(&ret[O_TcpSyn], tcph->syn);
+	key_set_bool(&ret[O_TcpFin], tcph->fin);
+	key_set_bool(&ret[O_TcpRes1], tcph->res1);
+	key_set_bool(&ret[O_TcpRes2], tcph->res2);
+	key_set_bool(&ret[O_TcpCsum], ntohs(tcph->check));
 	
 	return 0;
 }
@@ -379,10 +379,10 @@ _interp_udp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 
 	assert(iph->protocol == IPPROTO_UDP);
 
-	key_u16(&ret[O_UdpSPort], ntohs(udph->source));
-	key_u16(&ret[O_UdpDPort], ntohs(udph->dest));
-	key_u16(&ret[O_UdpLen], ntohs(udph->len));
-	key_u16(&ret[O_UdpCsum], ntohs(udph->check));
+	key_set_u16(&ret[O_UdpSPort], ntohs(udph->source));
+	key_set_u16(&ret[O_UdpDPort], ntohs(udph->dest));
+	key_set_u16(&ret[O_UdpLen], ntohs(udph->len));
+	key_set_u16(&ret[O_UdpCsum], ntohs(udph->check));
 	
 	return 0;
 }
@@ -399,28 +399,28 @@ _interp_icmp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 
 	assert(iph->protocol == IPPROTO_ICMP);
 	
-	key_u8(&ret[O_IcmpType], icmph->type);
-	key_u8(&ret[O_IcmpCode], icmph->code);
+	key_set_u8(&ret[O_IcmpType], icmph->type);
+	key_set_u8(&ret[O_IcmpCode], icmph->code);
 
 	switch (icmph->type) {
 	case ICMP_ECHO:
 	case ICMP_ECHOREPLY:
-		key_u16(&ret[O_IcmpEchoId], ntohs(icmph->un.echo.id));
-		key_u16(&ret[O_IcmpEchoSeq], ntohs(icmph->un.echo.sequence));
+		key_set_u16(&ret[O_IcmpEchoId], ntohs(icmph->un.echo.id));
+		key_set_u16(&ret[O_IcmpEchoSeq], ntohs(icmph->un.echo.sequence));
 		break;
 
 	case ICMP_REDIRECT:
 	case ICMP_PARAMETERPROB:
-		key_u32(&ret[O_IcmpGw], ntohl(icmph->un.gateway));
+		key_set_u32(&ret[O_IcmpGw], ntohl(icmph->un.gateway));
 		break;
 
 	case ICMP_DEST_UNREACH:
 		if (icmph->code == ICMP_FRAG_NEEDED)
-			key_u16(&ret[O_IcmpFragMtu], ntohs(icmph->un.frag.mtu));
+			key_set_u16(&ret[O_IcmpFragMtu], ntohs(icmph->un.frag.mtu));
 		break;
 	}
 
-	key_u16(&ret[O_IcmpCsum], icmph->checksum);
+	key_set_u16(&ret[O_IcmpCsum], icmph->checksum);
 
 	return 0;
 }
@@ -440,8 +440,7 @@ _interp_ahesp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 	if (iph->protocol != IPPROTO_ESP)
 		return NULL;
 
-	ret[0].u.value.ui32 = ntohl(esph->spi);
-	ret[0].flags |= ULOGD_RETF_VALID;
+	key_set_u32(ret[0], ntohl(esph->spi));
 #endif
 
 	return 0;
@@ -451,18 +450,18 @@ static int
 _interp_iphdr(struct ulogd_pluginstance *pi)
 {
 	struct ulogd_key *ret = pi->output.keys;
-	const struct iphdr *iph = key_get_ptr(&pi->input.keys[0]);
+	const struct iphdr *iph = key_ptr(&pi->input.keys[0]);
 
-	key_u32(&ret[0], ntohl(iph->saddr));
-	key_u32(&ret[1], ntohl(iph->daddr));
-	key_u8(&ret[2], iph->protocol);
-	key_u8(&ret[3], iph->tos);
-	key_u8(&ret[4], iph->ttl);
-	key_u16(&ret[5], ntohs(iph->tot_len));
-	key_u8(&ret[6], iph->ihl);
-	key_u16(&ret[7], ntohs(iph->check));
-	key_u16(&ret[8], ntohs(iph->id));
-	key_u16(&ret[9], ntohs(iph->frag_off));
+	key_set_u32(&ret[0], ntohl(iph->saddr));
+	key_set_u32(&ret[1], ntohl(iph->daddr));
+	key_set_u8(&ret[2], iph->protocol);
+	key_set_u8(&ret[3], iph->tos);
+	key_set_u8(&ret[4], iph->ttl);
+	key_set_u16(&ret[5], ntohs(iph->tot_len));
+	key_set_u8(&ret[6], iph->ihl);
+	key_set_u16(&ret[7], ntohs(iph->check));
+	key_set_u16(&ret[8], ntohs(iph->id));
+	key_set_u16(&ret[9], ntohs(iph->frag_off));
 
 	switch (iph->protocol) {
 	case IPPROTO_TCP:
