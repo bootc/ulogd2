@@ -33,6 +33,9 @@
         typeof(x) _x = (x);  typeof(y) _y = (y); \
         _x > _y ? _x : _y; })
 
+#define __STRINGIFY(x)	#x
+#define STRINGIFY(x)	__STRINGIFY(x)
+
 #define SEC		* 1
 #define MIN		* 60 SEC
 #define HOUR	* 60 MIN
