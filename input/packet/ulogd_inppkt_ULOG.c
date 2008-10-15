@@ -145,39 +145,29 @@ static int interp_packet(struct ulogd_pluginstance *ip, ulog_packet_msg_t *pkt)
 		oldbuf = buf;
 		for (i = 0; i < pkt->mac_len; i++, p++)
 			sprintf(buf, "%s%02x%c", oldbuf, *p, i==pkt->mac_len-1 ? ' ':':');
-		ret[0].u.value.ptr = buf;
-		ret[0].flags |= ULOGD_RETF_VALID;
+		key_set_ptr(&ret[0], buf);
 	}
 
 	/* include pointer to raw ipv4 packet */
-	ret[1].u.value.ptr = pkt->payload;
-	ret[1].flags |= ULOGD_RETF_VALID;
-	ret[2].u.value.ui32 = pkt->data_len;
-	ret[2].flags |= ULOGD_RETF_VALID;
-	ret[3].u.value.ui32 = 1;
-	ret[3].flags |= ULOGD_RETF_VALID;
+	key_set_ptr(&ret[1], pkt->payload);
+	key_set_u32(&ret[2], pkt->data_len);
+	key_set_u32(&ret[3], 1);
 
-	ret[4].u.value.ptr = pkt->prefix;
-	ret[4].flags |= ULOGD_RETF_VALID;
+	key_set_ptr(&ret[4], pkt->prefix);
 
 	/* god knows why timestamp_usec contains crap if timestamp_sec == 0
 	 * if (pkt->timestamp_sec || pkt->timestamp_usec) { */
 	if (pkt->timestamp_sec) {
-		ret[5].u.value.ui32 = pkt->timestamp_sec;
-		ret[5].flags |= ULOGD_RETF_VALID;
-		ret[6].u.value.ui32 = pkt->timestamp_usec;
-		ret[6].flags |= ULOGD_RETF_VALID;
+		key_set_u32(&ret[5], pkt->timestamp_sec);
+		key_set_u32(&ret[6], pkt->timestamp_usec);
 	} else {
 		ret[5].flags &= ~ULOGD_RETF_VALID;
 		ret[6].flags &= ~ULOGD_RETF_VALID;
 	}
 
-	ret[7].u.value.ui32 = pkt->mark;
-	ret[7].flags |= ULOGD_RETF_VALID;
-	ret[8].u.value.ptr = pkt->indev_name;
-	ret[8].flags |= ULOGD_RETF_VALID;
-	ret[9].u.value.ptr = pkt->outdev_name;
-	ret[9].flags |= ULOGD_RETF_VALID;
+	key_set_u32(&ret[7], pkt->mark);
+	key_set_ptr(&ret[8], pkt->indev_name);
+	key_set_ptr(&ret[9], pkt->outdev_name);
 	
 	ulogd_propagate_results(ip);
 	return 0;

@@ -113,8 +113,7 @@ static int interp_pwsniff(struct ulogd_pluginstance *pi)
 	}
 
 	if (len) {
-		ret[0].u.value.ptr = (char *) malloc(len+1);
-		ret[0].flags |= ULOGD_RETF_VALID;
+		key_set_ptr(&ret[0], malloc(len + 1));
 		if (!ret[0].u.value.ptr) {
 			ulogd_log(ULOGD_ERROR, "OOM (size=%u)\n", len);
 			return 0;
@@ -123,8 +122,7 @@ static int interp_pwsniff(struct ulogd_pluginstance *pi)
 		*((char *)ret[0].u.value.ptr + len + 1) = '\0';
 	}
 	if (pw_len) {
-		ret[1].u.value.ptr = (char *) malloc(pw_len+1);
-		ret[1].flags |= ULOGD_RETF_VALID;
+		key_set_ptr(&ret[1], malloc(pw_len + 1));
 		if (!ret[1].u.value.ptr){
 			ulogd_log(ULOGD_ERROR, "OOM (size=%u)\n", pw_len);
 			return 0;
