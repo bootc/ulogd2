@@ -30,7 +30,7 @@ struct pgsql_priv {
 
 
 /* our configuration directives */
-static struct config_keyset pgsql_kset = {
+static const struct config_keyset pgsql_kset = {
 	.num_ces = DB_CE_NUM + 6,
 	.ces = {
 		DB_CES,

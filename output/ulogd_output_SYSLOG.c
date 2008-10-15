@@ -44,7 +44,7 @@ static struct ulogd_key syslog_inp[] = {
 	},
 };
 
-static struct config_keyset syslog_kset = { 
+static const struct config_keyset syslog_kset = {
 	.num_ces = 2,
 	.ces = {
 		{

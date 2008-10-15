@@ -34,7 +34,7 @@ struct ulog_input {
 
 /* configuration entries */
 
-static struct config_keyset libulog_kset = {
+static const struct config_keyset libulog_kset = {
 	.num_ces = 3,
 	.ces = {
 	{

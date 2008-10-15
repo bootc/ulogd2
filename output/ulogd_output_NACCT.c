@@ -98,7 +98,7 @@ nacct_interp(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-static struct config_keyset nacct_kset = {
+static const struct config_keyset nacct_kset = {
 	.num_ces = 2,
 	.ces = {
 		{

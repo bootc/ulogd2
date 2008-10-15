@@ -58,7 +58,7 @@ static struct ulogd_key logemu_inp[] = {
 	},
 };
 
-static struct config_keyset logemu_kset = {
+static const struct config_keyset logemu_kset = {
 	.num_ces = 2,
 	.ces = {
 		{

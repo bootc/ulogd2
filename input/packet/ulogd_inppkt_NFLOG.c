@@ -34,7 +34,7 @@ struct nflog_priv {
 };
 
 /* configuration entries */
-static struct config_keyset nflog_kset = {
+static const struct config_keyset nflog_kset = {
 	.num_ces = 7,
 	.ces = {
 		{

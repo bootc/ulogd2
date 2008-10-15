@@ -95,7 +95,7 @@ static int oprint_interp(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static struct config_keyset oprint_kset = {
+static const struct config_keyset oprint_kset = {
 	.num_ces = 2,
 	.ces = {
 		{

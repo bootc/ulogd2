@@ -262,7 +262,7 @@ static struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
 	{ NULL, NULL, LH_F_NOLOG },	/* icmp.code */
 };
 
-static struct config_keyset astaro_kset = { 
+static const struct config_keyset astaro_kset = {
 	.num_ces = 2,
 	.ces = {
 		{

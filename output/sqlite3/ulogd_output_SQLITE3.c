@@ -97,7 +97,7 @@ struct sqlite3_priv {
 };
 
 
-static struct config_keyset sqlite3_kset = {
+static const struct config_keyset sqlite3_kset = {
 	.num_ces = 6,
 	.ces = {
 		{

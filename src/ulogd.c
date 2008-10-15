@@ -79,7 +79,7 @@ static int load_plugin(const char *file);
 static int create_stack(const char *file);
 static int logfile_open(const char *name);
 
-static struct config_keyset ulogd_kset = {
+static const struct config_keyset ulogd_kset = {
 	.num_ces = 4,
 	.ces = {
 		{

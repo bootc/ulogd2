@@ -147,7 +147,7 @@ struct bitmask *bitmask_dup(const struct bitmask *bm_orig)
 	return bm_new;
 }
 
-static struct config_keyset ipfix_kset = {
+static const struct config_keyset ipfix_kset = {
 	.num_ces = 3,
 	.ces = {
 		{

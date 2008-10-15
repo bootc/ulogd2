@@ -59,7 +59,7 @@ struct mysql_instance {
 };
 
 /* our configuration directives */
-static struct config_keyset kset_mysql = {
+static const struct config_keyset kset_mysql = {
 	.num_ces = DB_CE_NUM+5,
 	.ces = {
 		DB_CES,

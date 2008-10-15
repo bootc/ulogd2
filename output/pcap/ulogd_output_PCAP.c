@@ -85,7 +85,7 @@ struct pcap_sf_pkthdr {
         ((unsigned char *)&addr)[2], \
         ((unsigned char *)&addr)[3]
 
-static struct config_keyset pcap_kset = {
+static const struct config_keyset pcap_kset = {
 	.num_ces = 2,
 	.ces = {
 		{ 
