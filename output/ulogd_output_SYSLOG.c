@@ -37,6 +37,9 @@
 #define SYSLOG_LEVEL_DEFAULT "LOG_NOTICE"
 #endif
 
+#define NV_INITIALIZER(val)		{ STRINGIFY(val), val }
+
+
 static struct ulogd_key syslog_inp[] = {
 	{
 		.type = ULOGD_RET_STRING,
@@ -78,62 +81,66 @@ static int syslog_interp(struct ulogd_pluginstance *upi)
 
 	return 0;
 }
-		
+
+static const struct syslog_nv {
+	const char *name;
+	int val;
+} str2facility[] = {
+	NV_INITIALIZER(LOG_DAEMON),
+	NV_INITIALIZER(LOG_KERN),
+	NV_INITIALIZER(LOG_LOCAL0),
+	NV_INITIALIZER(LOG_LOCAL1),
+	NV_INITIALIZER(LOG_LOCAL2),
+	NV_INITIALIZER(LOG_LOCAL3),
+	NV_INITIALIZER(LOG_LOCAL4),
+	NV_INITIALIZER(LOG_LOCAL5),
+	NV_INITIALIZER(LOG_LOCAL6),
+	NV_INITIALIZER(LOG_LOCAL7),
+	NV_INITIALIZER(LOG_USER),
+};
+static const struct syslog_nv str2loglevel[] = {
+	NV_INITIALIZER(LOG_EMERG),
+	NV_INITIALIZER(LOG_ALERT),
+	NV_INITIALIZER(LOG_CRIT),
+	NV_INITIALIZER(LOG_ERR),
+	NV_INITIALIZER(LOG_WARNING),
+	NV_INITIALIZER(LOG_NOTICE),
+	NV_INITIALIZER(LOG_INFO),
+	NV_INITIALIZER(LOG_DEBUG),
+};
+
 static int syslog_configure(struct ulogd_pluginstance *pi)
 {
-	int syslog_facility, syslog_level;
+	struct syslog_instance *priv = upi_priv(pi);
 	char *facility, *level;
+	int i;
 
 	facility = pi->config_kset->ces[0].u.string;
 	level = pi->config_kset->ces[1].u.string;
 
-	if (!strcmp(facility, "LOG_DAEMON"))
-		syslog_facility = LOG_DAEMON;
-	else if (!strcmp(facility, "LOG_KERN"))
-		syslog_facility = LOG_KERN;
-	else if (!strcmp(facility, "LOG_LOCAL0"))
-		syslog_facility = LOG_LOCAL0;
-	else if (!strcmp(facility, "LOG_LOCAL1"))
-		syslog_facility = LOG_LOCAL1;
-	else if (!strcmp(facility, "LOG_LOCAL2"))
-		syslog_facility = LOG_LOCAL2;
-	else if (!strcmp(facility, "LOG_LOCAL3"))
-		syslog_facility = LOG_LOCAL3;
-	else if (!strcmp(facility, "LOG_LOCAL4"))
-		syslog_facility = LOG_LOCAL4;
-	else if (!strcmp(facility, "LOG_LOCAL5"))
-		syslog_facility = LOG_LOCAL5;
-	else if (!strcmp(facility, "LOG_LOCAL6"))
-		syslog_facility = LOG_LOCAL6;
-	else if (!strcmp(facility, "LOG_LOCAL7"))
-		syslog_facility = LOG_LOCAL7;
-	else if (!strcmp(facility, "LOG_USER"))
-		syslog_facility = LOG_USER;
-	else {
-		upi_log(pi, ULOGD_FATAL, "unknown facility '%s'\n", facility);
-		return -EINVAL;
+	for (i = 0; i < ARRAY_SIZE(str2facility); i++) {
+		if (strcmp(facility, str2facility[i].name) == 0)
+			break;
 	}
 
-	if (!strcmp(level, "LOG_EMERG"))
-		syslog_level = LOG_EMERG;
-	else if (!strcmp(level, "LOG_ALERT"))
-		syslog_level = LOG_ALERT;
-	else if (!strcmp(level, "LOG_CRIT"))
-		syslog_level = LOG_CRIT;
-	else if (!strcmp(level, "LOG_ERR"))
-		syslog_level = LOG_ERR;
-	else if (!strcmp(level, "LOG_WARNING"))
-		syslog_level = LOG_WARNING;
-	else if (!strcmp(level, "LOG_NOTICE"))
-		syslog_level = LOG_NOTICE;
-	else if (!strcmp(level, "LOG_INFO"))
-		syslog_level = LOG_INFO;
-	else if (!strcmp(level, "LOG_DEBUG"))
-		syslog_level = LOG_DEBUG;
-	else {
-		upi_log(pi, ULOGD_FATAL, "unknown level '%s'\n", level);
-		return -EINVAL;
+	if (i >= ARRAY_SIZE(str2facility)) {
+		upi_log(pi, ULOGD_FATAL, "unknown facility '%s'\n", facility);
+		return ULOGD_IRET_ERR;
 	}
+
+	priv->syslog_facility = str2facility[i].val;
+
+	for (i = 0; i < ARRAY_SIZE(str2loglevel); i++) {
+		if (strcmp(facility, str2loglevel[i].name) == 0)
+			break;
+	}
+
+	if (i >= ARRAY_SIZE(str2loglevel)) {
+		upi_log(pi, ULOGD_FATAL, "unknown level '%s'\n", level);
+		return ULOGD_IRET_ERR;
+	}
+
+	priv->syslog_level = str2loglevel[i].val;
 
 	return 0;
 }
