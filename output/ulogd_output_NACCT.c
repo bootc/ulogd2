@@ -28,75 +28,42 @@
 
 #define NACCT_FILE_DEFAULT	"/var/log/nacctdata.log"
 
-#define HIPQUAD(addr) \
-        ((unsigned char *)&addr)[3], \
-        ((unsigned char *)&addr)[2], \
-        ((unsigned char *)&addr)[1], \
-        ((unsigned char *)&addr)[0]
-
 /* config accessors (lazy me...) */
 #define NACCT_CFG_FILE(pi)	((pi)->config_kset->ces[0].u.string)
 #define NACCT_CFG_SYNC(pi)	((pi)->config_kset->ces[1].u.value)
-
-#define KEY(pi,idx)		((pi)->input.keys[(idx)].u.source)
-
-/* input keys */
-#define KEY_IP_SADDR(pi)		KEY(pi, 0)
-#define KEY_IP_DADDR(pi)		KEY(pi, 1)
-#define KEY_IP_PROTO(pi)		KEY(pi, 2)
-#define KEY_L4_SPORT(pi)		KEY(pi, 3)
-#define KEY_L4_DPORT(pi)		KEY(pi, 4)
-#define KEY_RAW_PKTLEN(pi)		KEY(pi, 5)
-#define KEY_RAW_PKTCNT(pi)		KEY(pi, 6)
-#define KEY_ICMP_CODE(pi)		KEY(pi, 7)
-#define KEY_ICMP_TYPE(pi)		KEY(pi, 8)
-#define KEY_FLOW_START(pi)		KEY(pi, 11)
-#define KEY_FLOW_END(pi)		KEY(pi, 13)
 
 struct nacct_priv {
 	FILE *of;
 };
 
+/* input keys */
+enum InKeys {
+	InIpSAddr = 0,
+	InIpDAddr,
+	InIpProto,
+	InL4SPort,
+	InL4DPort,
+	InRawInPktLen,
+	InRawInPktCnt,
+	InIcmpCode,
+	InIcmpType,
+	InFlowStartSec,
+	InFlowEndSec,
+};
 
-static int
-nacct_interp(struct ulogd_pluginstance *pi)
-{
-	struct nacct_priv *priv = upi_priv(pi);
-	static char buf[80];
-
-	/* try to be as close to nacct as possible.  Instead of nacct's
-	   'timestamp' value use 'flow.end.sec' */
-	if (KEY_IP_PROTO(pi)->u.value.ui8 == IPPROTO_ICMP) {
-		snprintf(buf, sizeof(buf),
-				 "%u\t%u\t%u.%u.%u.%u\t%u\t%u.%u.%u.%u\t%u\t%u\t%u",
-				 KEY_FLOW_END(pi)->u.value.ui32,
-				 KEY_IP_PROTO(pi)->u.value.ui8,
-				 HIPQUAD(KEY_IP_SADDR(pi)->u.value.ui32),
-				 KEY_ICMP_TYPE(pi)->u.value.ui8,
-				 HIPQUAD(KEY_IP_DADDR(pi)->u.value.ui32),
-				 KEY_ICMP_CODE(pi)->u.value.ui8,
-				 KEY_RAW_PKTCNT(pi)->u.value.ui32,
-				 KEY_RAW_PKTLEN(pi)->u.value.ui32);
-	} else {
-		snprintf(buf, sizeof(buf),
-				 "%u\t%u\t%u.%u.%u.%u\t%u\t%u.%u.%u.%u\t%u\t%u\t%u",
-				 KEY_FLOW_END(pi)->u.value.ui32,
-				 KEY_IP_PROTO(pi)->u.value.ui8,
-				 HIPQUAD(KEY_IP_SADDR(pi)->u.value.ui32),
-				 KEY_L4_SPORT(pi)->u.value.ui8,
-				 HIPQUAD(KEY_IP_DADDR(pi)->u.value.ui32),
-				 KEY_L4_DPORT(pi)->u.value.ui8,
-				 KEY_RAW_PKTCNT(pi)->u.value.ui32,
-				 KEY_RAW_PKTLEN(pi)->u.value.ui32);
-	}
-
-	fprintf(priv->of, "%s\n", buf);
-
-	if (NACCT_CFG_SYNC(pi) != 0)
-		fflush(priv->of);
-
-	return 0;
-}
+static struct ulogd_key in_keys[] = {
+	[InIpSAddr] = KEY(IPADDR, "ip.saddr"),
+	[InIpDAddr] = KEY(IPADDR, "ip.daddr"),
+	[InIpProto] = KEY(UINT8, "ip.protocol"),
+	[InL4SPort] = KEY(UINT16, "l4.sport"),
+	[InL4DPort] = KEY(UINT16, "l4.dport"),
+	[InRawInPktLen] = KEY(UINT32, "raw.in.pktlen"),
+	[InRawInPktCnt] = KEY(UINT32, "raw.in.pktcount"),
+	[InIcmpCode] = KEY(UINT8, "icmp.code"),
+	[InIcmpType] = KEY(UINT8, "icmp.type"),
+	[InFlowStartSec] = KEY(UINT32, "flow.start.sec"),
+	[InFlowEndSec] = KEY(UINT32, "flow.end.sec"),
+};
 
 static const struct config_keyset nacct_kset = {
 	.num_ces = 2,
@@ -117,52 +84,100 @@ static const struct config_keyset nacct_kset = {
 };
 
 static int
-nacct_conf(struct ulogd_pluginstance *pi)
+nacct_interp(struct ulogd_pluginstance *pi)
 {
-	int ret;
+	struct nacct_priv *priv = upi_priv(pi);
+	struct ulogd_key *in = pi->input.keys;
+	static char buf[80];
+	int len;
 
-	if ((ret = ulogd_wildcard_inputkeys(pi)) < 0)
-		return ret;
+	/* try to be as close to nacct as possible.  Instead of nacct's
+	   'timestamp' value use 'flow.end.sec' */
+	if (key_u8(&in[InIpProto]) == IPPROTO_ICMP) {
+		len = sprintf(buf, "%u\t%u\t%s\t%u\t%s\t%u\t%u\t%u\n",
+				key_u32(&in[InFlowEndSec]),
+				key_u8(&in[InIpProto]),
+				inet_ntoa((struct in_addr){ key_u32(&in[InIpSAddr]) }),
+				key_u8(&in[InIcmpType]),
+				inet_ntoa((struct in_addr){ key_u32(&in[InIpDAddr]) }),
+				key_u8(&in[InIcmpCode]),
+				key_u32(&in[InRawInPktCnt]),
+				key_u32(&in[InRawInPktLen]));
+	} else {
+		len = sprintf(buf, "%u\t%u\t%s\t%u\t%s\t%u\t%u\t%u\n",
+					  key_u32(&in[InFlowEndSec]),
+					  key_u8(&in[InIpProto]),
+					  inet_ntoa((struct in_addr){ key_u32(&in[InIpSAddr]) }),
+					  key_u16(&in[InL4SPort]),
+					  inet_ntoa((struct in_addr){ key_u32(&in[InIpDAddr]) }),
+					  key_u16(&in[InL4DPort]),
+					  key_u32(&in[InRawInPktCnt]),
+					  key_u32(&in[InRawInPktLen]));
+	}
 
+	if (fwrite(buf, len, 1, priv->of) < 1) {
+		upi_log(pi, ULOGD_ERROR, "write failed (short write)\n");
+		return ULOGD_IRET_ERR;
+	}
+
+	if (NACCT_CFG_SYNC(pi) != 0)
+		fflush(priv->of);
+
+	return ULOGD_IRET_OK;
+}
+
+static int
+nacct_configure(struct ulogd_pluginstance *pi)
+{
 	return 0;
 }
 
 static int
-nacct_init(struct ulogd_pluginstance *pi)
+nacct_start(struct ulogd_pluginstance *pi)
 {
-	struct nacct_priv *op = upi_priv(pi);
+	struct nacct_priv *priv = upi_priv(pi);
 
-	if ((op->of = fopen(NACCT_CFG_FILE(pi), "a")) == NULL) {
+	if ((priv->of = fopen(NACCT_CFG_FILE(pi), "a")) == NULL) {
 		upi_log(pi, ULOGD_FATAL, "%s: %s\n",
 				NACCT_CFG_FILE(pi), strerror(errno));
-		return -1;
-	}		
-	return 0;
+		return ULOGD_IRET_ERR;
+	}
+
+	upi_log(pi, ULOGD_DEBUG, "log file '%s' opened\n", NACCT_CFG_FILE(pi));
+
+	return ULOGD_IRET_OK;
 }
 
 static int
-nacct_fini(struct ulogd_pluginstance *pi)
+nacct_stop(struct ulogd_pluginstance *pi)
 {
-	struct nacct_priv *op = upi_priv(pi);
+	struct nacct_priv *priv = upi_priv(pi);
 
-	if (op->of != stdout)
-		fclose(op->of);
+	if (priv->of != NULL) {
+		fclose(priv->of);
+		priv->of = NULL;
+	}
+
+	upi_log(pi, ULOGD_DEBUG, "log file closed\n");
 
 	return 0;
 }
 
 static struct ulogd_plugin nacct_plugin = {
-	.name = "NACCT", 
+	.name = "NACCT",
+	.flags = ULOGD_PF_RECONF,
 	.input = {
-		.type = ULOGD_DTYPE_PACKET | ULOGD_DTYPE_FLOW,
+		.keys = in_keys,
+		.num_keys = ARRAY_SIZE(in_keys),
+		.type = ULOGD_DTYPE_FLOW,
 	},
 	.output = {
 		.type = ULOGD_DTYPE_SINK,
 	},
-	.configure = &nacct_conf,
+	.configure = &nacct_configure,
+	.start 	= &nacct_start,
+	.stop	= &nacct_stop,
 	.interp	= &nacct_interp,
-	.start 	= &nacct_init,
-	.stop	= &nacct_fini,
 	.config_kset = &nacct_kset,
 	.rev = ULOGD_PLUGIN_REVISION,
 	.priv_size = sizeof(struct nacct_priv),
