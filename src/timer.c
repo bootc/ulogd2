@@ -37,6 +37,22 @@ struct timeval tv_now, tv_now_local;
 
 
 int
+ulogd_init_timer(struct ulogd_timer *timer, unsigned freq,
+				 ulogd_timer_cb_t cb, void *arg, unsigned flags)
+{
+	if (timer == NULL)
+		return -1;
+
+	timer->expires = 0;
+	timer->flags = flags;
+	timer->cb = cb;
+	timer->data = arg;
+	timer->ival = freq;
+
+	return 0;
+}
+
+int
 ulogd_register_timer(struct ulogd_timer *timer)
 {
 	pr_debug("%s: timer=%p\n", __func__, timer);

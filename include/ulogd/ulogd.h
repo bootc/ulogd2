@@ -89,12 +89,16 @@ int ulogd_dispatch(void);
  ***********************************************************************/
 #define TIMER_F_PERIODIC			0x01
 
+struct ulogd_timer;
+
+typedef void (* ulogd_timer_cb_t)(struct ulogd_timer *);
+
 struct ulogd_timer {
 	struct llist_head list;
 	unsigned expires;			/* seconds */
 	unsigned ival;				/* seconds */
 	unsigned flags;
-	void (* cb)(struct ulogd_timer *);
+	ulogd_timer_cb_t cb;
 	void *data;					/* usually (ulogd_pluginstance *) */
 };
 
@@ -106,6 +110,8 @@ extern struct timeval tv_now_local;
 
 int ulogd_timer_init(void);
 int ulogd_timer_run(void);
+int ulogd_init_timer(struct ulogd_timer *timer, unsigned freq,
+					 ulogd_timer_cb_t cb, void *arg, unsigned flags);
 int ulogd_register_timer(struct ulogd_timer *timer);
 void ulogd_unregister_timer(struct ulogd_timer *timer);
 void ulogd_timer_schedule(void);

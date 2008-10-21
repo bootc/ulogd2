@@ -714,11 +714,8 @@ sqlite3_configure(struct ulogd_pluginstance *pi)
 	pr_debug("%s: db='%s' table='%s' timer=%d max-backlog=%d\n", pi->id,
 			 db_ce(pi), table_ce(pi), timer_ce(pi), max_backlog_ce(pi));
 
-	/* init timer */
-	priv->timer.cb = sqlite_timer_cb;
-	priv->timer.ival = timer_ce(pi);
-	priv->timer.flags = TIMER_F_PERIODIC;
-	priv->timer.data = pi;
+	ulogd_init_timer(&priv->timer, timer_ce(pi), sqlite_timer_cb, pi,
+					 TIMER_F_PERIODIC);
 
 	ulogd_register_timer(&priv->timer);
 

@@ -309,12 +309,7 @@ ulogd_db_configure(struct ulogd_pluginstance *upi)
 	/* close here because of restart logic later */
 	(void)di->driver->close_db(upi);
 
-	/* init timer */
-	di->timer.expires = 0;
-	di->timer.ival = 1 SEC;
-	di->timer.cb = db_timer_cb;
-	di->timer.flags = TIMER_F_PERIODIC;
-	di->timer.data = upi;
+	ulogd_init_timer(&di->timer, 1 SEC, db_timer_cb, upi, TIMER_F_PERIODIC);
 
 	return 0;
 
