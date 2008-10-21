@@ -250,6 +250,12 @@ ct_put(struct conntrack *ct)
 	}
 }
 
+static void
+ct_set_initial_time(struct conntrack *ct)
+{
+	ct->time[UPDATE].tv_sec = ct->time[START].tv_sec = t_now_local;
+}
+
 static int
 ct_tuple_cmp(const struct ct_tuple *t1, const struct ct_tuple *t2)
 {
@@ -351,8 +357,7 @@ static int
 cache_add(struct cache *c, struct conntrack *ct)
 {
 	ct_get(ct);
-
-	ct->time[UPDATE].tv_sec = ct->time[START].tv_sec = t_now_local;
+	ct_set_initial_time(ct);
 
     /* order of these two is important for debugging purposes */
     c->c_cnt++;
@@ -741,14 +746,25 @@ nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
 
 	switch (grp = nfnlmsg_ct_group(hdr)) {
 	case NFNLGRP_CONNTRACK_NEW:
-		assert(tcache_find(priv->tcache, &tuple) == NULL);
+		/* it is possible for a conntrack to be available if a _NEW
+		   event comes in, e. g. ICMP echo request if the previous
+		   echo reply was missed. */
+		if ((ct = tcache_find(priv->tcache, &tuple)) == NULL) {
+			if ((ct = ct_alloc_init(nfnl_ct, &tuple)) == NULL) {
+				upi_log(pi, ULOGD_ERROR, "out of memory\n");
+				goto err_put_ct;
+			}
 
-		if ((ct = ct_alloc_init(nfnl_ct, &tuple)) == NULL) {
-			upi_log(pi, ULOGD_ERROR, "out of memory\n");
-			goto err_put_ct;
+			cache_add(priv->tcache, ct);
+		} else {
+			/* use new conntrack */
+			nfnl_ct_put(ct->nfnl_ct);
+			nfnl_ct_get(nfnl_ct);
+			ct->nfnl_ct = nfnl_ct;
+
+			ct_set_initial_time(ct);
 		}
 
-		cache_add(priv->tcache, ct);
 		break;
 
 	case NFNLGRP_CONNTRACK_UPDATE:
