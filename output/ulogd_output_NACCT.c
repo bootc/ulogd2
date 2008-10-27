@@ -34,6 +34,7 @@
 
 struct nacct_priv {
 	FILE *of;
+	struct ulogd_timer timer;
 };
 
 /* input keys */
@@ -126,6 +127,15 @@ nacct_interp(struct ulogd_pluginstance *pi)
 	return ULOGD_IRET_OK;
 }
 
+static void
+nacct_timer_cb(struct ulogd_timer *t)
+{
+	struct ulogd_pluginstance *pi = t->data;
+	struct nacct_priv *priv = upi_priv(pi);
+
+	fflush(priv->of);
+}
+
 static int
 nacct_configure(struct ulogd_pluginstance *pi)
 {
@@ -145,6 +155,10 @@ nacct_start(struct ulogd_pluginstance *pi)
 
 	upi_log(pi, ULOGD_DEBUG, "log file '%s' opened\n", NACCT_CFG_FILE(pi));
 
+	ulogd_init_timer(&priv->timer, 1 SEC, nacct_timer_cb, pi,
+					TIMER_F_PERIODIC);
+	ulogd_register_timer(&priv->timer);
+
 	return ULOGD_IRET_OK;
 }
 
@@ -152,6 +166,8 @@ static int
 nacct_stop(struct ulogd_pluginstance *pi)
 {
 	struct nacct_priv *priv = upi_priv(pi);
+
+	ulogd_unregister_timer(&priv->timer);
 
 	if (priv->of != NULL) {
 		fclose(priv->of);
