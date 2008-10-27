@@ -369,7 +369,7 @@ print_proto_tcp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 	if (key_bool(&in[InTcpFin]))
 		strncat_delim(&pch, "FIN", sizeof("FIN"), &delim);
 
-	strncat_delim(&pch, "\"", 1, NULL);
+	strncat_delim(&pch, "\" ", sizeof("\" "), NULL);
 		
 	return pch - buf;
 }
