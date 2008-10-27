@@ -48,6 +48,20 @@ set_nonblock(int fd)
 }
 
 int
+ulogd_init_fd(struct ulogd_fd *ufd, int fd, unsigned when,
+			  ulogd_fd_cb_t cb, void *data)
+{
+	INIT_LLIST_HEAD(&ufd->list);
+
+	ufd->fd = fd;
+	ufd->when = when;
+	ufd->cb = cb;
+	ufd->data = data;
+
+	return 0;
+}
+
+int
 ulogd_register_fd(struct ulogd_fd *ufd)
 {
 	if (set_nonblock(ufd->fd) < 0)
@@ -73,6 +87,9 @@ ulogd_register_fd(struct ulogd_fd *ufd)
 void
 ulogd_unregister_fd(struct ulogd_fd *ufd)
 {
+	if (llist_empty(&ufd->list))
+		return;
+
 	if (ufd->when & ULOGD_FD_READ)
 		FD_CLR(ufd->fd, &readset);
 	

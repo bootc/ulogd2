@@ -186,9 +186,8 @@ ulogd_signal_init(void)
 		return -1;
 	}
 
-	sig_pipe_fd.fd = sig_pipe[0];
-	sig_pipe_fd.cb = sig_pipe_cb;
-	sig_pipe_fd.when = ULOGD_FD_READ;
+	ulogd_init_fd(&sig_pipe_fd, sig_pipe[0], ULOGD_FD_READ, sig_pipe_cb,
+				  NULL);
 
 	return ulogd_register_fd(&sig_pipe_fd);
 }

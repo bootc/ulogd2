@@ -290,6 +290,16 @@ nflog_ufd_cb(int fd, unsigned int what, void *arg)
 }
 
 static int
+nflog_configure(struct ulogd_pluginstance *upi)
+{
+	struct nflog_priv *priv = upi_priv(upi);
+
+	ulogd_init_fd(&priv->ufd, -1, ULOGD_FD_READ, nflog_ufd_cb, upi);
+
+	return 0;
+}
+
+static int
 nflog_start(struct ulogd_pluginstance *upi)
 {
 	struct nflog_priv *priv = upi_priv(upi);
@@ -347,10 +357,6 @@ nflog_start(struct ulogd_pluginstance *upi)
 	/* TODO set flags */
 
 	priv->ufd.fd = nl_socket_get_fd(priv->nfnlh);
-	priv->ufd.cb = &nflog_ufd_cb;
-	priv->ufd.data = upi;
-	priv->ufd.when = ULOGD_FD_READ;
-
 	if (ulogd_register_fd(&priv->ufd) < 0)
 		goto err_free;
 
@@ -389,6 +395,7 @@ struct ulogd_plugin nflog_plugin = {
 			.num_keys = ARRAY_SIZE(output_keys),
 		},
 	.priv_size 	= sizeof(struct nflog_priv),
+	.configure = &nflog_configure,
 	.start 		= &nflog_start,
 	.stop 		= &nflog_stop,
 	.config_kset = &nflog_kset,

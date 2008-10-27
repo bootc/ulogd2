@@ -201,6 +201,16 @@ static int ulog_read_cb(int fd, unsigned int what, void *param)
 	return 0;
 }
 
+static int
+ulog_configure(struct ulogd_pluginstance *upi)
+{
+	struct ulog_input *ui = upi_priv(upi);
+
+	ulogd_init_fd(&ui->ulog_fd, -1, ULOGD_FD_READ, ulog_read_cb, upi);
+
+	return 0;
+}
+
 static int init(struct ulogd_pluginstance *upi)
 {
 	struct ulog_input *ui = upi_priv(upi);
@@ -220,8 +230,6 @@ static int init(struct ulogd_pluginstance *upi)
 	}
 
 	ui->ulog_fd.fd = ipulog_get_fd(ui->libulog_h);
-	ui->ulog_fd.cb = &ulog_read_cb;
-	ui->ulog_fd.data = upi;
 
 	ulogd_register_fd(&ui->ulog_fd);
 
@@ -255,6 +263,7 @@ static struct ulogd_plugin libulog_plugin = {
 		.keys = output_keys,
 		.num_keys = sizeof(output_keys)/sizeof(struct ulogd_key),
 	},
+	.configure = ulog_configure,
 	.start = &init,
 	.stop = &fini,
 	.config_kset = &libulog_kset,

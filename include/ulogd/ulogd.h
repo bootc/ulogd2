@@ -72,14 +72,18 @@ void __ulogd_abort(const char *, int, const char *, ...) __noreturn;
 #define ULOGD_FD_WRITE	0x0002
 #define ULOGD_FD_EXCEPT	0x0004
 
+typedef int (* ulogd_fd_cb_t)(int fd, unsigned what, void *data);
+
 struct ulogd_fd {
 	struct llist_head list;
-	int fd;				/* file descriptor */
-	unsigned int when;
-	int (*cb)(int fd, unsigned int what, void *data);
-	void *data;			/* void * to pass to callback */
+	int fd;						/* file descriptor */
+	unsigned when;
+	ulogd_fd_cb_t cb;			/* callback */
+	void *data;					/* void * to pass to callback */
 };
 
+int ulogd_init_fd(struct ulogd_fd *ufd, int fd, unsigned when,
+				  ulogd_fd_cb_t cb, void *data);
 int ulogd_register_fd(struct ulogd_fd *ufd);
 void ulogd_unregister_fd(struct ulogd_fd *ufd);
 int ulogd_dispatch(void);

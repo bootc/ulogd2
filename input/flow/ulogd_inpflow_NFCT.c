@@ -931,6 +931,8 @@ nfct_gc_timer_cb(struct ulogd_timer *t)
 static int
 nfct_configure(struct ulogd_pluginstance *pi)
 {
+	struct nfct_priv *priv = upi_priv(pi);
+
 	pr_fn_debug("pi=%p\n", pi);
 
     if (disable_ce(pi) != 0) {
@@ -949,6 +951,8 @@ nfct_configure(struct ulogd_pluginstance *pi)
 		upi_log(pi, ULOGD_NOTICE, "timeout too small, set to %d\n",
 				TCACHE_MIN_SIZE);
 	}
+
+	ulogd_init_fd(&priv->ufd, -1, ULOGD_FD_READ, nfct_ufd_cb, pi);
 
 	return ULOGD_IRET_OK;
 }
@@ -1046,9 +1050,6 @@ nfct_start(struct ulogd_pluginstance *pi)
 	assert(priv->nlh != NULL);
 
 	priv->ufd.fd = nl_socket_get_fd(priv->nlh);
-	priv->ufd.cb = &nfct_ufd_cb;
-	priv->ufd.data = pi;
-	priv->ufd.when = ULOGD_FD_READ;
 
 	if (ulogd_register_fd(&priv->ufd) < 0)
 		goto err;

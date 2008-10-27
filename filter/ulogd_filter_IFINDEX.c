@@ -79,7 +79,7 @@ static int rtnl_read_cb(int fd, unsigned int what, void *param)
 
 static int ifindex_start(struct ulogd_pluginstance *upi)
 {
-	int rc;
+	int rc, fd;
 
 	/* if we're already initialized, inc usage count and exit */
 	if (rtnl_fd.fd >= 0) {
@@ -88,16 +88,14 @@ static int ifindex_start(struct ulogd_pluginstance *upi)
 	}
 
 	/* if we reach here, we need to initialize */
-	rtnl_fd.fd = rtnl_init();
-	if (rtnl_fd.fd < 0)
-		return rtnl_fd.fd;
+	if ((fd = rtnl_init()) < 0)
+		return fd;
 
 	rc = iftable_init();
 	if (rc < 0)
 		goto out_rtnl;
 
-	rtnl_fd.when = ULOGD_FD_READ;
-	rtnl_fd.cb = &rtnl_read_cb;
+	ulogd_init_fd(&rtnl_fd, fd, ULOGD_FD_READ, rtnl_read_cb, NULL);
 	rc = ulogd_register_fd(&rtnl_fd);
 	if (rc < 0)
 		goto out_iftable;

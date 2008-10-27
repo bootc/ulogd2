@@ -36,7 +36,7 @@
    IFI_STATIX_MAX-1 are kept in the linked ifi_list. */
 static TAILQ_HEAD(ifi_lh, ifi) ifi_list;
 static struct ifi ifi_static[IFI_STATIC_MAX];
-
+static struct ulogd_fd nl_fd;
 static unsigned nl_seq;			/* last seq# */
 
 
@@ -325,16 +325,11 @@ rtnl_read_cb(int fd, unsigned what, void *data)
 }
 
 
-static struct ulogd_fd nl_fd = {
-	.fd = -1,
-	.cb = rtnl_read_cb,
-	.when = ULOGD_FD_READ,
-};
-
-
 int
 ifi_init(void)
 {
+	int fd;
+
 	struct sockaddr_nl sa = {
 		.nl_family = AF_NETLINK,
 		.nl_groups = RTNLGRP_LINK,
@@ -342,23 +337,24 @@ ifi_init(void)
 
 	sa.nl_pid = getpid();
 
-	if ((nl_fd.fd = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE)) < 0) {
+	if ((fd = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE)) < 0) {
 		ulogd_log(ULOGD_ERROR, "ifi: socket: %s\n", strerror(errno));
 		return -1;
 	}
 
-	if (bind(nl_fd.fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+	if (bind(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 		ulogd_log(ULOGD_ERROR, "ifi: bind: %s\n", strerror(errno));
 		return -1;
 	}
 
-	if (connect(nl_fd.fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+	if (connect(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 		ulogd_log(ULOGD_ERROR, "ifi: connect: %s\n", strerror(errno));
 		return -1;
 	}
 
 	TAILQ_INIT(&ifi_list);
 
+	ulogd_init_fd(&nl_fd, fd, ULOGD_FD_READ, rtnl_read_cb, NULL);
 	if (ulogd_register_fd(&nl_fd) < 0)
 		return -1;
 
