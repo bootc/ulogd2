@@ -57,6 +57,7 @@
 #define LOG_ID_AFC_ALERT	(__PF_BASE + 17)
 #define LOG_ID_AFC_FT_BLOCK	(__PF_BASE + 18)
 #define LOG_ID_AFC_BLOCK	(__PF_BASE + 19)
+#define LOG_ID_TRACE		(__PF_BASE + 20)
 
 /* IPS range */
 #define __IPS_BASE	2100
@@ -115,6 +116,7 @@ static struct log_type {
 	/* the '-' is correct */
 	{ "AFC_FT-BLOCK ", "AFC FT Block", LOG_ID_AFC_FT_BLOCK, "drop" },
 	{ "AFC_BLOCK ", "AFC Block", LOG_ID_AFC_BLOCK, "drop" },
+	{ "TRACE:", "Packet traced", LOG_ID_TRACE, "log" },
 	{ NULL, }
 };
 
@@ -386,8 +388,21 @@ print_proto_icmp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 	return pch - buf;
 }
 
+/**
+ * Print log data resulting from the netfilter TRACE target
+ */
 static int
-print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
+print_trace(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
+{
+	const struct ulogd_key *in = pi->input.keys;
+
+	return snprintf(buf, max_len, "trace=\"%s\" ",
+					key_str(&in[InOobPrefix]) + sizeof("TRACE: ") - 1);
+}
+
+static int
+print_dyn_part(const struct ulogd_pluginstance *pi, unsigned type,
+			   char *buf, size_t max_len)
 {
 	const struct ulogd_key *in = pi->input.keys;
 	char *pch = buf;
@@ -420,6 +435,11 @@ print_dyn_part(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 		pch += print_proto_tcp(pi, pch, avail(buf, pch, max_len));
 	else if (key_u8(&in[InIpProto]) == IPPROTO_ICMP)
 		pch += print_proto_icmp(pi, pch, avail(buf, pch, max_len));
+
+	/* ideally log_prefix2type() would return the real ID, not the
+	   index into the array */
+	if (__PF_BASE + type == LOG_ID_TRACE)
+		pch += print_trace(pi, pch, avail(buf, pch, max_len));
 
 	return pch - buf;
 }
@@ -460,8 +480,8 @@ astaro_output(struct ulogd_pluginstance *pi)
 					log_types[type].id, id_to_sub(log_types[type].id),
 					log_types[type].desc, log_types[type].action);
 
-	print_dyn_part(pi, pch, end - pch);
-	
+	print_dyn_part(pi, type, pch, end - pch);
+
 	syslog(priv->level | priv->facility, "%s\n", buf);
 
 	return ULOGD_IRET_OK;
