@@ -528,11 +528,12 @@ ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi)
 
 	/* second pass: copy key names */
 	llist_for_each_entry(pi_cur, &stack->list, list) {
+		const struct ulogd_keyset *keyset = &pi_cur->plugin->output;
 		int i;
 
-		for (i = 0; i < pi_cur->plugin->output.num_keys; i++) {
+		for (i = 0; i < keyset->num_keys; i++) {
 			pr_debug("%s: copy key '%s' from plugin '%s'\n", upi->id,
-					 pi_cur->id);
+					 keyset->keys[i].name, pi_cur->id);
 
 			upi->input.keys[index++] = pi_cur->output.keys[i];
 		}
@@ -548,8 +549,6 @@ static void
 stack_clean_results(const struct ulogd_pluginstance_stack *stack)
 {
 	struct ulogd_pluginstance *pi;
-
-	pr_fn_debug("cleaning up results\n");
 
 	/* iterate through plugin stack */
 	llist_for_each_entry(pi, &stack->list, list) {
