@@ -392,7 +392,8 @@ stack_reconfigure(struct ulogd_pluginstance_stack *stack)
 		if ((pi->plugin->flags & ULOGD_PF_RECONF) == 0)
 			continue;
 
-		ulogd_upi_stop(pi);
+		if (pi->state != PsInit)
+			ulogd_upi_stop(pi);
 	}
 
 	return stack_fsm(stack);
