@@ -213,11 +213,11 @@ create_stack(const char *option)
 		goto out_buf;
 	}
 
-	stack = malloc(sizeof(*stack));
-	if (!stack) {
+	if ((stack = calloc(1, sizeof(*stack))) == NULL) {
 		ret = -ENOMEM;
 		goto out_stack;
 	}
+
 	INIT_LLIST_HEAD(&stack->list);
 	stack->state = PsInit;
 

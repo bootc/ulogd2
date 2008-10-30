@@ -441,8 +441,8 @@ ulogd_upi_alloc_init(struct ulogd_plugin *pl, const char *pi_id,
 	}
 	size += pl->input.num_keys * sizeof(struct ulogd_key);
 	size += pl->output.num_keys * sizeof(struct ulogd_key);
-	pi = malloc(size);
-	if (!pi)
+
+	if ((pi = malloc(size)) == NULL)
 		return NULL;
 
 	/* initialize */
