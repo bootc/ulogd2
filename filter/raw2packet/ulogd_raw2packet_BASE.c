@@ -362,7 +362,7 @@ _interp_tcp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 	key_set_bool(&ret[O_TcpFin], tcph->fin);
 	key_set_bool(&ret[O_TcpRes1], tcph->res1);
 	key_set_bool(&ret[O_TcpRes2], tcph->res2);
-	key_set_bool(&ret[O_TcpCsum], ntohs(tcph->check));
+	key_set_u16(&ret[O_TcpCsum], ntohs(tcph->check));
 	
 	return 0;
 }
