@@ -141,6 +141,17 @@ ulogd2syslog_loglevel[] = {
 };
 
 /* log message to the logfile */
+static void
+__ulogd_vlog(enum ulogd_loglevel level, const char *file, int line,
+			const char *fmt, va_list ap)
+{
+	if (level < loglevel_ce.u.value)
+		return;
+
+	if (logfile == NULL)
+		vsyslog(ulogd2syslog_loglevel[level], fmt, ap);
+}
+
 void
 __ulogd_log(enum ulogd_loglevel level, const char *file, int line,
 			const char *fmt, ...)
@@ -153,7 +164,7 @@ __ulogd_log(enum ulogd_loglevel level, const char *file, int line,
 
 	if (logfile == NULL) {
 		va_start(ap, fmt);
-		vsyslog(ulogd2syslog_loglevel[level], fmt, ap);
+		__ulogd_vlog(level, file, line, fmt, ap);
 		va_end(ap);
 
 		return;
@@ -167,7 +178,7 @@ __ulogd_abort(const char *file, int line, const char *fmt, ...)
 
 	va_start(ap, fmt);
 
-	/* __ulogd_log(ULOGD_FATAL, fmt, ap); */
+	__ulogd_vlog(ULOGD_FATAL, file, line, fmt, ap);
 
 	va_end(ap);
 
