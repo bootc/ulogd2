@@ -483,6 +483,12 @@ pgsql_escape_string(struct ulogd_pluginstance *upi,
 	return 0;
 }
 
+static inline void
+__ulltoa(unsigned long long v, char *out, size_t outlen)
+{
+	snprintf(out, outlen, "%llu", v);
+}
+
 static int
 __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 {
@@ -495,10 +501,10 @@ __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 	utoa(row->ip_daddr, priv->param_val[1], 32);
 	utoa(row->ip_proto, priv->param_val[2], 32);
 	utoa(row->l4_dport, priv->param_val[3], 32);
-	utoa(row->raw_in_pktlen, priv->param_val[4], 32);
-	utoa(row->raw_in_pktcount, priv->param_val[5], 32);
-	utoa(row->raw_out_pktlen, priv->param_val[6], 32);
-	utoa(row->raw_out_pktcount, priv->param_val[7], 32);
+	__ulltoa(row->raw_in_pktlen, priv->param_val[4], 32);
+	__ulltoa(row->raw_in_pktcount, priv->param_val[5], 32);
+	__ulltoa(row->raw_out_pktlen, priv->param_val[6], 32);
+	__ulltoa(row->raw_out_pktcount, priv->param_val[7], 32);
 	utoa(row->flow_start_day, priv->param_val[8], 32);
 	utoa(row->flow_start_sec, priv->param_val[9], 32);
 	utoa(row->flow_duration, priv->param_val[10], 32);

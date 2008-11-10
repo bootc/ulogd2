@@ -38,10 +38,10 @@ struct db_row {
 	uint32_t ip_daddr;
 	unsigned char ip_proto;
 	unsigned l4_dport;
-	unsigned raw_in_pktlen;
-	unsigned raw_in_pktcount;
-	unsigned raw_out_pktlen;
-	unsigned raw_out_pktcount;
+	uint64_t raw_in_pktlen;
+	uint64_t raw_in_pktcount;
+	uint64_t raw_out_pktlen;
+	uint64_t raw_out_pktcount;
 	unsigned flow_start_day;
 	unsigned flow_start_sec;
 	unsigned flow_duration;
