@@ -926,6 +926,24 @@ key_set_u32(struct ulogd_key *key, unsigned v)
 }
 
 void
+key_set_i64(struct ulogd_key *key, int64_t v)
+{
+	__check(key, ULOGD_RET_INT64);
+
+	key->u.value.i64 = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
+key_set_u64(struct ulogd_key *key, uint64_t v)
+{
+	__check(key, ULOGD_RET_UINT64);
+
+	key->u.value.ui64 = v;
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
 key_set_bool(struct ulogd_key *key, bool v)
 {
 	__check(key, ULOGD_RET_BOOL);
@@ -1000,6 +1018,20 @@ key_u32(const struct ulogd_key *key)
 	__check_get(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
 
 	return key->u.source->u.value.ui32;
+}
+
+int64_t
+key_i64(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_INT64);
+	return key->u.source->u.value.i64;
+}
+
+uint64_t
+key_u64(const struct ulogd_key *key)
+{
+	__check_get(key, ULOGD_RET_UINT64);
+	return key->u.source->u.value.ui64;
 }
 
 bool
