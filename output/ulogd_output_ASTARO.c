@@ -190,21 +190,19 @@ lh_log_mac(const struct ulogd_pluginstance *pi, unsigned idx,
 	struct ifi *ifi;
 	unsigned char *src, *dst;
 
-	if (key_src_valid(&in[InOobIfiIn])) {
+	if (key_src_valid(&in[InOobIfiIn]))
 		ifi = ifi_find_by_idx(key_u32(&in[InOobIfiIn]));
-		dst = (ifi != NULL) ? ifi->lladdr : mac_unknown;
+	else
+		ifi = NULL;
 
-		src = key_ptr(&in[idx]);
-	} else if (key_src_valid(&in[InOobIfiOut])) {
+	dst = (ifi != NULL) ? ifi->lladdr : mac_unknown;
+
+	if (key_src_valid(&in[InOobIfiOut]))
 		ifi = ifi_find_by_idx(key_u32(&in[InOobIfiOut]));
-		src = (ifi != NULL) ? ifi->lladdr : mac_unknown;
+	else
+		ifi = NULL;
 		
-		dst = key_ptr(&in[idx]);
-	} else {
-		upi_log(pi, ULOGD_ERROR, "srcmac = dstmac = 0!\n");
-
-		return 0;
-	}
+	src = (ifi != NULL) ? ifi->lladdr : mac_unknown;
 	
 	return snprintf(buf, len, "dstmac=\"%02x:%02x:%02x:%02x:%02x:%02x\" "
 					"srcmac=\"%02x:%02x:%02x:%02x:%02x:%02x\" ",
