@@ -229,7 +229,7 @@ lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
 	const struct ulogd_key *in = pi->input.keys;
-	struct ifi *ifi = ifi_find_by_idx(key_u32(&in[InOobIfiIn]));
+	struct ifi *ifi = ifi_find_by_idx(key_u32(&in[idx]));
 	char *key_name = log_handler[idx].name ? log_handler[idx].name : "itf";
 
 	return snprintf(buf, len, "%s=\"%s\" ", key_name, ifi ? ifi->name
