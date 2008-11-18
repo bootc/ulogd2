@@ -304,8 +304,8 @@ nfnl_ct_to_tuple(const struct nfnl_ct *nfnl_ct, struct ct_tuple *t)
 	switch (t->l4proto) {
 	case IPPROTO_TCP:
 	case IPPROTO_UDP:
-		t->pinfo.tcp.sport = nfnl_ct_get_src_port(nfnl_ct, 0);
-		t->pinfo.tcp.dport = nfnl_ct_get_dst_port(nfnl_ct, 0);
+		t->pinfo.tcp.sport = ntohs(nfnl_ct_get_src_port(nfnl_ct, 0));
+		t->pinfo.tcp.dport = ntohs(nfnl_ct_get_src_port(nfnl_ct, 1));
 		break;
 
 	case IPPROTO_ICMP:
@@ -658,10 +658,8 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
     case IPPROTO_TCP:
     case IPPROTO_UDP:
     case IPPROTO_SCTP:
-        key_set_u16(&out[O_L4_SPORT],
-					ntohs(nfnl_ct_get_src_port(nfnl_ct, 0)));
-        key_set_u16(&out[O_L4_DPORT],
-					ntohs(nfnl_ct_get_dst_port(nfnl_ct, 1)));
+		key_set_u16(&out[O_L4_SPORT], ct->tuple.pinfo.tcp.sport);
+		key_set_u16(&out[O_L4_DPORT], ct->tuple.pinfo.tcp.dport);
 		break;
 
     case IPPROTO_ICMP:
