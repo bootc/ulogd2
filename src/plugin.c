@@ -389,9 +389,6 @@ stack_reconfigure(struct ulogd_pluginstance_stack *stack)
 	struct ulogd_pluginstance *pi;
 
 	llist_for_each_entry(pi, &stack->list, list) {
-		if ((pi->plugin->flags & ULOGD_PF_RECONF) == 0)
-			continue;
-
 		if (pi->state != PsInit)
 			ulogd_upi_stop(pi);
 	}
@@ -723,16 +720,13 @@ ulogd_upi_stop(struct ulogd_pluginstance *pi)
 
 	ulogd_log(ULOGD_DEBUG, "stopping '%s'\n", pi->id);
 
-	if (pi->plugin->stop == NULL)
-		goto done;
-
-	pi->plugin->stop(pi);
+	if (pi->plugin->stop != NULL)
+		pi->plugin->stop(pi);
 
 	/* clear source links */
 	for (i = 0; i < pi->input.num_keys; i++)
 		pi->input.keys[i].u.source = NULL;
 
-done:
 	ulogd_upi_set_state(pi, PsInit);
 
 	return 0;
