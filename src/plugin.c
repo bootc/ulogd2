@@ -108,8 +108,8 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 						   struct ulogd_pluginstance,
 						   list);
 		i++;
-		ulogd_log(ULOGD_DEBUG, "traversing plugin `%s'\n",
-			  pi_cur->plugin->name);
+
+		ulogd_log(ULOGD_DEBUG, "traversing instance '%s'\n", pi_cur->id);
 
 		if (i == 1) {
 			/* first round: output plugin */
@@ -175,9 +175,8 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 							  okey->name, pi_src->id);
 				}
 
-				ulogd_log(ULOGD_DEBUG, "%s(%s) -> %s(%s)\n",
-						  ikey->name, pi_cur->id,
-						  okey->name, pi_src->id);
+				ulogd_log(ULOGD_DEBUG, "  %s(%s) -> %s(%s)\n",
+						  ikey->name, pi_cur->id, okey->name, pi_src->id);
 				ikey->u.source = okey;
 			}
 		}
