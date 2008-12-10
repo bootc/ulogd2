@@ -83,32 +83,12 @@ db_has_prepare(const struct db_instance *di)
  *				a commit is forced (or after timer elapsed).
  */
 #define DB_CES \
-	{ \
-		.key = "table", \
-		.type = CONFIG_TYPE_STRING, \
-		.options = CONFIG_OPT_MANDATORY, \
-	}, \
-	{ \
-		.key = "reconnect", \
-		.type = CONFIG_TYPE_INT, \
-	}, \
-	{ \
-		.key = "ip_as_string", \
-		.type = CONFIG_TYPE_INT, \
-	}, \
-	{ \
-		.key = "connect_timeout", \
-		.type = CONFIG_TYPE_INT, \
-	}, \
-	{ \
-		.key = "buffer", \
-		.type = CONFIG_TYPE_INT, \
-		.u.value = ULOGD_DB_BUFFER_DEFAULT, \
-	}, \
-	{ \
-		.key = "disable", \
-		.type = CONFIG_TYPE_INT, \
-	}
+		CONFIG_KEY("table", STRING, CONFIG_OPT_MANDATORY), \
+		CONFIG_KEY("reconnect", INT, 0),				   \
+		CONFIG_KEY("ip_as_string", INT, 0),				   \
+		CONFIG_KEY("connect_timeout", INT, 0),			   \
+		CONFIG_KEY_INT("buffer", ULOGD_DB_BUFFER_DEFAULT), \
+		CONFIG_KEY("disable", INT, 0)
 
 #define DB_CE_NUM	6
 
