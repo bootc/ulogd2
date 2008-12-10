@@ -54,6 +54,42 @@ struct config_entry {
 	} u;
 };
 
+/**
+ * config key initializers
+ */
+#define __CONFIG_KEY_INT(k, o, v) {				\
+			.key = k,							\
+			.type = CONFIG_TYPE_INT,			\
+			.options = o,						\
+			.u.value = v,						\
+		}
+#define CONFIG_KEY_INT(k, v)			__CONFIG_KEY_INT(k, 0, v)
+#define CONFIG_KEY_INT_OPTS(k, o, v)	__CONFIG_KEY_INT(k, o, v)
+
+#define __CONFIG_KEY_STR(k, o, v) {				\
+			.key = k,							\
+			.type = CONFIG_TYPE_STRING,			\
+			.options = o,						\
+			.u.value = v,						\
+		}
+#define CONFIG_KEY_STR(k, s)			__CONFIG_KEY_STR(k, 0, s)
+#define CONFIG_KEY_STR_OPTS(k, o, s)	__CONFIG_KEY_STR(k, o, s)
+
+#define __CONFIG_KEY_CALLBACK(k, o, c) {		\
+			.key = k,							\
+			.type = CONFIG_TYPE_CALLBACK,		\
+			.options = o,						\
+			.u.parser = c,						\
+		}
+#define CONFIG_KEY_CALLBACK(k, c)			__CONFIG_KEY_CALLBACK(k, 0, v)
+#define CONFIG_KEY_CALLBACK_OPTS(k, o, c)	__CONFIG_KEY_CALLBACK(k, o, v)
+
+#define CONFIG_KEY(k, t, o) {			\
+			.key = k,					\
+			.type = CONFIG_TYPE_ ## t,	\
+			.options = o,				\
+		}
+
 struct config_keyset {
 	unsigned int num_ces;
 	struct config_entry ces[];
