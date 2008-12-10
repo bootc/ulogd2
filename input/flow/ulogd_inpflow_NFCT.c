@@ -179,24 +179,9 @@ static struct ulogd_key nfct_okeys[] = {
 static const struct config_keyset nfct_kset = {
 	.num_ces = 3,
 	.ces = {
-		{
-			.key	 = "hash_buckets",
-			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
-			.u.value = TCACHE_SIZE,
-		},
-		{
-			.key	 = "disable",
-			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
-			.u.value = 0,
-		},
-		{
-			.key	 = "timeout",
-			.type	 = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
-			.u.value = TIMEOUT,
-		},
+		CONFIG_KEY_INT("hash_buckets", TCACHE_SIZE),
+		CONFIG_KEY("disable", INT, 0),
+		CONFIG_KEY_INT("timeout", TIMEOUT),
 	},
 };
 
