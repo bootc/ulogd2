@@ -34,34 +34,12 @@ static const struct config_keyset pgsql_kset = {
 	.num_ces = DB_CE_NUM + 6,
 	.ces = {
 		DB_CES,
-		{ 
-			.key = "db", 
-			.type = CONFIG_TYPE_STRING,
-			.options = CONFIG_OPT_MANDATORY,
-		},
-		{
-			.key = "host", 
-			.type = CONFIG_TYPE_STRING,
-		},
-		{ 
-			.key = "user", 
-			.type = CONFIG_TYPE_STRING,
-		},
-		{
-			.key = "pass", 
-			.type = CONFIG_TYPE_STRING,
-		},
-		{
-			.key = "port",
-			.type = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
-		},
-		{
-			.key = "schema", 
-			.type = CONFIG_TYPE_STRING,
-			.options = CONFIG_OPT_NONE,
-			.u.string = "public",
-		},
+		CONFIG_KEY("db", STRING, CONFIG_OPT_MANDATORY),
+		CONFIG_KEY("host", STRING, 0),
+		CONFIG_KEY("user", STRING, 0),
+		CONFIG_KEY("pass", STRING, 0),
+		CONFIG_KEY("port", INT, 0),
+		CONFIG_KEY_STR("schema", "public"),
 	},
 };
 #define db_ce(x)	(x->ces[DB_CE_NUM+0])
