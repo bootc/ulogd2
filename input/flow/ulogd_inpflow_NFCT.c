@@ -50,7 +50,7 @@
 #define TCACHE_MIN_SIZE	512
 #define TCACHE_SIZE		1024
 #define SCACHE_SIZE	    256
-#define TCACHE_REQ_MAX	100
+#define TCACHE_REQ_MAX	1000
 #define TIMEOUT_MIN		30 SEC
 #define TIMEOUT			TIMEOUT_MIN
 
@@ -177,17 +177,19 @@ static struct ulogd_key nfct_okeys[] = {
 };
 
 static const struct config_keyset nfct_kset = {
-	.num_ces = 3,
+	.num_ces = 4,
 	.ces = {
 		CONFIG_KEY_INT("hash_buckets", TCACHE_SIZE),
 		CONFIG_KEY("disable", INT, 0),
 		CONFIG_KEY_INT("timeout", TIMEOUT),
+		CONFIG_KEY_INT("gcmax", TCACHE_REQ_MAX),
 	},
 };
 
 #define buckets_ce(pi)	((pi)->config_kset->ces[0].u.value)
 #define disable_ce(pi)	((pi)->config_kset->ces[1].u.value)
 #define timeout_ce(pi)	((pi)->config_kset->ces[2].u.value)
+#define gcmax_ce(pi)	((pi)->config_kset->ces[3].u.value)
 
 
 static void ct_dump_tuple(const struct ct_tuple *) __ulogd_unused;
@@ -218,7 +220,6 @@ ct_get(struct conntrack *ct)
 {
 	ct->refcnt++;
 }
-
 
 static inline void
 ct_put(struct conntrack *ct)
@@ -611,7 +612,7 @@ tcache_cleanup(struct ulogd_pluginstance *pi)
 				cache_add(priv->scache, ct);
 			}
 
-			if (++req > TCACHE_REQ_MAX)
+			if (++req > gcmax_ce(pi))
 				break;
 		}
 
