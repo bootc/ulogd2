@@ -152,9 +152,12 @@ static int syslog_start(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
-static void syslog_stop(struct ulogd_pluginstance *pi)
+static int
+syslog_stop(struct ulogd_pluginstance *pi)
 {
 	closelog();
+
+	return ULOGD_IRET_OK;
 }
 
 static struct ulogd_plugin syslog_plugin = {
@@ -170,10 +173,10 @@ static struct ulogd_plugin syslog_plugin = {
 	},
 	.config_kset	= &syslog_kset,
 	.priv_size	= sizeof(struct syslog_instance),
-	.configure	= &syslog_configure,
-	.start		= &syslog_start,
-	.stop		= &syslog_stop,
-	.interp		= &syslog_interp,
+	.configure	= syslog_configure,
+	.start		= syslog_start,
+	.stop		= syslog_stop,
+	.interp		= syslog_interp,
 	.rev		= ULOGD_PLUGIN_REVISION,
 };
 
