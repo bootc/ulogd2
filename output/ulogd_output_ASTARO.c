@@ -191,14 +191,14 @@ lh_log_mac(const struct ulogd_pluginstance *pi, unsigned idx,
 	unsigned char *src, *dst;
 
 	if (key_src_valid(&in[InOobIfiIn]))
-		ifi = ifi_find_by_idx(key_u32(&in[InOobIfiIn]));
+		ifi = ifi_find_by_idx(key_src_u32(&in[InOobIfiIn]));
 	else
 		ifi = NULL;
 
 	dst = (ifi != NULL) ? ifi->lladdr : mac_unknown;
 
 	if (key_src_valid(&in[InOobIfiOut]))
-		ifi = ifi_find_by_idx(key_u32(&in[InOobIfiOut]));
+		ifi = ifi_find_by_idx(key_src_u32(&in[InOobIfiOut]));
 	else
 		ifi = NULL;
 		
@@ -215,7 +215,7 @@ lh_log_tos(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
 	const struct ulogd_key *in = pi->input.keys;
-	const uint8_t tos = key_u8(&in[InIpTos]);
+	const uint8_t tos = key_src_u8(&in[InIpTos]);
 	
 	return snprintf(buf, len, "tos=\"0x%02x\" prec=\"0x%02x\" ",
 					IPTOS_TOS(tos), IPTOS_PREC(tos));
@@ -229,7 +229,7 @@ lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
 	const struct ulogd_key *in = pi->input.keys;
-	struct ifi *ifi = ifi_find_by_idx(key_u32(&in[idx]));
+	struct ifi *ifi = ifi_find_by_idx(key_src_u32(&in[idx]));
 	char *key_name = log_handler[idx].name ? log_handler[idx].name : "itf";
 
 	return snprintf(buf, len, "%s=\"%s\" ", key_name, ifi ? ifi->name
@@ -310,12 +310,12 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 	switch (key->type) {
 	case ULOGD_RET_STRING:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ", name,
-						key_str(key));
+						key_src_str(key));
 		break;
 		
 	case ULOGD_RET_IPADDR:
 	{
-		unsigned long addr = key_u32(key);
+		unsigned long addr = key_src_u32(key);
 
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u.%u.%u.%u\" ",
 						name, HIPQUAD(addr));
@@ -324,19 +324,19 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 		
 	case ULOGD_RET_UINT8:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-						key_u8(key));
+						key_src_u8(key));
 		break;
 		
 	case ULOGD_RET_UINT16:
 		if (key->u.value.ui16 != 0)
 			pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-							key_u16(key));
+							key_src_u16(key));
 		break;
 		
 	case ULOGD_RET_UINT32:
 		if (key->u.value.ui32 != 0)
 			pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-							key_u32(key));
+							key_src_u32(key));
 		break;
 		
 	default:
@@ -358,15 +358,15 @@ print_proto_tcp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 	strcpy(buf, "tcpflags=\"");
 	pch = buf + sizeof("tcpflags=\"") - 1;
 
-	if (key_bool(&in[InTcpAck]))
+	if (key_src_bool(&in[InTcpAck]))
 		strncat_delim(&pch, "ACK", sizeof("ACK"), &delim);
-	if (key_bool(&in[InTcpPsh]))
+	if (key_src_bool(&in[InTcpPsh]))
 		strncat_delim(&pch, "PSH", sizeof("PSH"), &delim);
-	if (key_bool(&in[InTcpRst]))
+	if (key_src_bool(&in[InTcpRst]))
 		strncat_delim(&pch, "RST", sizeof("RST"), &delim);
-	if (key_bool(&in[InTcpSyn]))
+	if (key_src_bool(&in[InTcpSyn]))
 		strncat_delim(&pch, "SYN", sizeof("SYN"), &delim);
-	if (key_bool(&in[InTcpFin]))
+	if (key_src_bool(&in[InTcpFin]))
 		strncat_delim(&pch, "FIN", sizeof("FIN"), &delim);
 
 	strncat_delim(&pch, "\" ", sizeof("\" "), NULL);
@@ -395,7 +395,7 @@ print_trace(const struct ulogd_pluginstance *pi, char *buf, size_t max_len)
 	const struct ulogd_key *in = pi->input.keys;
 
 	return snprintf(buf, max_len, "trace=\"%s\" ",
-					key_str(&in[InOobPrefix]) + sizeof("TRACE: ") - 1);
+					key_src_str(&in[InOobPrefix]) + sizeof("TRACE: ") - 1);
 }
 
 static int
@@ -429,9 +429,9 @@ print_dyn_part(const struct ulogd_pluginstance *pi, unsigned type,
 	}
 
 	/* print proto specific part */
-	if (key_u8(&in[InIpProto]) == IPPROTO_TCP)
+	if (key_src_u8(&in[InIpProto]) == IPPROTO_TCP)
 		pch += print_proto_tcp(pi, pch, avail(buf, pch, max_len));
-	else if (key_u8(&in[InIpProto]) == IPPROTO_ICMP)
+	else if (key_src_u8(&in[InIpProto]) == IPPROTO_ICMP)
 		pch += print_proto_icmp(pi, pch, avail(buf, pch, max_len));
 
 	/* ideally log_prefix2type() would return the real ID, not the
@@ -469,7 +469,7 @@ astaro_output(struct ulogd_pluginstance *pi)
 		return 0;
 
 	type = log_prefix2type(log_types, key_src_valid(&in[InOobPrefix]) ?
-						   key_str(&in[InOobPrefix]) : NULL);
+						   key_src_str(&in[InOobPrefix]) : NULL);
 	
 	/* static part */
 	pch += snprintf(pch, end - pch,

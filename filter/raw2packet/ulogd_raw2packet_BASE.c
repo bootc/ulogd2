@@ -450,7 +450,7 @@ static int
 _interp_iphdr(struct ulogd_pluginstance *pi)
 {
 	struct ulogd_key *ret = pi->output.keys;
-	const struct iphdr *iph = key_ptr(&pi->input.keys[0]);
+	const struct iphdr *iph = key_src_ptr(&pi->input.keys[0]);
 
 	key_set_u32(&ret[0], ntohl(iph->saddr));
 	key_set_u32(&ret[1], ntohl(iph->daddr));
