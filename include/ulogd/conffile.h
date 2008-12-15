@@ -66,11 +66,11 @@ struct config_entry {
 #define CONFIG_KEY_INT(k, v)			__CONFIG_KEY_INT(k, 0, v)
 #define CONFIG_KEY_INT_OPTS(k, o, v)	__CONFIG_KEY_INT(k, o, v)
 
-#define __CONFIG_KEY_STR(k, o, v) {				\
+#define __CONFIG_KEY_STR(k, o, s) {				\
 			.key = k,							\
 			.type = CONFIG_TYPE_STRING,			\
 			.options = o,						\
-			.u.value = v,						\
+			.u.string = s,						\
 		}
 #define CONFIG_KEY_STR(k, s)			__CONFIG_KEY_STR(k, 0, s)
 #define CONFIG_KEY_STR_OPTS(k, o, s)	__CONFIG_KEY_STR(k, o, s)
