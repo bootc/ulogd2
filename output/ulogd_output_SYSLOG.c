@@ -29,13 +29,8 @@
 #include <unistd.h>
 #include <syslog.h>
 
-#ifndef SYSLOG_FACILITY_DEFAULT
 #define SYSLOG_FACILITY_DEFAULT	"LOG_KERN"
-#endif
-
-#ifndef SYSLOG_LEVEL_DEFAULT 
 #define SYSLOG_LEVEL_DEFAULT "LOG_NOTICE"
-#endif
 
 #define NV_INITIALIZER(val)		{ STRINGIFY(val), val }
 
@@ -50,18 +45,8 @@ static struct ulogd_key syslog_inp[] = {
 static const struct config_keyset syslog_kset = {
 	.num_ces = 2,
 	.ces = {
-		{
-		.key = "facility", 
-		.type = CONFIG_TYPE_STRING, 
-		.options = CONFIG_OPT_NONE, 
-		.u = { .string = SYSLOG_FACILITY_DEFAULT } 
-		},
-		{ 
-		.key = "level", 
-		.type = CONFIG_TYPE_STRING,
-		.options = CONFIG_OPT_NONE, 
-		.u = { .string = SYSLOG_LEVEL_DEFAULT }
-		},
+		CONFIG_KEY_STR("facility", SYSLOG_FACILITY_DEFAULT),
+		CONFIG_KEY_STR("level", SYSLOG_LEVEL_DEFAULT),
 	},
 };
 

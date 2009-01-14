@@ -265,16 +265,8 @@ static struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
 static const struct config_keyset astaro_kset = {
 	.num_ces = 2,
 	.ces = {
-		{
-			.key = "facility", 
-			.type = CONFIG_TYPE_STRING, 
-			.options = CONFIG_OPT_NONE, 
-		},
-		{ 
-			.key = "level", 
-			.type = CONFIG_TYPE_STRING,
-			.options = CONFIG_OPT_NONE, 
-		},
+		CONFIG_KEY_STR("facility", 0),
+		CONFIG_KEY_STR("level", 0),
 	},
 };
 
