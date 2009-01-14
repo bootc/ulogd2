@@ -30,11 +30,11 @@ dnl Checks for library functions.
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(socket strerror)
 
-AC_CHECK_HEADER([netlink/netfilter/log.h], [AC_MSG_RESULT([found])],
+AC_CHECK_HEADER([netlink/netfilter/log.h],,
 		[AC_MSG_ERROR([libnl with nfnetlink_log support needed])])
 
-AC_CHECK_HEADER([libnetfilter_conntrack/libnetfilter_conntrack.h], [AC_MSG_RESULT([found])],
-		[AC_MSG_ERROR([libnetfilter_conntrack Version 0.0.11 or later needed])])
+AC_CHECK_HEADER([netlink/netfilter/ct.h],,
+		[AC_MSG_ERROR([libnl with ctnetlink support needed])])
 
 
 CT_CHECK_POSTGRES_DB()
