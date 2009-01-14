@@ -82,30 +82,10 @@ static int logfile_open(const char *name);
 static struct config_keyset ulogd_kset = {
 	.num_ces = 4,
 	.ces = {
-		{
-			.key = "logfile",
-			.type = CONFIG_TYPE_CALLBACK,
-			.options = CONFIG_OPT_NONE,
-			.u.parser = &logfile_open,
-		},
-		{
-			.key = "plugin",
-			.type = CONFIG_TYPE_CALLBACK,
-			.options = CONFIG_OPT_MULTI,
-			.u.parser = &load_plugin,
-		},
-		{
-			.key = "loglevel", 
-			.type = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
-			.u.value = ULOGD_NOTICE,
-		},
-		{
-			.key = "stack",
-			.type = CONFIG_TYPE_CALLBACK,
-			.options = CONFIG_OPT_MULTI,
-			.u.parser = &create_stack,
-		},
+		CONFIG_KEY_CALLBACK("logfile", &logfile_open),
+		CONFIG_KEY_CALLBACK_OPTS("plugin", CONFIG_OPT_MULTI, &load_plugin),
+		CONFIG_KEY_INT("loglevel", ULOGD_NOTICE),
+		CONFIG_KEY_CALLBACK_OPTS("stack", CONFIG_OPT_MULTI, &create_stack),
 	},
 };
 
