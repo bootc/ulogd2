@@ -243,7 +243,7 @@ ct_update(struct conntrack *ct, const struct nfnl_ct *new_nfnl_ct)
 
 	assert(nfnl_ct != NULL);
 
-	ct->time[UPDATE].tv_sec = t_now_local;
+	ct->time[UPDATE].tv_sec = t_now;
 
 	nfnl_ct_set_packets(nfnl_ct, 0, nfnl_ct_get_packets(new_nfnl_ct, 0));
 	nfnl_ct_set_bytes(nfnl_ct, 0, nfnl_ct_get_bytes(new_nfnl_ct, 0));
@@ -353,7 +353,7 @@ static int
 cache_add(struct cache *c, struct conntrack *ct)
 {
 	ct_get(ct);
-	ct->time[UPDATE].tv_sec = ct->time[START].tv_sec = t_now_local;
+	ct->time[UPDATE].tv_sec = ct->time[START].tv_sec = t_now;
 
     /* order of these two is important for debugging purposes */
     c->c_cnt++;
@@ -634,7 +634,7 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 
 	pr_fn_debug("pi=%p ct=%p\n", pi, ct);
 
-	ct->time[STOP].tv_sec = t_now_local;
+	ct->time[STOP].tv_sec = t_now;
 
 	key_set_u32(&out[O_IP_SADDR], ntohl(ct->tuple.src));
     key_set_u32(&out[O_IP_DADDR], ntohl(ct->tuple.dst));
@@ -759,7 +759,6 @@ nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
 		}
 
 		ct_update(ct, nfnl_ct);
-        ct->time[UPDATE].tv_sec = t_now_local;
 
         /* handle TCP connections differently in order not to bloat CT
            hash with many TIME_WAIT connections */
