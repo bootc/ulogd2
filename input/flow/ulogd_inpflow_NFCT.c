@@ -1063,6 +1063,8 @@ nfct_stop(struct ulogd_pluginstance *pi)
     if (disable_ce(pi) != 0)
         return ULOGD_IRET_OK;               /* wasn't started */
 
+	ulogd_unregister_timer(&priv->timer);
+
 	ulogd_unregister_fd(&priv->ufd);
 
 	if (priv->nlh != NULL) {
