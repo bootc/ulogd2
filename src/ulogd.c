@@ -86,7 +86,6 @@ static struct config_keyset ulogd_kset = {
 			.key = "logfile",
 			.type = CONFIG_TYPE_CALLBACK,
 			.options = CONFIG_OPT_NONE,
-			.u.string = ULOGD_LOGFILE_DEFAULT,
 			.u.parser = &logfile_open,
 		},
 		{
