@@ -1174,9 +1174,8 @@ ulogd_plugin_init(void)
 {
 	INIT_LLIST_HEAD(&stack_fsm_list);
 
-	stack_fsm_timer.cb = &stack_fsm_timer_cb;
-	stack_fsm_timer.ival = 5 SEC;
-	stack_fsm_timer.flags = TIMER_F_PERIODIC;
+	ulogd_init_timer(&stack_fsm_timer, 5 SEC, stack_fsm_timer_cb, NULL,
+		TIMER_F_PERIODIC);
 
 	return 0;
 }
