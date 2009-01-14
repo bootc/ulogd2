@@ -288,7 +288,7 @@ static int
 db_count_cols(struct ulogd_pluginstance *pi, sqlite3_stmt **stmt)
 {
 	struct sqlite3_priv *priv = upi_priv(pi);
-	char query[SELECT_ALL_LEN + CONFIG_VAL_STRING_LEN] = SELECT_ALL_STR;
+	char query[255] = SELECT_ALL_STR;
 
 	strncat(query, table_ce(pi), LINE_LEN);
 

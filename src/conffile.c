@@ -186,11 +186,10 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 
 			switch (ce->type) {
 				case CONFIG_TYPE_STRING:
-					if (strlen(args) < 
-					    CONFIG_VAL_STRING_LEN ) {
-						strcpy(ce->u.string, args);
-						/* FIXME: what if not ? */
-					}
+					if (ce->u.string != NULL)
+						free(ce->u.string);
+
+					ce->u.string = strdup(args);
 					break;
 				case CONFIG_TYPE_INT:
 					ce->u.value = atoi(args);

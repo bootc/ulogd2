@@ -29,9 +29,6 @@ enum {
 /* maximum lenght of config key name */
 #define CONFIG_KEY_LEN		30
 
-/* maximum lenght of string config value */
-#define CONFIG_VAL_STRING_LEN	225
-
 /* valid config types */
 #define CONFIG_TYPE_INT		0x0001
 #define CONFIG_TYPE_STRING	0x0002
@@ -48,7 +45,7 @@ struct config_entry {
 	u_int8_t options;		/* options; see above  */
 	u_int8_t hit;			/* found? */
 	union {
-		char string[CONFIG_VAL_STRING_LEN];
+		char *string;
 		int value;
 		int (*parser)(const char *argstr);
 	} u;
