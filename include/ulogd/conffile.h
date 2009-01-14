@@ -78,8 +78,8 @@ struct config_entry {
 			.options = o,						\
 			.u.parser = c,						\
 		}
-#define CONFIG_KEY_CALLBACK(k, c)			__CONFIG_KEY_CALLBACK(k, 0, v)
-#define CONFIG_KEY_CALLBACK_OPTS(k, o, c)	__CONFIG_KEY_CALLBACK(k, o, v)
+#define CONFIG_KEY_CALLBACK(k, c)			__CONFIG_KEY_CALLBACK(k, 0, c)
+#define CONFIG_KEY_CALLBACK_OPTS(k, o, c)	__CONFIG_KEY_CALLBACK(k, o, c)
 
 #define CONFIG_KEY(k, t, o) {			\
 			.key = k,					\
