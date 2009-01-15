@@ -764,7 +764,7 @@ nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
            hash with many TIME_WAIT connections */
         if (tuple.l4proto == IPPROTO_TCP) {
             if (nfnl_ct_get_tcp_state(nfnl_ct) == TCP_CONNTRACK_TIME_WAIT)
-                return propagate_ct(pi, ct);
+                propagate_ct(pi, ct);
         }
         break;
 
