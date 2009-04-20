@@ -763,8 +763,10 @@ nfct_parse_valid_cb(struct nl_msg *msg, void *arg)
         /* handle TCP connections differently in order not to bloat CT
            hash with many TIME_WAIT connections */
         if (tuple.l4proto == IPPROTO_TCP) {
-            if (nfnl_ct_get_tcp_state(nfnl_ct) == TCP_CONNTRACK_TIME_WAIT)
-                propagate_ct(pi, ct);
+            if (nfnl_ct_get_tcp_state(nfnl_ct) == TCP_CONNTRACK_TIME_WAIT) {
+                if (propagate_ct(pi, ct) < 0)
+					goto err_put_ct;
+			}
         }
         break;
 
