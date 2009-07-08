@@ -82,17 +82,17 @@ ulogd_register_signal(int signo, void (* sigh)(int), unsigned flags)
 
 	sig_state[signo].cnt++;
 
+	if (flags & ULOGD_SIGF_SYNC)
+		llist_add_tail(&sig->link, &sig_state[signo].head);
+	else
+		llist_add_tail(&sig->link, &sig_state[signo].async_head);
+
 	/* add real signal handler */
 	if ((sig_state[signo].flags & SIG_F_USED) == 0) {
 		signal(signo, sig_handler);
 		
 		sig_state[signo].flags |= SIG_F_USED;
 	}
-
-	if (flags & ULOGD_SIGF_SYNC)
-		llist_add_tail(&sig->link, &sig_state[signo].head);
-	else
-		llist_add_tail(&sig->link, &sig_state[signo].async_head);
 
 	ulogd_sigaddset(signo);
 

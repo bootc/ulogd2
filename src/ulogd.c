@@ -526,6 +526,14 @@ main(int argc, char* argv[])
 	if (ulogd_signal_init() < 0)
 		exit(EXIT_FAILURE);
 
+	ulogd_register_signal(SIGTERM, sync_sig_handler, ULOGD_SIGF_SYNC);
+	ulogd_register_signal(SIGINT, sig_handler, 0);
+	ulogd_register_signal(SIGABRT, sig_handler, 0);
+	ulogd_register_signal(SIGHUP, sync_sig_handler, ULOGD_SIGF_SYNC);
+	ulogd_register_signal(SIGALRM, sync_sig_handler, ULOGD_SIGF_SYNC);
+	ulogd_register_signal(SIGUSR1, sync_sig_handler, ULOGD_SIGF_SYNC);
+	ulogd_register_signal(SIGUSR2, sync_sig_handler, ULOGD_SIGF_SYNC);
+
 	ulogd_timer_init();
 	ulogd_plugin_init();
 
@@ -589,14 +597,6 @@ main(int argc, char* argv[])
 
 	if (write_pid_file() < 0)
 		exit(EXIT_FAILURE);
-
-	ulogd_register_signal(SIGTERM, sync_sig_handler, ULOGD_SIGF_SYNC);
-	ulogd_register_signal(SIGINT, sig_handler, 0);
-	ulogd_register_signal(SIGABRT, sig_handler, 0);
-	ulogd_register_signal(SIGHUP, sync_sig_handler, ULOGD_SIGF_SYNC);
-	ulogd_register_signal(SIGALRM, sync_sig_handler, ULOGD_SIGF_SYNC);
-	ulogd_register_signal(SIGUSR1, sync_sig_handler, ULOGD_SIGF_SYNC);
-	ulogd_register_signal(SIGUSR2, sync_sig_handler, ULOGD_SIGF_SYNC);
 
 	if (ifi_init() < 0)
 		exit(EXIT_FAILURE);
