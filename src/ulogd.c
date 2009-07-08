@@ -603,9 +603,8 @@ main(int argc, char* argv[])
 
 	ulogd_timer_run();
 
-	ulogd_log(ULOGD_INFO, "entering main loop\n");
-
 	ulogd_set_state(GS_RUNNING);
+	ulogd_log(ULOGD_INFO, "ulogd running\n");
 
 	ulogd_dispatch();
 
