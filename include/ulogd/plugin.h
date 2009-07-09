@@ -145,7 +145,20 @@ void key_set_bool(struct ulogd_key *, bool);
 void key_set_ptr(struct ulogd_key *, void *);
 void key_set_str(struct ulogd_key *, char *);
 
-/* get key value from source key */
+/* key accessors */
+int key_i8(const struct ulogd_key *);
+int key_i16(const struct ulogd_key *);
+int key_32(const struct ulogd_key *);
+unsigned key_u8(const struct ulogd_key *);
+unsigned key_u16(const struct ulogd_key *);
+unsigned key_u32(const struct ulogd_key *);
+int64_t key_i64(const struct ulogd_key *);
+uint64_t key_u64(const struct ulogd_key *);
+bool key_bool(const struct ulogd_key *);
+void *key_ptr(const struct ulogd_key *);
+char *key_str(const struct ulogd_key *);
+
+/* src key accessors */
 int key_src_i8(const struct ulogd_key *);
 int key_src_i16(const struct ulogd_key *);
 int key_src_i32(const struct ulogd_key *);

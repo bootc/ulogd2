@@ -839,26 +839,13 @@ ulogd_upi_reset_cfg(struct ulogd_pluginstance *pi)
 
 /* key API */
 static void
-__check_src(const struct ulogd_key *key, unsigned type)
-{
-#ifdef DEBUG
-	if (key == NULL || key_src(key) == NULL)
-		ulogd_abort("key pointer invalid (%p)\n", key);
-
-	if ((key_src(key)->type & type) == 0)
-		ulogd_abort("get: %s: type check failed (%d <-> %d)\n",
-					key->name, key->type, type);
-#endif /* DEBUG */
-}
-
-static void
 __check(const struct ulogd_key *key, unsigned type)
 {
 #ifdef DEBUG
-	if (key == NULL)
+	if (!key)
 		ulogd_abort("key ptr is NULL\n");
 
-	if ((key->type & type) == 0)
+	if (!(key->type & type))
 		ulogd_abort("set: %s: type check failed (%d <-> %d)\n",
 					key->name, key->type, type);
 #endif /* DEBUG */
@@ -963,94 +950,160 @@ key_set_str(struct ulogd_key *key, char *str)
 	key->flags |= ULOGD_RETF_VALID;
 }
 
+/* key accessors */
 int
-key_src_i8(const struct ulogd_key *key)
+key_i8(const struct ulogd_key *key)
 {
-	__check_src(key, ULOGD_RET_INT8);
+	__check(key, ULOGD_RET_INT8);
 
-	return key_src(key)->u.value.i8;
+	return key->u.value.i8;
+}
+
+int
+key_i16(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_INT16);
+
+	return key->u.value.i16;
+}
+
+int
+key_i32(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_INT32);
+
+	return key->u.value.i32;
+}
+
+unsigned
+key_u8(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_UINT8);
+
+	return key->u.value.ui8;
+}
+
+unsigned
+key_u16(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_UINT16);
+
+	return key->u.value.ui16;
+}
+
+unsigned
+key_u32(const struct ulogd_key *key)
+{
+	/* currently, IP addresses are encoded as u32.  A strong typesafety
+	   might require to add key_get_ipaddr() as well. */
+	__check(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
+
+	return key->u.value.ui32;
+}
+
+int64_t
+key_i64(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_INT64);
+
+	return key->u.value.i64;
+}
+
+uint64_t
+key_u64(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_UINT64);
+
+	return key->u.value.ui64;
+}
+
+bool
+key_bool(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_BOOL);
+
+	return !!key->u.value.b;
+}
+
+void *
+key_ptr(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_RAW);
+
+	return key->u.value.ptr;
+}
+
+char *
+key_str(const struct ulogd_key *key)
+{
+	__check(key, ULOGD_RET_STRING);
+
+	return key->u.value.str;
+}
+
+int key_src_i8(const struct ulogd_key *key)
+{
+	return key_i8(key_src(key));
 }
 
 int
 key_src_i16(const struct ulogd_key *key)
 {
-	__check_src(key, ULOGD_RET_INT16);
-
-	return key_src(key)->u.value.i16;
+	return key_i16(key_src(key));
 }
 
 int
 key_src_i32(const struct ulogd_key *key)
 {
-	__check_src(key, ULOGD_RET_INT32);
-
-	return key_src(key)->u.value.i32;
-}
-
-unsigned
-key_src_u8(const struct ulogd_key *key)
-{
-	__check_src(key, ULOGD_RET_UINT8);
-
-	return key_src(key)->u.value.ui8;
-}
-
-unsigned
-key_src_u16(const struct ulogd_key *key)
-{
-	__check_src(key, ULOGD_RET_UINT16);
-
-	return key_src(key)->u.value.ui16;
-}
-
-unsigned
-key_src_u32(const struct ulogd_key *key)
-{
-	/* currently, IP addresses are encoded as u32.  A strong typesafety
-	   might require to add key_get_ipaddr() as well. */
-	__check_src(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
-
-	return key_src(key)->u.value.ui32;
+	return key_i32(key_src(key));
 }
 
 int64_t
 key_src_i64(const struct ulogd_key *key)
 {
-	__check_src(key, ULOGD_RET_INT64);
+	return key_i64(key_src(key));
+}
 
-	return key_src(key)->u.value.i64;
+unsigned
+key_src_u8(const struct ulogd_key *key)
+{
+	return key_u8(key_src(key));
+}
+
+unsigned
+key_src_u16(const struct ulogd_key *key)
+{
+	return key_u16(key_src(key));
+}
+
+unsigned
+key_src_u32(const struct ulogd_key *key)
+{
+	return key_u32(key_src(key));
 }
 
 uint64_t
 key_src_u64(const struct ulogd_key *key)
 {
-	__check_src(key, ULOGD_RET_UINT64);
-
-	return key_src(key)->u.value.ui64;
+	return key_u64(key_src(key));
 }
 
 bool
 key_src_bool(const struct ulogd_key *key)
 {
-	__check_src(key, ULOGD_RET_BOOL);
-
-	return !!key_src(key)->u.value.b;
+	return key_bool(key_src(key));
 }
 
 void *
 key_src_ptr(const struct ulogd_key *key)
 {
-	__check_src(key, ULOGD_RET_RAW);
-
-	return key_src(key)->u.value.ptr;
+	return key_ptr(key_src(key));
 }
 
 char *
 key_src_str(const struct ulogd_key *key)
 {
-	__check_src(key, ULOGD_RET_STRING);
-
-	return key_src(key)->u.value.str;
+	return key_str(key_src(key));
 }
 
 /**
