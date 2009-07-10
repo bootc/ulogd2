@@ -23,6 +23,7 @@
 #define IFI_H
 
 #include <net/if.h>
+#include <netinet/ether.h>
 #include <sys/queue.h>
 
 
@@ -32,7 +33,7 @@ struct ifi {
 	unsigned used : 1;
 	unsigned flags;
 	char name[IFNAMSIZ];
-	unsigned char lladdr[6];
+	unsigned char lladdr[ETH_ALEN];
 };
 
 int ifi_init(void);

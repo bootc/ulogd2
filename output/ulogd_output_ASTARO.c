@@ -26,14 +26,13 @@
 #include <syslog.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/ether.h>
 
 #define HIPQUAD(addr) \
         ((unsigned char *)&addr)[3], \
         ((unsigned char *)&addr)[2], \
         ((unsigned char *)&addr)[1], \
         ((unsigned char *)&addr)[0]
-
-#define PRINT_MAC(mac) 	*mac, (mac)[1], (mac)[2], (mac)[3], (mac)[4], (mac)[5]
 
 /* config accessors */
 #define CFG_FACILITY(pi)	((pi)->config_kset->ces[0].u.string)
@@ -186,27 +185,32 @@ lh_log_mac(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
 	const struct ulogd_key *in = pi->input.keys;
-	static unsigned char mac_unknown[6];
+	static const char unknown[3 * ETH_ALEN] = "00:00:00:00:00:00";
+	static char __src[3 * ETH_ALEN], __dst[3 * ETH_ALEN];
+	const char *src, *dst;
 	struct ifi *ifi;
-	unsigned char *src, *dst;
 
 	if (key_src_valid(&in[InOobIfiIn]))
 		ifi = ifi_find_by_idx(key_src_u32(&in[InOobIfiIn]));
 	else
 		ifi = NULL;
 
-	dst = (ifi != NULL) ? ifi->lladdr : mac_unknown;
+	if (ifi && ifi->lladdr)
+		dst = ether_ntoa_r((struct ether_addr *)ifi->lladdr, __dst);
+	else
+		dst = unknown;
 
 	if (key_src_valid(&in[InOobIfiOut]))
 		ifi = ifi_find_by_idx(key_src_u32(&in[InOobIfiOut]));
 	else
 		ifi = NULL;
 		
-	src = (ifi != NULL) ? ifi->lladdr : mac_unknown;
+	if (ifi && ifi->lladdr)
+		src = ether_ntoa_r((struct ether_addr *)ifi->lladdr, __src);
+	else
+		src = unknown;
 	
-	return snprintf(buf, len, "dstmac=\"%02x:%02x:%02x:%02x:%02x:%02x\" "
-					"srcmac=\"%02x:%02x:%02x:%02x:%02x:%02x\" ",
-					PRINT_MAC(dst), PRINT_MAC(src));
+	return snprintf(buf, len, "dstmac=\"%s\" srcmac=\"%s\" ", src, dst);
 }
 
 
