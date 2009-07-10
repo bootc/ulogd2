@@ -27,12 +27,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ether.h>
-
-#define HIPQUAD(addr) \
-        ((unsigned char *)&addr)[3], \
-        ((unsigned char *)&addr)[2], \
-        ((unsigned char *)&addr)[1], \
-        ((unsigned char *)&addr)[0]
+#include <arpa/inet.h>
 
 /* config accessors */
 #define CFG_FACILITY(pi)	((pi)->config_kset->ces[0].u.string)
@@ -301,7 +296,6 @@ static int
 print_key(char *buf, size_t len, const struct ulogd_key *key,
 		  const char *name)
 {
-
 	char *pch = buf;
 
 	switch (key->type) {
@@ -312,10 +306,14 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 		
 	case ULOGD_RET_IPADDR:
 	{
-		unsigned long addr = key_src_u32(key);
+		struct in_addr addr = (struct in_addr){ key_src_u32(key), };
+		char __str[16];
+		const char *str;
 
-		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u.%u.%u.%u\" ",
-						name, HIPQUAD(addr));
+		str = inet_ntop(AF_INET, &addr, __str, sizeof(__str));
+
+		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ",
+						name, str);
 		break;
 	}
 		
