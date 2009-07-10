@@ -21,241 +21,27 @@
 #include <ulogd/common.h>
 #include <ulogd/ifi.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <linux/rtnetlink.h>
 
-#define IFI_STATIC_MAX			64
-
-#define TAILQ_FOR_EACH(pos, head, link) \
-        for (pos = (head).tqh_first; pos != NULL; pos = pos->link.tqe_next)
-
-/* the first IFI_STATIC_MAX entries are kept in ifi_static[] for performance
-   reasons, whereas all entries with an interface index larger than
-   IFI_STATIX_MAX-1 are kept in the linked ifi_list. */
-static TAILQ_HEAD(ifi_lh, ifi) ifi_list;
-static struct ifi ifi_static[IFI_STATIC_MAX];
-static struct ulogd_fd nl_fd;
-static unsigned nl_seq;			/* last seq# */
+#include <netlink/netlink.h>
+#include <netlink/cache.h>
+#include <netlink/route/link.h>
+#include <net/if.h>
+#include <netinet/ether.h>
 
 
-static struct ifi *
-ifi_alloc(void)
-{
-	struct ifi *ifi;
-
-	if ((ifi = calloc(1, sizeof(struct ifi))) == NULL)
-		return NULL;
-
-	return ifi;
-}
-
-
-struct ifi *
-ifi_find_by_idx(unsigned idx)
-{
-	struct ifi *ifi;
-
-	if (idx < IFI_STATIC_MAX)
-		ifi = &ifi_static[idx];
-	else {
-		TAILQ_FOR_EACH(ifi, ifi_list, link) {
-			if (ifi->idx == idx)
-				break;
-		}
-
-		if (ifi == NULL)
-			return NULL;
-	}
-
-	return ifi->used ? ifi : NULL;
-}
-
-
-static struct ifi *
-ifi_find_or_add(unsigned idx)
-{
-	struct ifi *ifi = ifi_find_by_idx(idx);
-	
-	if (ifi != NULL)
-		return ifi;
-
-	/* add */
-	if (idx < IFI_STATIC_MAX)
-		ifi = &ifi_static[idx];
-	else {
-		ifi = ifi_alloc();
-
-		TAILQ_INSERT_TAIL(&ifi_list, ifi, link);
-	}
-		
-	ifi->idx = idx;
-	ifi->used = 1;
-
-	return ifi;
-}
-
-
-static bool
-ifi_del(unsigned idx)
-{
-	struct ifi *ifi;
-	
-	if (idx < IFI_STATIC_MAX) {
-		ifi = &ifi_static[idx];
-
-		if (ifi->used) {
-			ifi->used = 0;
-
-			return true;
-		}
-	} else {
-		TAILQ_FOR_EACH(ifi, ifi_list, link) {
-			if (ifi->idx == idx) {
-				TAILQ_REMOVE(&ifi_list, ifi, link);
-				free(ifi);
-				
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-
-static void dump_bytes(const char *, unsigned char *, size_t) __ulogd_unused;
-
-static void
-dump_bytes(const char *prefix, unsigned char *data, size_t len)
-{
-	int i;
-	static unsigned char buf[1024];
-	char *pch = buf;
-
-	if (prefix) 
-		pch += sprintf(pch, "%s: ", prefix);
-
-	for (i = 0; i < len; i++)
-		pch += sprintf(pch, "0x%.2x ", data[i]);
-
-	fprintf(stdout, "%s\n", buf);
-}
-
-
-static void dump_nlmsg(FILE *, struct nlmsghdr *) __ulogd_unused;
-
-static void
-dump_nlmsg(FILE *fp, struct nlmsghdr *nlh)
-{
-	fprintf(fp, "rtmsg: len=%04x type=%08x flags=%08x seq=%08x\n",
-			nlh->nlmsg_len,	nlh->nlmsg_type, nlh->nlmsg_flags,
-			nlh->nlmsg_seq);
-}
-
-
-static ssize_t sprint_lladdr(char *, size_t, const unsigned char *)
-	__ulogd_unused;
-
-static ssize_t
-sprint_lladdr(char *buf, size_t len, const unsigned char *addr)
-{
-	char *pch = buf;
-
-	pch += sprintf(pch, "%02x:%02x:%02x:%02x:%02x:%02x",
-				   addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-
-	return pch - buf;
-}
-
-static int
-rtnl_parse_attrs(struct rtattr *attr, size_t attr_len,
-				 struct rtattr **rta, size_t rta_len)
-{
-	memset(rta, 0, rta_len * sizeof(struct rtattr *));
-
-	while (RTA_OK(attr, attr_len)) {
-		if (attr->rta_type < rta_len)
-			rta[attr->rta_type] = attr;
-
-		attr = RTA_NEXT(attr, attr_len);
-	}
-
-	return 0;
-}
+static struct ulogd_fd rtnl_ufd;
+static struct nl_handle *nlh;
+static struct nl_cache *cache;
+static struct nl_cache_mngr *mngr;
 
 
 static int
-nl_send(int fd, struct nlmsghdr *nlh)
+rtnl_ufd_cb(int fd, unsigned what, void *arg)
 {
-	struct sockaddr_nl sa;
-
-	memset(&sa, 0, sizeof(sa));
-
-	sa.nl_family = AF_NETLINK;
-
-	nlh->nlmsg_pid = getpid();
-	nlh->nlmsg_seq = ++nl_seq;
-
-	return sendto(fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr *)&sa,
-				  sizeof(sa));
-}
-
-
-static int
-nl_dump_request(int fd, int type)
-{
-	struct {
-		struct nlmsghdr nlh;
-		struct rtgenmsg gen;
-	} req = {
-		.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP,
-		.gen.rtgen_family = AF_UNSPEC,
-	};
-
-	req.nlh.nlmsg_type = type;
-	req.nlh.nlmsg_len = sizeof(req);
-
-	return nl_send(fd, &req.nlh);
-}
-
-
-static int
-nl_listen(int fd, char *buf, size_t len)
-{
-	return read(fd, buf, len);
-}
-
-
-static int
-rtnl_handle_link(struct nlmsghdr *nlh)
-{
-	struct ifinfomsg *m = NLMSG_DATA(nlh);
-	struct rtattr *ifla[IFLA_MAX];
-	struct ifi *ifi;
-	size_t len = nlh->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifinfomsg));
-
-	rtnl_parse_attrs(IFLA_RTA(m), len, ifla, IFLA_MAX);
-
-	switch (nlh->nlmsg_type) {
-	case RTM_NEWLINK:
-		if (m->ifi_flags & IFF_UP) {
-			if ((ifi = ifi_find_or_add(m->ifi_index)) == NULL)
-				return -1;
-			
-			ifi->flags = m->ifi_flags;
-			
-			if (ifla[IFLA_ADDRESS])
-				memcpy(ifi->lladdr, RTA_DATA(ifla[IFLA_ADDRESS]), 6);
-			
-			if (ifla[IFLA_IFNAME])
-				strcpy(ifi->name, RTA_DATA(ifla[IFLA_IFNAME]));
-		} else
-			ifi_del(m->ifi_index);
-		break;
-
-	case RTM_DELLINK:
+	switch (what) {
+	case ULOGD_FD_READ:
+		nl_cache_mngr_data_ready(mngr);
 		break;
 
 	default:
@@ -265,100 +51,131 @@ rtnl_handle_link(struct nlmsghdr *nlh)
 	return 0;
 }
 
-
-static int
-rtnl_handle_msg(struct nlmsghdr *nlh, size_t len)
+static void
+rtnl_change_cb(struct nl_cache *cache, struct nl_object *obj, int action)
 {
-	if (nlh == NULL)
-		return -1;
+	struct nl_dump_params dp = {
+		.dp_type = NL_DUMP_BRIEF,
+		.dp_fd = logfile,
+	};
 
-	while (NLMSG_OK(nlh, len)) {
-		if (nlh->nlmsg_type & NLMSG_DONE)
-			return 0;
+	switch (action) {
+	case NL_ACT_NEW:
+	case NL_ACT_DEL:
+		nl_object_dump(obj, &dp);
+		break;
 
-#if 0
-		dump_nlmsg(stdout, nlh);
-#endif /* 0 */
+	case NL_ACT_CHANGE:
+		break;
 
-		switch (nlh->nlmsg_type) {
-		case RTM_NEWLINK:
-		case RTM_DELLINK:
-			rtnl_handle_link(nlh);
-			break;
-
-		case NLMSG_ERROR:
-			break;
-
-		default:
-			break;
-		}
-
-		nlh = NLMSG_NEXT(nlh, len);
+	default:
+		break;
 	}
-	
-
-	return 0;
 }
 
-
-static int
-rtnl_read_cb(int fd, unsigned what, void *data)
+char *
+ifi_index2name(int ifi, char *dst, size_t len)
 {
-	static char buf[4096];
-
-	for (;;) {
-		int nbytes;
-
-		if ((nbytes = nl_listen(fd, buf, sizeof(buf))) < 0) {
-			if (errno == EWOULDBLOCK)
-				return 0;
-
-			ulogd_log(ULOGD_ERROR, "nl_listen: %s\n", strerror(errno));
-
-			return -1;
-		}
-
-		rtnl_handle_msg((struct nlmsghdr *)buf, nbytes);
-	}
-	
-	return 0;
+	return rtnl_link_i2name(cache, ifi, dst, len);
 }
 
+/**
+ * Return hardware address of interface
+ *
+ * @arg ifi		interface index
+ * @arg dst		target buffer of at least size %ETH_ALEN
+ *
+ * @return pointer to buffer or %NULL
+ */
+uint8_t *
+ifi_get_hwaddr(int ifi, uint8_t *dst)
+{
+	static uint8_t zero_hwaddr[ETH_ALEN];
+	struct rtnl_link *link = rtnl_link_get(cache, ifi);
+	struct nl_addr *addr;
+
+	if (!link)
+		return NULL;
+
+	if ((addr = rtnl_link_get_addr(link)) == NULL)
+		goto err_put;
+
+	if (nl_addr_iszero(addr))
+		memset(dst, 0, ETH_ALEN);
+	else
+		memcpy(dst, nl_addr_get_binary_addr(addr), ETH_ALEN);
+
+	rtnl_link_put(link);
+
+	return dst;
+
+err_put:
+	rtnl_link_put(link);
+	return NULL;
+}
+
+/**
+ * Return hardware address as string
+ *
+ * @arg ifi		interface index
+ * @arg dst		target buff
+ * @arg len		buffer of appropriate size
+ *
+ * @return 0 on success, -1 on error
+ */
+char *
+ifi_hwaddr2str(int ifi, char *dst, size_t len)
+{
+	struct rtnl_link *link = rtnl_link_get(cache, ifi);
+	struct nl_addr *addr;
+
+	if (!link)
+		return NULL;
+
+	if ((addr = rtnl_link_get_addr(link)) == NULL)
+		goto err_put;
+
+	if (!nl_addr2str(addr, dst, len))
+		goto err_put;
+
+	rtnl_link_put(link);
+
+	return dst;
+
+err_put:
+	rtnl_link_put(link);
+	return NULL;
+}
 
 int
 ifi_init(void)
 {
-	int fd;
-
-	struct sockaddr_nl sa = {
-		.nl_family = AF_NETLINK,
-		.nl_groups = RTNLGRP_LINK,
-	};
-
-	sa.nl_pid = getpid();
-
-	if ((fd = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE)) < 0) {
-		ulogd_log(ULOGD_ERROR, "ifi: socket: %s\n", strerror(errno));
+	if ((nlh = nl_handle_alloc()) == NULL) {
+		ulogd_log(ULOGD_ERROR, "ifi: unable to allocate netlink handle\n");
 		return -1;
 	}
 
-	if (bind(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
-		ulogd_log(ULOGD_ERROR, "ifi: bind: %s\n", strerror(errno));
+	nl_disable_sequence_check(nlh);
+
+	mngr = nl_cache_mngr_alloc(nlh, NETLINK_ROUTE, NL_AUTO_PROVIDE);
+	if (!mngr) {
+		ulogd_log(ULOGD_ERROR, "ifi: unable to allocate cache manager\n");
 		return -1;
 	}
 
-	if (connect(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
-		ulogd_log(ULOGD_ERROR, "ifi: connect: %s\n", strerror(errno));
+	cache = nl_cache_mngr_add(mngr, "route/link", rtnl_change_cb);
+	if (!cache) {
+		ulogd_log(ULOGD_ERROR, "ifi: unable to add cache to manager\n");
 		return -1;
-	}
+	}		
 
-	TAILQ_INIT(&ifi_list);
+	ulogd_init_fd(&rtnl_ufd, nl_cache_mngr_get_fd(mngr),
+				  ULOGD_FD_READ, rtnl_ufd_cb, mngr);
 
-	ulogd_init_fd(&nl_fd, fd, ULOGD_FD_READ, rtnl_read_cb, NULL);
-	if (ulogd_register_fd(&nl_fd) < 0)
+	if (ulogd_register_fd(&rtnl_ufd) < 0)
 		return -1;
 
-	nl_dump_request(nl_fd.fd, RTM_GETLINK);
+	ulogd_log(ULOGD_DEBUG, "interface notifier initialized\n");
 
 	return 0;
 }

@@ -24,21 +24,21 @@
 
 #include <net/if.h>
 #include <netinet/ether.h>
-#include <sys/queue.h>
 
-
-struct ifi {
-	TAILQ_ENTRY(ifi) link;
-	unsigned idx;			/* interface index */
-	unsigned used : 1;
-	unsigned flags;
-	char name[IFNAMSIZ];
-	unsigned char lladdr[ETH_ALEN];
-};
 
 int ifi_init(void);
 void ifi_fini(void);
 
-struct ifi *ifi_find_by_idx(unsigned);
+char *ifi_index2name(int, char *dst, size_t);
+
+/**
+ * Get hardware address for interface
+ */
+uint8_t *ifi_get_hwaddr(int ifi, uint8_t *dst);
+
+/**
+ * Get hardware address as string for interface
+ */
+char *ifi_hwaddr2str(int ifi, char *dst, size_t len);
 
 #endif /* IFI_H */

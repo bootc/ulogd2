@@ -7,4 +7,4 @@ sbin_PROGRAMS = ulogd
 
 ulogd_SOURCES = ulogd.c db.c ifi.c plugin.c select.c timer.c signal.c \
 		common.c conffile.c
-ulogd_LDFLAGS = -export-dynamic -lpthread
+ulogd_LDFLAGS = -export-dynamic -lpthread -lnl
