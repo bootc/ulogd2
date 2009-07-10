@@ -295,7 +295,7 @@ find_template_for_bitmask(struct ulogd_pluginstance *upi,
 	return NULL;
 }
 
-static int output_ipfix(struct ulogd_pluginstance *upi)
+static int output_ipfix(struct ulogd_pluginstance *upi, unsigned *flags)
 {
 	struct ipfix_instance *ii = upi_priv(upi);
 	struct ulogd_ipfix_template *template;

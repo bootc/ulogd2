@@ -85,7 +85,7 @@ static const struct config_keyset nacct_kset = {
 };
 
 static int
-nacct_interp(struct ulogd_pluginstance *pi)
+nacct_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct nacct_priv *priv = upi_priv(pi);
 	struct ulogd_key *in = pi->input.keys;

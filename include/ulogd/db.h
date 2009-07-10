@@ -101,8 +101,8 @@ db_has_prepare(const struct db_instance *di)
 
 int ulogd_db_start(struct ulogd_pluginstance *upi);
 int ulogd_db_stop(struct ulogd_pluginstance *upi);
-int ulogd_db_interp(struct ulogd_pluginstance *upi);
-int ulogd_db_interp_batch(struct ulogd_pluginstance *upi);
+int ulogd_db_interp(struct ulogd_pluginstance *upi, unsigned *flags);
+int ulogd_db_interp_batch(struct ulogd_pluginstance *upi, unsigned *flags);
 int ulogd_db_configure(struct ulogd_pluginstance *upi);
 int ulogd_db_signal(struct ulogd_pluginstance *upi, int signal);
 

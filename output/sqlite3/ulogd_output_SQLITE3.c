@@ -622,7 +622,7 @@ db_commit_rows(struct ulogd_pluginstance *pi)
 
 /* our main output function, called by ulogd */
 static int
-sqlite3_interp(struct ulogd_pluginstance *pi)
+sqlite3_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct sqlite3_priv *priv = upi_priv(pi);
 	struct col *cols = priv->cols;

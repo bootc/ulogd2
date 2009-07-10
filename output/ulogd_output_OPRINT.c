@@ -47,7 +47,7 @@ struct oprint_priv {
 	FILE *of;
 };
 
-static int oprint_interp(struct ulogd_pluginstance *upi)
+static int oprint_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 {
 	struct oprint_priv *opi = upi_priv(upi);
 	unsigned int i;

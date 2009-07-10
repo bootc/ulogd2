@@ -449,7 +449,7 @@ id_to_sub(unsigned id)
 }
 
 static int
-astaro_output(struct ulogd_pluginstance *pi)
+astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct astaro_priv *priv = upi_priv(pi);
 	const struct ulogd_key *in = pi->input.keys;

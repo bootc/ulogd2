@@ -447,7 +447,7 @@ _interp_ahesp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 }
 
 static int
-_interp_iphdr(struct ulogd_pluginstance *pi)
+_interp_iphdr(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ulogd_key *ret = pi->output.keys;
 	const struct iphdr *iph = key_src_ptr(&pi->input.keys[0]);

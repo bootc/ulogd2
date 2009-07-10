@@ -129,9 +129,10 @@ static struct ulogd_key output_keys[] = {
 static int interp_packet(struct ulogd_pluginstance *ip, ulog_packet_msg_t *pkt)
 {
 	unsigned char *p;
-	int i;
 	char *buf, *oldbuf = NULL;
 	struct ulogd_key *ret = ip->output.keys;
+	unsigned flags = 0;
+	int i;
 
 	if (pkt->mac_len) {
 		buf = (char *) malloc(3 * pkt->mac_len + 1);
@@ -169,7 +170,8 @@ static int interp_packet(struct ulogd_pluginstance *ip, ulog_packet_msg_t *pkt)
 	key_set_ptr(&ret[8], pkt->indev_name);
 	key_set_ptr(&ret[9], pkt->outdev_name);
 	
-	ulogd_propagate_results(ip);
+	ulogd_propagate_results(ip, &flags);
+
 	return 0;
 }
 

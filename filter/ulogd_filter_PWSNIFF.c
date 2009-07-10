@@ -55,7 +55,7 @@ static unsigned char *_get_next_blank(unsigned char* begp, unsigned char *endp)
 	return NULL;
 }
 
-static int interp_pwsniff(struct ulogd_pluginstance *pi)
+static int interp_pwsniff(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ulogd_key *inp = pi->input.keys;
 	struct ulogd_key *ret = pi->output.keys;

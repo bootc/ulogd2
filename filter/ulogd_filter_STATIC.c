@@ -58,7 +58,7 @@ static struct ulogd_key static_out_keys[] = {
 
 
 static int
-static_interp(struct ulogd_pluginstance *pi)
+static_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ulogd_key *out = pi->output.keys;
 	struct ulogd_key *in = pi->input.keys;

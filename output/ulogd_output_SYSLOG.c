@@ -55,7 +55,7 @@ struct syslog_instance {
 	int syslog_facility;
 };
 
-static int syslog_interp(struct ulogd_pluginstance *upi)
+static int syslog_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 {
 	struct syslog_instance *li = upi_priv(upi);
 	struct ulogd_key *res = upi->input.keys;

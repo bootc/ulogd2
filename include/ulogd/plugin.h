@@ -212,6 +212,9 @@ struct ulogd_pluginstance;
 /* plugin flags */
 #define ULOGD_PF_RECONF			0x00000001
 
+/* propagation flags */
+#define ULOGD_PROP_FOLLOW		0x00000001 /* follow this propagation */
+
 struct ulogd_plugin {
 	/* global list of plugins */
 	struct llist_head list;
@@ -231,11 +234,13 @@ struct ulogd_plugin {
 	 * Per-packet interpreter function
 	 *
 	 * Usually not used by input plugins, which usually ahve their own
-	 * event sources.
+	 * event sources.  You can use %flags to pass additional info
+	 * to all downstream plugintances, which is currently only used
+	 * for debugging.
 	 *
 	 * May return ULOGD_IRET_AGAIN.
 	 */
-	int (* interp)(struct ulogd_pluginstance *pi);
+	int (* interp)(struct ulogd_pluginstance *pi, unsigned *flags);
 
 	/**
 	 * Configuration handler for a %ulogd_pluginstance
@@ -384,7 +389,7 @@ struct ulogd_pluginstance *ulogd_upi_alloc_init(struct ulogd_plugin *,
 int ulogd_upi_configure(struct ulogd_pluginstance *);
 int ulogd_upi_start(struct ulogd_pluginstance *);
 int ulogd_upi_stop(struct ulogd_pluginstance *);
-int ulogd_upi_interp(struct ulogd_pluginstance *);
+int ulogd_upi_interp(struct ulogd_pluginstance *, unsigned *);
 void ulogd_upi_signal(struct ulogd_pluginstance *, int);
 int ulogd_upi_error(struct ulogd_pluginstance *, int);
 void ulogd_upi_set_state(struct ulogd_pluginstance *, enum UpiState);
@@ -393,7 +398,7 @@ int ulogd_upi_reset_cfg(struct ulogd_pluginstance *);
 int ulogd_upi_stop_all(void);
 
 int ulogd_wildcard_inputkeys(struct ulogd_pluginstance *upi);
-void ulogd_propagate_results(struct ulogd_pluginstance *pi);
+void ulogd_propagate_results(struct ulogd_pluginstance *pi, unsigned *flags);
 
 int ulogd_plugin_init(void);
 

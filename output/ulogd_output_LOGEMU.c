@@ -80,7 +80,7 @@ struct logemu_instance {
 	FILE *of;
 };
 
-static int _output_logemu(struct ulogd_pluginstance *upi)
+static int _output_logemu(struct ulogd_pluginstance *upi, unsigned *flags)
 {
 	struct logemu_instance *li = upi_priv(upi);
 	struct ulogd_key *res = upi->input.keys;

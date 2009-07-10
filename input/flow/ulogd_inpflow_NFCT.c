@@ -631,6 +631,7 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 	struct nfct_priv *priv = upi_priv(pi);
 	struct ulogd_key *out = pi->output.keys;
 	struct nfnl_ct *nfnl_ct = ct->nfnl_ct;
+	unsigned flags = 0;
 
 	pr_fn_debug("pi=%p ct=%p\n", pi, ct);
 
@@ -676,7 +677,7 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
     key_set_u32(&out[O_FLOW_DURATION],
 				tv_diff_sec(&ct->time[START], &ct->time[STOP]));
 
-	ulogd_propagate_results(pi);
+	ulogd_propagate_results(pi, &flags);
 
 	if (ct->refcnt > 1)
 		cache_del(priv->scache, ct);

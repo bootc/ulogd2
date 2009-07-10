@@ -567,9 +567,14 @@ stack_clean_results(const struct ulogd_pluginstance_stack *stack)
 	}
 }
 
-/* propagate results to all downstream plugins in the stack */
+/**
+ * Propagate results to all downstream plugins in the stack
+ *
+ * @arg pi		%ulogd_pluginstance to propagate
+ * @arg flags	additional flags to pass to downstream flags
+ */
 void
-ulogd_propagate_results(struct ulogd_pluginstance *pi)
+ulogd_propagate_results(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ulogd_pluginstance_stack *stack = pi->stack;
 
@@ -577,7 +582,7 @@ ulogd_propagate_results(struct ulogd_pluginstance *pi)
 	llist_for_each_entry_continue(pi, &stack->list, list) {
 		int ret;
 
-		ret = ulogd_upi_interp(pi);
+		ret = ulogd_upi_interp(pi, flags);
 		switch (ret) {
 		case ULOGD_IRET_OK:
 			/* we shall continue travelling down the stack */
@@ -739,14 +744,14 @@ ulogd_upi_stop(struct ulogd_pluginstance *pi)
  * later.
  */
 int
-ulogd_upi_interp(struct ulogd_pluginstance *pi)
+ulogd_upi_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	int ret;
 
 	if (pi->state != PsStarted)
 		return 0;
 
-	if ((ret = pi->plugin->interp(pi)) < 0) {
+	if ((ret = pi->plugin->interp(pi, flags)) < 0) {
 		ulogd_upi_stop(pi);
 
 		if (ret == ULOGD_IRET_AGAIN) {

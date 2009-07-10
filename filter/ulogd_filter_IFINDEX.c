@@ -52,7 +52,7 @@ static struct ulogd_key ifindex_inp[] = {
 	},
 };
 
-static int interp_ifindex(struct ulogd_pluginstance *pi)
+static int interp_ifindex(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ulogd_key *ret = pi->output.keys;
 	struct ulogd_key *inp = pi->input.keys;
