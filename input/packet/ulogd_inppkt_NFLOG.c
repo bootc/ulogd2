@@ -8,6 +8,8 @@
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
 
+#include <netinet/ether.h>
+
 #include <netinet/in.h>
 #include <netlink/utils.h>
 #include <netlink/msg.h>
@@ -216,6 +218,77 @@ enum {
 	K_OOB_LOGMARK,
 	__K_LAST
 };
+
+void nflog_dump(const char *prefix, const struct nl_object *obj)
+	__ulogd_unused;
+
+/* the libnl nl_object_dump() may not be used, because of the lacking
+   cache_mgr support here. */
+void
+nflog_dump(const char *prefix, const struct nl_object *obj)
+{
+	static char line[128], *end = line + sizeof(line);
+	struct nfnl_log *nflog_obj = (struct nfnl_log *)obj;
+	struct ether_addr *mac;
+	char buf[64], *pch = line;
+	const char *nflog_prefix;
+	int len, family;
+
+#define AVAIL	(end - pch)
+
+	if (prefix)
+		pch += snprintf(pch, AVAIL, "%s: ", prefix);
+
+	if (nfnl_log_get_indev(nflog_obj))
+		pch += snprintf(pch, AVAIL, "in=%u ", nfnl_log_get_indev(nflog_obj));
+	if (nfnl_log_get_physindev(nflog_obj))
+		pch += snprintf(pch, AVAIL, "physin=%u ",
+						nfnl_log_get_indev(nflog_obj));
+	if (nfnl_log_get_outdev(nflog_obj))
+		pch += snprintf(pch, AVAIL, "out=%u ",
+						nfnl_log_get_outdev(nflog_obj));
+	if (nfnl_log_get_physoutdev(nflog_obj))
+		pch += snprintf(pch, AVAIL, "physout=%u ",
+						nfnl_log_get_physoutdev(nflog_obj));
+
+	if (nfnl_log_test_hook(nflog_obj))
+		pch += snprintf(pch, AVAIL, "hook=%u ",
+						nfnl_log_get_hook(nflog_obj));
+
+	family = nfnl_log_get_family(nflog_obj);
+	pch += snprintf(pch, AVAIL, "family=%s ",
+					nl_af2str(family, buf, sizeof(buf)));
+
+	if (nfnl_log_test_hwproto(nflog_obj)) {
+		uint16_t proto = nfnl_log_get_hwproto(nflog_obj);
+
+		pch += snprintf(pch, AVAIL, "proto=%s ",
+						nl_ether_proto2str(proto, buf, sizeof(buf)));
+	}
+
+	mac = (struct ether_addr *)nfnl_log_get_hwaddr(nflog_obj, &len);
+	if (mac)
+		pch += snprintf(pch, AVAIL, "mac=%s ", ether_ntoa(mac));
+
+	if (nfnl_log_test_mark(nflog_obj))
+		pch += snprintf(pch, AVAIL, "mark=%u ",	nfnl_log_get_mark(nflog_obj));
+
+	if (nfnl_log_test_logmark(nflog_obj))
+		pch += snprintf(pch, AVAIL, "logmark=%u ",
+						nfnl_log_get_logmark(nflog_obj));
+
+	if (nfnl_log_get_payload(nflog_obj, &len))
+		pch += snprintf(pch, AVAIL, "payloadlen=%d ", len);
+
+	if ((nflog_prefix = nfnl_log_get_prefix(nflog_obj)) && nflog_prefix[0])
+		pch += snprintf(pch, AVAIL, "prefix='%s' ", nflog_prefix);
+
+	*(end - 1) = '\0';
+
+#undef AVAIL
+
+	ulogd_log(ULOGD_INFO, "%s\n", line);
+}
 
 static void
 nflog_handle_msg(struct nl_object *obj, void *arg)
