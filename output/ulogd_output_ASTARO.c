@@ -15,8 +15,6 @@
  *
  * H. Eitzenberger, 2006  Astaro AG
  */
-#define SYSLOG_NAMES			/* wtf? */
-
 #include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
