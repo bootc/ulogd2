@@ -301,6 +301,7 @@ static int
 print_key(char *buf, size_t len, const struct ulogd_key *key,
 		  const char *name)
 {
+
 	char *pch = buf;
 
 	switch (key->type) {

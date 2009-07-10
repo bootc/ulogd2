@@ -37,6 +37,8 @@ enum ulogd_loglevel {
 	__ULOGD_LOGLEVEL_MAX = ULOGD_FATAL
 };
 
+extern FILE *logfile;
+
 /***********************************************************************
  * PUBLIC INTERFACE 
  ***********************************************************************/

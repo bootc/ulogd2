@@ -69,7 +69,7 @@
 	"Copyright (C) 2000-2005 Harald Welte <laforge@netfilter.org>\n"
 
 /* global variables */
-static FILE *logfile;
+FILE *logfile;
 static char *ulogd_configfile = ULOGD_CONFIGFILE;
 static char *ulogd_logfile = ULOGD_LOGFILE_DEFAULT;
 static char pid_file[PATH_MAX] = "/var/run/ulogd.pid";
