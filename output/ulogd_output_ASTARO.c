@@ -59,8 +59,8 @@
 #define LOG_ID_UDP_FLOOD	(__IPS_BASE + 5)
 
 /* logging flags for custom log handler */
-#define LH_F_NOLOG		0x0001
-#define LH_F_NOTNULL	0x0002
+#define LH_F_NOLOG		0x0001	/* never log */
+#define LH_F_ALWAYS		0x0002	/* always log */
 
 
 /* one entry for each entry in astaro_in_keys */
@@ -231,29 +231,29 @@ lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
 }
 
 static struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
-	{ NULL, NULL, LH_F_NOLOG },	/* oob.prefix */
-	{ "fwrule", },
-	{ "seq", },					/* oob.seq.local */
-	{ "initf", lh_log_itf, },
-	{ "outitf", lh_log_itf, },
-	{ NULL, lh_log_mac },		/* mac address */
-	{ "srcip", },
-	{ "dstip", },
-	{ "proto", NULL },
-	{ "length", },
-	{ "tos", lh_log_tos },
-	{ "ttl", },
-	{ "srcport", NULL, LH_F_NOTNULL }, /* tcp.spt */
-	{ "dstport", NULL, LH_F_NOTNULL }, /* tcp.dpt */
-	{ "srcport", NULL, LH_F_NOTNULL }, /* udp.spt */
-	{ "dstport", NULL, LH_F_NOTNULL }, /* udp.dpt */
-	{ NULL, NULL, LH_F_NOLOG },	/* tcp.ack */
-	{ NULL, NULL, LH_F_NOLOG },	/* tcp.psh */
-	{ NULL, NULL, LH_F_NOLOG },	/* tcp.rst */
-	{ NULL, NULL, LH_F_NOLOG },	/* tcp.syn */
-	{ NULL, NULL, LH_F_NOLOG },	/* tcp.fin */
-	{ NULL, NULL, LH_F_NOLOG },	/* icmp.type */
-	{ NULL, NULL, LH_F_NOLOG },	/* icmp.code */
+	[InOobPrefix] = { NULL, NULL, LH_F_NOLOG },
+	[InOobLogmark] = { "fwrule", },
+	[InOobSeqLocal] = { "seq", },
+	[InOobIfiIn] = { "initf", lh_log_itf, },
+	[InOobIfiOut] = { "outitf", lh_log_itf, },
+	[InRawMac] = { NULL, lh_log_mac, LH_F_ALWAYS },
+	[InIpSAddr] = { "srcip", },
+	[InIpDAddr] = { "dstip", },
+	[InIpProto] = { "proto", NULL },
+	[InRawPktLen] = { "length", },
+	[InIpTos] = { "tos", lh_log_tos },
+	[InIpTtl] = { "ttl", },
+	[InTcpSPort] = { "srcport", NULL, },
+	[InTcpDPort] = { "dstport", NULL, },
+	[InUdpSPort] = { "srcport", NULL, },
+	[InUdpDPort] = { "dstport", NULL, },
+	[InTcpAck] = { NULL, NULL, LH_F_NOLOG },
+	[InTcpPsh] = { NULL, NULL, LH_F_NOLOG },
+	[InTcpRst] = { NULL, NULL, LH_F_NOLOG },
+	[InTcpSyn] = { NULL, NULL, LH_F_NOLOG },
+	[InTcpFin] = { NULL, NULL, LH_F_NOLOG },
+	[InIcmpType] = { NULL, NULL, LH_F_NOLOG },
+	[InIcmpCode] = { NULL, NULL, LH_F_NOLOG },
 };
 
 static const struct config_keyset astaro_kset = {
@@ -275,10 +275,10 @@ log_prefix2type(const struct log_type *t, const char *prefix)
 {
 	unsigned n;
 
-	if (prefix == NULL)
+	if (!prefix)
 		return 0;
 
-	for (n = 0; t[n].prefix != NULL; n++) {
+	for (n = 0; t[n].prefix; n++) {
 		if (strncmp(t[n].prefix, prefix, t[n].prefix_len) == 0)
 			return n;
 	}
@@ -400,17 +400,19 @@ print_dyn_part(const struct ulogd_pluginstance *pi, unsigned type,
 		struct ulogd_key *key = &pi->input.keys[i];
 		char *name;
 
- 		if (!key_src_valid(key))
-			continue;
+		if (!(log_handler[i].flags & LH_F_ALWAYS)) {
+			if (!key_src_valid(key))
+				continue;
 
-		if (log_handler[i].flags & LH_F_NOLOG)
-			continue;
+			if (log_handler[i].flags & LH_F_NOLOG)
+				continue;
+		}
 
 		/* log handler name takes precedence */
 		name = log_handler[i].name ? log_handler[i].name : key->name;
 
 		/* custom logging handler? */
-		if (log_handler[i].fn != NULL) {
+		if (log_handler[i].fn) {
 			pch += (log_handler[i].fn)(pi, i, pch, avail(buf, pch, max_len));
 			continue;
 		}
@@ -512,7 +514,7 @@ nv_get_value(struct nv *nv, const char *name, int def_val)
 	if (*name == '\0')
 		return def_val;
 
-	for (; nv->name != NULL; nv++) {
+	for (; nv->name; nv++) {
 		if (strcmp(nv->name, name) == 0)
 			return nv->val;
 	}
@@ -555,7 +557,7 @@ astaro_start(struct ulogd_pluginstance *pi)
 
 	openlog("ulogd", LOG_NDELAY | LOG_PID, LOG_DAEMON);
 
-	for (i = 0; log_types[i].prefix !=  NULL; i++)
+	for (i = 0; log_types[i].prefix; i++)
 		log_types[i].prefix_len = strlen(log_types[i].prefix);
 
 	return 0;
