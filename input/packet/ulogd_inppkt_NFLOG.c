@@ -280,7 +280,7 @@ nflog_dump(const char *prefix, const struct nl_object *obj)
 	if (nfnl_log_get_payload(nflog_obj, &len))
 		pch += snprintf(pch, AVAIL, "payloadlen=%d ", len);
 
-	if ((nflog_prefix = nfnl_log_get_prefix(nflog_obj)) && nflog_prefix[0])
+	if ((nflog_prefix = nfnl_log_get_prefix(nflog_obj)) && *nflog_prefix)
 		pch += snprintf(pch, AVAIL, "prefix='%s' ", nflog_prefix);
 
 	*(end - 1) = '\0';
@@ -297,6 +297,7 @@ nflog_handle_msg(struct nl_object *obj, void *arg)
 	struct nfnl_log *nflog_obj = (struct nfnl_log *)obj;
 	struct ulogd_key *out = upi->output.keys;
 	const struct timeval *tv;
+	char *prefix;
 	unsigned flags = 0;
 	int len;
 
@@ -312,8 +313,8 @@ nflog_handle_msg(struct nl_object *obj, void *arg)
 
 	key_set_u32(&out[K_RAW_PKTCNT], 1);
 
-	if (nfnl_log_get_prefix(nflog_obj) != NULL)
-		key_set_ptr(&out[K_OOB_PREFIX], (void*)nfnl_log_get_prefix(nflog_obj));
+	if ((prefix = nfnl_log_get_prefix(nflog_obj)) != NULL && *prefix)
+		key_set_str(&out[K_OOB_PREFIX], (void*)nfnl_log_get_prefix(nflog_obj));
 
 	if ((tv = nfnl_log_get_timestamp(nflog_obj)) != NULL) {
 		/* FIXME: convert endianness */

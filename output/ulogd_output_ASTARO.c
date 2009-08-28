@@ -426,6 +426,14 @@ print_dyn_part(const struct ulogd_pluginstance *pi, unsigned type,
 	else if (key_src_u8(&in[InIpProto]) == IPPROTO_ICMP)
 		pch += print_proto_icmp(pi, pch, avail(buf, pch, max_len));
 
+	if (__PF_BASE + type == LOG_ID_LOG) {
+		/* log Netfilter-internal messages without loss of information */
+		if (key_src_valid(&in[InOobPrefix])) {
+			pch += snprintf(pch, avail(buf, pch, max_len), "info=\"%s\"",
+							key_src_str(&in[InOobPrefix]));
+		}
+	}
+
 	/* ideally log_prefix2type() would return the real ID, not the
 	   index into the array */
 	if (__PF_BASE + type == LOG_ID_TRACE)
@@ -457,9 +465,6 @@ astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 	char *pch = buf, *end = buf + sizeof(buf);
 	unsigned type;
 	
-	if ((ces[0].u.source->flags & ULOGD_RETF_VALID) == 0)
-		return 0;
-
 	type = log_prefix2type(log_types, key_src_valid(&in[InOobPrefix]) ?
 						   key_src_str(&in[InOobPrefix]) : NULL);
 	
