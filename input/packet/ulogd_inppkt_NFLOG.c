@@ -42,7 +42,7 @@ static const struct config_keyset nflog_kset = {
 		CONFIG_KEY_INT("bufsize", NFLOG_BUFSIZE_DEFAULT),
 		CONFIG_KEY_INT("group", NFLOG_GROUP_DEFAULT),
 		CONFIG_KEY_INT("rmem", NFLOG_RMEM_DEFAULT),
-		CONFIG_KEY_INT("addressfamily", AF_INET),
+		CONFIG_KEY_INT("af", AF_INET),
 		CONFIG_KEY_INT("unbind", 1),
 		CONFIG_KEY_INT("seq_local", 0),
 		CONFIG_KEY_INT("seq_global", 0),
