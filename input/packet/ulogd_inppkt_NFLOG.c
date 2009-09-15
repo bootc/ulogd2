@@ -39,41 +39,13 @@ struct nflog_priv {
 static const struct config_keyset nflog_kset = {
 	.num_ces = 7,
 	.ces = {
-		{
-			.key 	 = "bufsize",
-			.type 	 = CONFIG_TYPE_INT,
-			.u.value = NFLOG_BUFSIZE_DEFAULT,
-		},
-		{
-			.key	 = "group",
-			.type	 = CONFIG_TYPE_INT,
-			.u.value = NFLOG_GROUP_DEFAULT,
-		},
-		{
-			.key	 = "rmem",
-			.type	 = CONFIG_TYPE_INT,
-			.u.value = NFLOG_RMEM_DEFAULT,
-		},
-		{
-			.key 	 = "addressfamily",
-			.type	 = CONFIG_TYPE_INT,
-			.u.value = AF_INET,
-		},
-		{
-			.key	 = "unbind",
-			.type	 = CONFIG_TYPE_INT,
-			.u.value = 1,
-		},
-		{
-			.key	 = "seq_local",
-			.type	 = CONFIG_TYPE_INT,
-			.u.value = 0,
-		},
-		{
-			.key	 = "seq_global",
-			.type	 = CONFIG_TYPE_INT,
-			.u.value = 0,
-		},
+		CONFIG_KEY_INT("bufsize", NFLOG_BUFSIZE_DEFAULT),
+		CONFIG_KEY_INT("group", NFLOG_GROUP_DEFAULT),
+		CONFIG_KEY_INT("rmem", NFLOG_RMEM_DEFAULT),
+		CONFIG_KEY_INT("addressfamily", AF_INET),
+		CONFIG_KEY_INT("unbind", 1),
+		CONFIG_KEY_INT("seq_local", 0),
+		CONFIG_KEY_INT("seq_global", 0),
 	}
 };
 
