@@ -58,120 +58,6 @@ static const struct config_keyset nflog_kset = {
 #define seq_global_ce(x)	(x->ces[5])
 
 
-static struct ulogd_key output_keys[] = {
-	{
-		.type = ULOGD_RET_RAW, 
-		.name = "raw.mac", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_sourceMacAddress,
-		},
-	},
-	{
-		.type = ULOGD_RET_RAW,
-		.name = "raw.pkt",
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_NETFILTER,
-			.field_id = IPFIX_NF_rawpacket,
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "raw.pktlen",
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_NETFILTER,
-			.field_id = IPFIX_NF_rawpacket_length,
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "raw.pktcount",
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_packetDeltaCount,
-		},
-	},
-	{
-		.type = ULOGD_RET_STRING,
-		.name = "oob.prefix", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_NETFILTER,
-			.field_id = IPFIX_NF_prefix,  
-		},
-	},
-	{ 	.type = ULOGD_RET_UINT32, 
-		.name = "oob.time.sec", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF, 
-			.field_id = IPFIX_flowStartSeconds, 
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "oob.time.usec", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_flowStartMicroSeconds,
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "oob.mark", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_NETFILTER,
-			.field_id = IPFIX_NF_mark,
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "oob.ifindex_in", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_ingressInterface,
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "oob.ifindex_out", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_egressInterface,
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT8,
-		.name = "oob.hook",
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_NETFILTER,
-			.field_id = IPFIX_NF_hook,
-		},
-	},
-	{ 
-		.type = ULOGD_RET_UINT16,
-		.name = "raw.mac_len", 
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "oob.seq.local",
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_NETFILTER,
-			.field_id = IPFIX_NF_seq_local,
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "oob.seq.global",
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_NETFILTER,
-			.field_id = IPFIX_NF_seq_global,
-		},
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.name = "oob.logmark",
-	},
-};
-
 enum {
 	K_RAW_MAC = 0,
 	K_RAW_PKT,
@@ -189,6 +75,30 @@ enum {
 	K_OOB_SEQ_GLOBAL,
 	K_OOB_LOGMARK,
 	__K_LAST
+};
+
+static struct ulogd_key output_keys[] = {
+	[K_RAW_MAC] = KEY_IPFIX(RAW, "raw.mac", IETF, sourceMacAddress),
+	[K_RAW_PKT] = KEY_IPFIX(RAW,  "raw.pkt", NETFILTER, NF_rawpacket),
+	[K_RAW_PKTLEN] KEY_IPFIX(RAW, "raw.pktlen", NETFILTER,
+							 NF_rawpacket_length),
+	[K_RAW_PKTCNT] = KEY_IPFIX(UINT32, "raw.pktcount", IETF, packetDeltaCount),
+	[K_OOB_PREFIX] = KEY_IPFIX(STRING, "oob.prefix", NETFILTER, NF_prefix),
+	[K_OOB_TIME_SEC] = KEY_IPFIX(UINT32, "oob.time.sec", IETF,
+								 flowStartSeconds),
+	[K_OOB_TIME_USEC] = KEY_IPFIX(UINT32, "oob.time.usec", IETF,
+								  flowStartMicroSeconds),
+	[K_OOB_MARK] = KEY_IPFIX(UINT32, "oob.mark", NETFILTER, NF_mark),
+	[K_OOB_IFI_IN] = KEY_IPFIX(UINT32, "oob.ifindex_in", IETF,
+							   ingressInterface),
+	[K_OOB_IFI_OUT] = KEY_IPFIX(UINT32, "oob.ifindex_out", IETF,
+								egressInterface),
+	[K_OOB_HOOK] = KEY_IPFIX(UINT8, "oob.hook", NETFILTER, NF_hook),
+	[K_RAW_MAC_LEN] = KEY(UINT16, "raw.mac_len"),
+	[K_OOB_SEQ] = KEY_IPFIX(UINT32, "oob.seq.local", NETFILTER, NF_seq_local),
+	[K_OOB_SEQ_GLOBAL] = KEY_IPFIX(UINT32, "oob.seq.global", NETFILTER,
+								   NF_seq_global),
+	[K_OOB_LOGMARK] = KEY(UINT32, "oob.logmark"),
 };
 
 void nflog_dump(const char *prefix, const struct nl_object *obj)
