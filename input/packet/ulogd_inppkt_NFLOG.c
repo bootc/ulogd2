@@ -16,9 +16,7 @@
 #include <netlink/netfilter/nfnl.h>
 #include <netlink/netfilter/log.h>
 
-#ifndef NFLOG_GROUP_DEFAULT
 #define NFLOG_GROUP_DEFAULT	0
-#endif
 
 /* Size of the socket recevive memory.  Should be at least the same size as the
  * 'nlbufsiz' parameter of nfnetlink_log.ko
