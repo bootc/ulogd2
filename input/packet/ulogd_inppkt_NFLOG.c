@@ -139,9 +139,11 @@ nflog_dump(const char *prefix, const struct nl_object *obj)
 	if (nfnl_log_test_mark(nflog_obj))
 		pch += snprintf(pch, AVAIL, "mark=%u ",	nfnl_log_get_mark(nflog_obj));
 
+#if 0
 	if (nfnl_log_test_logmark(nflog_obj))
 		pch += snprintf(pch, AVAIL, "logmark=%u ",
 						nfnl_log_get_logmark(nflog_obj));
+#endif /* 0 */
 
 	if (nfnl_log_get_payload(nflog_obj, &len))
 		pch += snprintf(pch, AVAIL, "payloadlen=%d ", len);
@@ -194,8 +196,10 @@ nflog_handle_msg(struct nl_object *obj, void *arg)
 	key_set_u32(&out[K_OOB_SEQ], nfnl_log_get_seq(nflog_obj));
 	key_set_u32(&out[K_OOB_SEQ_GLOBAL], nfnl_log_get_seq_global(nflog_obj));
 
+#if 0
 	/* Astaro logmark */
 	key_set_u32(&out[K_OOB_LOGMARK], nfnl_log_get_logmark(nflog_obj));
+#endif /* 0 */
 
 	ulogd_propagate_results(upi, &flags);
 }
