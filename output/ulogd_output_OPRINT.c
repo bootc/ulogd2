@@ -90,7 +90,8 @@ static int oprint_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 			default: fprintf(opi->of, "default");
 		}
 	}
-	if (upi->config_kset->ces[1].u.value != 0)
+
+	if (upi->config_kset->ces[1].u.value)
 		fflush(opi->of);
 
 	return 0;
@@ -100,7 +101,7 @@ static const struct config_keyset oprint_kset = {
 	.num_ces = 2,
 	.ces = {
 		CONFIG_KEY_STR("file", ULOGD_OPRINT_DEFAULT),
-		CONFIG_KEY_INT("sync", 0),
+		CONFIG_KEY_INT("sync", 1),
 	},
 };
 
