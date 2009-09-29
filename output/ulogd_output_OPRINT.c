@@ -99,18 +99,8 @@ static int oprint_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 static const struct config_keyset oprint_kset = {
 	.num_ces = 2,
 	.ces = {
-		{
-			.key = "file", 
-			.type = CONFIG_TYPE_STRING, 
-			.options = CONFIG_OPT_NONE,
-			.u = {.string = ULOGD_OPRINT_DEFAULT },
-		},
-		{
-			.key = "sync",
-			.type = CONFIG_TYPE_INT,
-			.options = CONFIG_OPT_NONE,
-			.u = { .value = 0 },
-		},
+		CONFIG_KEY_STR("file", ULOGD_OPRINT_DEFAULT),
+		CONFIG_KEY_INT("sync", 0),
 	},
 };
 
