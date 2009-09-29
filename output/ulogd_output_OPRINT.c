@@ -27,25 +27,18 @@
 #include <ulogd/conffile.h>
 #include <ulogd/plugin.h>
 #include <string.h>
+#include <arpa/inet.h>
+
+#define OPR_BUF_LEN		64
 
 #ifndef ULOGD_OPRINT_DEFAULT
 #define ULOGD_OPRINT_DEFAULT	"/var/log/ulogd.pktlog"
 #endif
 
-#define NIPQUAD(addr) \
-	((unsigned char *)&addr)[0], \
-	((unsigned char *)&addr)[1], \
-        ((unsigned char *)&addr)[2], \
-        ((unsigned char *)&addr)[3]
-
-#define HIPQUAD(addr) \
-        ((unsigned char *)&addr)[3], \
-        ((unsigned char *)&addr)[2], \
-        ((unsigned char *)&addr)[1], \
-        ((unsigned char *)&addr)[0]
 
 struct oprint_priv {
 	FILE *of;
+	char buf[OPR_BUF_LEN];
 };
 
 static int oprint_interp(struct ulogd_pluginstance *upi, unsigned *flags)
@@ -81,9 +74,13 @@ static int oprint_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 				fprintf(opi->of, "%u\n", ret->u.value.ui32);
 				break;
 			case ULOGD_RET_IPADDR:
-				fprintf(opi->of, "%u.%u.%u.%u\n", 
-					HIPQUAD(ret->u.value.ui32));
+			{
+				struct in_addr addr = (struct in_addr){ key_u32(ret), };
+
+				inet_ntop(AF_INET, &addr, opi->buf, OPR_BUF_LEN);
+				fprintf(opi->of, "%s\n", opi->buf);
 				break;
+			}
 			case ULOGD_RET_NONE:
 				fprintf(opi->of, "<none>");
 				break;
