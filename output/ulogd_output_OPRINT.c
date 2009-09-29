@@ -97,10 +97,8 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 	for (i = 0; i < upi->input.num_keys; i++) {
 		struct ulogd_key *key = key_src(&upi->input.keys[i]);
 
-		if (!key || !key_valid(key)) {
-			upi_log(upi, ULOGD_NOTICE, "no result for '%s'\n", key->name);
+		if (!key || !key_valid(key))
 			continue;
-		}
 
 		fprintf(opi->of,"%s=", key->name);
 		switch (key->type) {
