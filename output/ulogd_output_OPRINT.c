@@ -100,38 +100,37 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 		if (!key || !key_valid(key))
 			continue;
 
-		fprintf(opi->of,"%s=", key->name);
 		switch (key->type) {
 		case ULOGD_RET_STRING:
-			fprintf(opi->of, "%s\n", key_str(key));
+			fprintf(opi->of, "%s=%s\n", key->name, key_str(key));
 			break;
 
 		case ULOGD_RET_BOOL:
-			fprintf(opi->of, "%d\n", key_bool(key));
+			fprintf(opi->of, "%s=%d\n", key->name, key_bool(key));
 			break;
 
 		case ULOGD_RET_INT8:
-			fprintf(opi->of, "%d\n", key_i8(key));
+			fprintf(opi->of, "%s=%d\n", key->name, key_i8(key));
 			break;
 
 		case ULOGD_RET_INT16:
-			fprintf(opi->of, "%d\n", key_i16(key));
+			fprintf(opi->of, "%s=%d\n", key->name, key_i16(key));
 			break;
 
 		case ULOGD_RET_INT32:
-			fprintf(opi->of, "%d\n", key_i32(key));
+			fprintf(opi->of, "%s=%d\n", key->name, key_i32(key));
 			break;
 
 		case ULOGD_RET_UINT8:
-			fprintf(opi->of, "%u\n", key_u8(key));
+			fprintf(opi->of, "%s=%u\n", key->name, key_u8(key));
 			break;
 			
 		case ULOGD_RET_UINT16:
-			fprintf(opi->of, "%u\n", key_u16(key));
+			fprintf(opi->of, "%s=%u\n", key->name, key_u16(key));
 			break;
 			
 		case ULOGD_RET_UINT32:
-			fprintf(opi->of, "%u\n", key_u32(key));
+			fprintf(opi->of, "%s=%u\n", key->name, key_u32(key));
 			break;
 			
 		case ULOGD_RET_IPADDR:
@@ -139,7 +138,7 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 			struct in_addr addr = (struct in_addr){ key_u32(key), };
 			
 			inet_ntop(AF_INET, &addr, opi->buf, OPR_BUF_LEN);
-			fprintf(opi->of, "%s\n", opi->buf);
+			fprintf(opi->of, "%s=%s\n", key->name, opi->buf);
 			break;
 		}
 		
