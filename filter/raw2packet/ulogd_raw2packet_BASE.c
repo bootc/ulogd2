@@ -40,7 +40,15 @@
 #include <netinet/udp.h>
 
 
-enum OutKeys {
+enum {
+	I_RawPkt = 0,
+};
+
+static struct ulogd_key in_keys[] = {
+	[I_RawPkt] = KEY(RAW, "raw.pkt"),
+};
+
+enum {
 	O_IpSAddr = 0,
 	O_IpDAddr,
 	O_IpProto,
@@ -86,244 +94,46 @@ enum OutKeys {
  * 			IP HEADER
  ***********************************************************************/
 static struct ulogd_key out_keys[] = {
-	[O_IpSAddr] = {
-		.type = ULOGD_RET_IPADDR,
-		.name = "ip.saddr", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_sourceIPv4Address,
-		},
-	},
-	[O_IpDAddr] = {
-		.type = ULOGD_RET_IPADDR,
-		.name = "ip.daddr", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_destinationIPv4Address,
-		},
-	},
-	[O_IpProto] = {
-		.type = ULOGD_RET_UINT8,
-		.name = "ip.protocol", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_protocolIdentifier,
-		},
-	},
-	[O_IpTos] = {
-		.type = ULOGD_RET_UINT8,
-		.name = "ip.tos", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_classOfServiceIPv4,
-		},
-	},
-	[O_IpTtl] = {
-		.type = ULOGD_RET_UINT8,
-		.name = "ip.ttl", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_ipTimeToLive,
-		},
-	},
-	[O_IpTotLen] {
-		.type = ULOGD_RET_UINT16,
-		.name = "ip.totlen", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_totalLengthIPv4,
-		},
-	},
-	[O_IpIhl] = {
-		.type = ULOGD_RET_UINT8,
-		.name = "ip.ihl", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_internetHeaderLengthIPv4,
-		},
-	},
-	[O_IpCsum] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "ip.csum", 
-	},
-	[O_IpId] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "ip.id", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_identificationIPv4,
-		},
-	},
-	[O_IpFragOff] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "ip.fragoff", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_fragmentOffsetIPv4,
-		},
-	},
-
-	/* 10 */
-	[O_TcpSPort] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "tcp.sport", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_tcpSourcePort,
-		},
-	},
-	[O_TcpDPort] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "tcp.dport", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_tcpDestinationPort,
-		},
-	},
-	[O_TcpSeq] = {
-		.type = ULOGD_RET_UINT32,
-		.name = "tcp.seq", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_tcpSequenceNumber,
-		},
-	},
-	[O_TcpAckSeq] = {
-		.type = ULOGD_RET_UINT32,
-		.name = "tcp.ackseq", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_tcpAcknowledgementNumber,
-		},
-	},
-	[O_TcpOff] = {
-		.type = ULOGD_RET_UINT8,
-		.name = "tcp.offset",
-	},
-	[O_TcpReserved] = {
-		.type = ULOGD_RET_UINT8,
-		.name = "tcp.reserved",
-	}, 
-	[O_TcpWin] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "tcp.window",
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_tcpWindowSize,
-		},
-	},
-	[O_TcpUrg] = {
-		.type = ULOGD_RET_BOOL, 
-		.name = "tcp.urg", 
-	},
-	[O_TcpUrgp] = {
-		.type = ULOGD_RET_UINT16, 
-		.name = "tcp.urgp",
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_tcpUrgentPointer,
-		},
-	},
-	[O_TcpAck] = {
-		.type = ULOGD_RET_BOOL, 
-		.name = "tcp.ack", 
-	},
-	[O_TcpPsh] = {
-		.type = ULOGD_RET_BOOL,
-		.name = "tcp.psh",
-	},
-	[O_TcpRst] = {
-		.type = ULOGD_RET_BOOL,
-		.name = "tcp.rst",
-	},
-	[O_TcpSyn] = {
-		.type = ULOGD_RET_BOOL,
-		.name = "tcp.syn",
-	},
-	[O_TcpFin] = {
-		.type = ULOGD_RET_BOOL,
-		.name = "tcp.fin",
-	},
-	[O_TcpRes1] = {
-		.type = ULOGD_RET_BOOL,
-		.name = "tcp.res1",
-	},
-	[O_TcpRes2] = {
-		.type = ULOGD_RET_BOOL,
-		.name = "tcp.res2",
-	},
-	[O_TcpCsum] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "tcp.csum",
-	},
-
-	/* 27 */
-	[O_UdpSPort] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "udp.sport", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF, 
-			.field_id = IPFIX_udpSourcePort,
-		},
-	},
-	[O_UdpDPort] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "udp.dport", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_udpDestinationPort,
-		},
-	},
-	[O_UdpLen] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "udp.len", 
-	},
-	[O_UdpCsum] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "udp.csum",
-	},
-
-	/* 31 */
-	[O_IcmpType] = {
-		.type = ULOGD_RET_UINT8,
-		.name = "icmp.type", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_icmpTypeIPv4,
-		},
-	},
-	[O_IcmpCode] {
-		.type = ULOGD_RET_UINT8,
-		.name = "icmp.code", 
-		.ipfix = {
-			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_icmpCodeIPv4,
-		},
-	},
-	[O_IcmpEchoId] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "icmp.echoid", 
-	},
-	[O_IcmpEchoSeq] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "icmp.echoseq",
-	},
-	[O_IcmpGw] = {
-		.type = ULOGD_RET_IPADDR,
-		.name = "icmp.gateway", 
-	},
-	[O_IcmpFragMtu] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "icmp.fragmtu", 
-	},
-	[O_IcmpCsum] = {
-		.type = ULOGD_RET_UINT16,
-		.name = "icmp.csum",
-	},
-	[O_AhEspSpi] = {
-		.type = ULOGD_RET_UINT32,
-		.name = "ahesp.spi",
-	},
+	[O_IpSAddr] = KEY_IPFIX(IPADDR, "ip.saddr", IETF, sourceIPv4Address),
+	[O_IpDAddr] = KEY_IPFIX(IPADDR, "ip.daddr", IETF, destinationIPv4Address),
+	[O_IpProto] = KEY_IPFIX(UINT8, "ip.protocol", IETF, protocolIdentifier),
+	[O_IpTos] = KEY_IPFIX(UINT8, "ip.tos", IETF, classOfServiceIPv4),
+	[O_IpTtl] = KEY_IPFIX(UINT8, "ip.ttl", IETF, ipTimeToLive),
+	[O_IpTotLen] = KEY_IPFIX(UINT16, "ip.totlen", IETF, totalLengthIPv4),
+	[O_IpIhl] = KEY_IPFIX(UINT8, "ip.ihl", IETF, internetHeaderLengthIPv4),
+	[O_IpCsum] = KEY(UINT16, "ip.csum"),
+	[O_IpId] = KEY_IPFIX(UINT16, "ip.id", IETF, identificationIPv4),
+	[O_IpFragOff] = KEY_IPFIX(UINT16, "ip.fragoff", IETF, fragmentOffsetIPv4),
+	[O_TcpSPort] = KEY_IPFIX(UINT16, "tcp.sport", IETF, tcpSourcePort),
+	[O_TcpDPort] = KEY_IPFIX(UINT16, "tcp.dport", IETF, tcpDestinationPort),
+	[O_TcpSeq] = KEY_IPFIX(UINT32, "tcp.seq", IETF, tcpSequenceNumber),
+	[O_TcpAckSeq] = KEY_IPFIX(UINT32, "tcp.ackseq", IETF,
+							  tcpAcknowledgementNumber),
+	[O_TcpOff] = KEY(UINT8, "tcp.offset"),
+	[O_TcpReserved] = KEY(UINT8, "tcp.reserved"),
+	[O_TcpWin] = KEY_IPFIX(UINT16, "tcp.window", IETF, tcpWindowSize),
+	[O_TcpUrg] = KEY(BOOL, "tcp.urg"),
+	[O_TcpUrgp] = KEY_IPFIX(UINT16, "tcp.urgp", IETF, tcpUrgentPointer),
+	[O_TcpAck] = KEY(BOOL, "tcp.ack"),
+	[O_TcpPsh] = KEY(BOOL, "tcp.psh"),
+	[O_TcpRst] = KEY(BOOL, "tcp.rst"),
+	[O_TcpSyn] = KEY(BOOL, "tcp.syn"),
+	[O_TcpFin] = KEY(BOOL, "tcp.fin"),
+	[O_TcpRes1] = KEY(BOOL, "tcp.res1"),
+	[O_TcpRes2] = KEY(BOOL,  "tcp.res2"),
+	[O_TcpCsum] = KEY(UINT16, "tcp.csum"),
+	[O_UdpSPort] = KEY_IPFIX(UINT16, "udp.sport", IETF, udpSourcePort),
+	[O_UdpDPort] = KEY_IPFIX(UINT16, "udp.dport", IETF, udpDestinationPort),
+	[O_UdpLen] = KEY(UINT16, "udp.len"),
+	[O_UdpCsum] = KEY(UINT16, "udp.csum"),
+	[O_IcmpType] = KEY_IPFIX(UINT8, "icmp.type", IETF, icmpTypeIPv4),
+	[O_IcmpCode] = KEY_IPFIX(UINT8, "icmp.code", IETF, icmpCodeIPv4),
+	[O_IcmpEchoId] = KEY(UINT16, "icmp.echoid"),
+	[O_IcmpEchoSeq] = KEY(UINT16, "icmp.echoseq"),
+	[O_IcmpGw] = KEY(IPADDR, "icmp.gateway"),
+	[O_IcmpFragMtu] = KEY(UINT16, "icmp.fragmtu"),
+	[O_IcmpCsum] = KEY(UINT16, "icmp.csum"),
+	[O_AhEspSpi] = KEY(UINT32, "ahesp.spi"),
 };
 
 static void *
@@ -433,14 +243,13 @@ static int
 _interp_ahesp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 {
 #if 0
-	struct ulogd_key *ret = &pi->output.keys[38];
-
+	struct ulogd_key *keys = &pi->output.keys[AhEspBase];
 	struct esphdr *esph = protoh;
 
 	if (iph->protocol != IPPROTO_ESP)
 		return NULL;
 
-	key_set_u32(ret[0], ntohl(esph->spi));
+	key_set_u32(keys[O_AhEspSpi], ntohl(esph->spi));
 #endif
 
 	return 0;
@@ -450,7 +259,7 @@ static int
 _interp_iphdr(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ulogd_key *ret = pi->output.keys;
-	const struct iphdr *iph = key_src_ptr(&pi->input.keys[0]);
+	const struct iphdr *iph = key_src_ptr(pi->input.keys);
 
 	key_set_u32(&ret[0], ntohl(iph->saddr));
 	key_set_u32(&ret[1], ntohl(iph->daddr));
@@ -484,17 +293,6 @@ _interp_iphdr(struct ulogd_pluginstance *pi, unsigned *flags)
 
 	return 0;
 }
-
-static struct ulogd_key in_keys[] = {
-	{ 
-		.type = ULOGD_RET_RAW,
-		.name = "raw.pkt", 
-		.ipfix = { 
-			.vendor = IPFIX_VENDOR_NETFILTER, 
-			.field_id = 1 
-		},
-	},
-};
 
 static struct ulogd_plugin base_plugin = {
 	.name = "BASE",
