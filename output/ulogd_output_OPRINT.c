@@ -20,7 +20,6 @@
  *
  * (c) 2009  Holger Eitzenberger <holger@eitzenberger.org>
  */
-#define DEBUG
 #include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
@@ -33,14 +32,65 @@
 #define OPR_DEFAULT_LOG	"/var/log/ulogd.pktlog"
 
 
-struct oprint_priv {
+struct opr_priv {
 	FILE *of;
 	char buf[OPR_BUF_LEN];
 };
 
-static int oprint_interp(struct ulogd_pluginstance *upi, unsigned *flags)
+static const struct config_keyset opr_kset = {
+	.num_ces = 2,
+	.ces = {
+		CONFIG_KEY_STR("file", OPR_DEFAULT_LOG),
+		CONFIG_KEY_INT("sync", 1),
+	},
+};
+
+static int
+opr_configure(struct ulogd_pluginstance *upi)
 {
-	struct oprint_priv *opi = upi_priv(upi);
+	int ret;
+
+	pr_fn_debug("pi=%p\n", upi);
+
+	ret = ulogd_wildcard_inputkeys(upi);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static int
+opr_start(struct ulogd_pluginstance *upi)
+{
+	struct opr_priv *op = upi_priv(upi);
+
+	pr_fn_debug("pi=%p file=%p\n", upi, upi->config_kset->ces[0].u.string);
+
+	op->of = fopen(upi->config_kset->ces[0].u.string, "a");
+	if (!op->of) {
+		upi_log(upi, ULOGD_FATAL, "can't open PKTLOG: %m\n");
+		return -1;
+	}		
+	return 0;
+}
+
+static int
+opr_stop(struct ulogd_pluginstance *pi)
+{
+	struct opr_priv *op = upi_priv(pi);
+
+	if (op->of) {
+		fclose(op->of);
+		op->of = NULL;
+	}
+
+	return 0;
+}
+
+static int
+opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
+{
+	struct opr_priv *opi = upi_priv(upi);
 	unsigned int i;
 	
 	fprintf(opi->of, "===>PACKET BOUNDARY\n");
@@ -91,52 +141,7 @@ static int oprint_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 	return 0;
 }
 
-static const struct config_keyset oprint_kset = {
-	.num_ces = 2,
-	.ces = {
-		CONFIG_KEY_STR("file", OPR_DEFAULT_LOG),
-		CONFIG_KEY_INT("sync", 1),
-	},
-};
-
-static int oprint_configure(struct ulogd_pluginstance *upi)
-{
-	int ret;
-
-	pr_fn_debug("pi=%p\n", upi);
-
-	ret = ulogd_wildcard_inputkeys(upi);
-	if (ret < 0)
-		return ret;
-
-	return 0;
-}
-
-static int oprint_init(struct ulogd_pluginstance *upi)
-{
-	struct oprint_priv *op = upi_priv(upi);
-
-	pr_fn_debug("pi=%p file=%p\n", upi, upi->config_kset->ces[0].u.string);
-
-	op->of = fopen(upi->config_kset->ces[0].u.string, "a");
-	if (!op->of) {
-		upi_log(upi, ULOGD_FATAL, "can't open PKTLOG: %m\n");
-		return -1;
-	}		
-	return 0;
-}
-
-static int oprint_fini(struct ulogd_pluginstance *pi)
-{
-	struct oprint_priv *op = upi_priv(pi);
-
-	if (op->of != stdout)
-		fclose(op->of);
-
-	return 0;
-}
-
-static struct ulogd_plugin oprint_plugin = {
+static struct ulogd_plugin opr_plugin = {
 	.name = "OPRINT", 
 	.input = {
 			.type = ULOGD_DTYPE_PACKET | ULOGD_DTYPE_FLOW,
@@ -144,18 +149,18 @@ static struct ulogd_plugin oprint_plugin = {
 	.output = {
 			.type = ULOGD_DTYPE_SINK,
 		},
-	.configure = &oprint_configure,
-	.interp	= &oprint_interp,
-	.start 	= &oprint_init,
-	.stop	= &oprint_fini,
-	.config_kset = &oprint_kset,
+	.configure = opr_configure,
+	.start 	= opr_start,
+	.stop	= opr_stop,
+	.interp	= opr_interp,
+	.config_kset = &opr_kset,
 	.rev = ULOGD_PLUGIN_REVISION,
-	.priv_size = sizeof(struct oprint_priv),
+	.priv_size = sizeof(struct opr_priv),
 };
 
 void __upi_ctor init(void);
 
 void init(void)
 {
-	ulogd_register_plugin(&oprint_plugin);
+	ulogd_register_plugin(&opr_plugin);
 }
