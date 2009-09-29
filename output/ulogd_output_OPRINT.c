@@ -20,6 +20,7 @@
  * $Id$
  *
  */
+#define DEBUG
 #include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
@@ -117,6 +118,8 @@ static int oprint_configure(struct ulogd_pluginstance *upi)
 {
 	int ret;
 
+	pr_fn_debug("pi=%p\n", upi);
+
 	ret = ulogd_wildcard_inputkeys(upi);
 	if (ret < 0)
 		return ret;
@@ -127,6 +130,8 @@ static int oprint_configure(struct ulogd_pluginstance *upi)
 static int oprint_init(struct ulogd_pluginstance *upi)
 {
 	struct oprint_priv *op = upi_priv(upi);
+
+	pr_fn_debug("pi=%p file=%p\n", upi, upi->config_kset->ces[0].u.string);
 
 	op->of = fopen(upi->config_kset->ces[0].u.string, "a");
 	if (!op->of) {
