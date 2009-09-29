@@ -35,9 +35,11 @@ enum {
 #define CONFIG_TYPE_CALLBACK	0x0003
 
 /* valid config options */
-#define CONFIG_OPT_NONE		0x0000
+#define CONFIG_OPT_NONE			0x0000
 #define CONFIG_OPT_MANDATORY	0x0001
-#define CONFIG_OPT_MULTI	0x0002
+#define CONFIG_OPT_MULTI		0x0002
+#define CONFIG_OPT_MALLOC		0x0004 /* value was allocated */
+
 
 struct config_entry {
 	char key[CONFIG_KEY_LEN];	/* name of config directive */
@@ -91,6 +93,8 @@ struct config_keyset {
 	unsigned int num_ces;
 	struct config_entry ces[];
 };
+
+int config_str_set(struct config_entry *, const char *);
 
 /* if an error occurs, config_errce is set to the erroneous ce */
 extern struct config_entry *config_errce;

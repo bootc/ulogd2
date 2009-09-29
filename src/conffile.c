@@ -186,10 +186,7 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 
 			switch (ce->type) {
 				case CONFIG_TYPE_STRING:
-					if (ce->u.string != NULL)
-						free(ce->u.string);
-
-					ce->u.string = strdup(args);
+					config_str_set(ce, args);
 					break;
 				case CONFIG_TYPE_INT:
 					ce->u.value = atoi(args);
@@ -226,3 +223,17 @@ cpf_error:
 	return err;
 }
 
+int
+config_str_set(struct config_entry *ce, const char *val)
+{
+	if (!ce || !val)
+		return -1;
+
+	if (ce->u.string && (ce->options & CONFIG_OPT_MALLOC))
+		free(ce->u.string);
+
+	ce->u.string = strdup(val);
+	ce->options |= CONFIG_OPT_MALLOC;
+	
+	return 0;
+}
