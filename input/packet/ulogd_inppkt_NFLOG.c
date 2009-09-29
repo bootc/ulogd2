@@ -18,16 +18,6 @@
 
 #define NFLOG_GROUP_DEFAULT	0
 
-/* Size of the socket recevive memory.  Should be at least the same size as the
- * 'nlbufsiz' parameter of nfnetlink_log.ko
- * If you have _big_ in-kernel queues, you may have to increase this number.  (
- * --qthreshold 100 * 1500 bytes/packet = 150kB  */
-#define NFLOG_RMEM_DEFAULT 131071
-
-/* Size of the receive buffer for the netlink socket.  Should be at least of
- * RMEM_DEFAULT size.  */
-#define NFLOG_BUFSIZE_DEFAULT  150000
-
 struct nflog_priv {
 	struct nl_handle *nfnlh;
 	struct ulogd_fd ufd;
@@ -35,11 +25,9 @@ struct nflog_priv {
 
 /* configuration entries */
 static const struct config_keyset nflog_kset = {
-	.num_ces = 7,
+	.num_ces = 5,
 	.ces = {
-		CONFIG_KEY_INT("bufsize", NFLOG_BUFSIZE_DEFAULT),
 		CONFIG_KEY_INT("group", NFLOG_GROUP_DEFAULT),
-		CONFIG_KEY_INT("rmem", NFLOG_RMEM_DEFAULT),
 		CONFIG_KEY_INT("af", AF_INET),
 		CONFIG_KEY_INT("unbind", 1),
 		CONFIG_KEY_INT("seq_local", 0),
@@ -47,13 +35,11 @@ static const struct config_keyset nflog_kset = {
 	}
 };
 
-#define bufsiz_ce(x)	(x->ces[0])
-#define group_ce(x)	(x->ces[1])
-#define rmem_ce(x)	(x->ces[2])
-#define af_ce(x)	(x->ces[3])
-#define unbind_ce(x)	(x->ces[4])
-#define seq_ce(x)	(x->ces[4])
-#define seq_global_ce(x)	(x->ces[5])
+#define group_ce(x)	(x->ces[0])
+#define af_ce(x)	(x->ces[1])
+#define unbind_ce(x)	(x->ces[2])
+#define seq_ce(x)	(x->ces[3])
+#define seq_global_ce(x)	(x->ces[4])
 
 
 enum {
