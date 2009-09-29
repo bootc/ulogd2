@@ -30,10 +30,7 @@
 #include <arpa/inet.h>
 
 #define OPR_BUF_LEN		64
-
-#ifndef ULOGD_OPRINT_DEFAULT
-#define ULOGD_OPRINT_DEFAULT	"/var/log/ulogd.pktlog"
-#endif
+#define OPR_DEFAULT_LOG	"/var/log/ulogd.pktlog"
 
 
 struct oprint_priv {
@@ -97,7 +94,7 @@ static int oprint_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 static const struct config_keyset oprint_kset = {
 	.num_ces = 2,
 	.ces = {
-		CONFIG_KEY_STR("file", ULOGD_OPRINT_DEFAULT),
+		CONFIG_KEY_STR("file", OPR_DEFAULT_LOG),
 		CONFIG_KEY_INT("sync", 1),
 	},
 };
