@@ -148,8 +148,7 @@ sig_pipe_cb(int fd, unsigned what, void *arg)
 
 	assert(nbytes == sizeof(signo));
 
-	if (signo < 0 || signo > NSIG)
-		abort();
+	BUG_ON(signo < 0 || signo > NSIG);
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, signo);

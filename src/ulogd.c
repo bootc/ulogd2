@@ -156,12 +156,8 @@ __ulogd_abort(const char *file, int line, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-
 	__ulogd_vlog(ULOGD_FATAL, file, line, fmt, ap);
-
 	va_end(ap);
-
-	/* TODO backtrace */
 
 	abort();
 }

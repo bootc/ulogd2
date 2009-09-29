@@ -598,7 +598,7 @@ ulogd_propagate_results(struct ulogd_pluginstance *pi, unsigned *flags)
 			goto out;
 
 		default:
-			ulogd_abort("%s: unknown return value '%d'\n", pi->id, ret);
+			BUG();
 		}
 	}
 
@@ -847,12 +847,8 @@ static void
 __check(const struct ulogd_key *key, unsigned type)
 {
 #ifdef DEBUG
-	if (!key)
-		ulogd_abort("key ptr is NULL\n");
-
-	if (!(key->type & type))
-		ulogd_abort("set: %s: type check failed (%d <-> %d)\n",
-					key->name, key->type, type);
+	BUG_ON(!key);
+	BUG_ON(!(key->type & type));
 #endif /* DEBUG */
 }
 
@@ -1140,7 +1136,8 @@ ulogd_key_size(const struct ulogd_key *key)
 
 	switch (key->type) {
 	case ULOGD_RET_NONE:
-		ulogd_abort("wrong key type\n");
+		BUG();
+		break;
 
 	case ULOGD_RET_INT8:
 	case ULOGD_RET_UINT8:

@@ -143,8 +143,7 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 		}
 		
 		case ULOGD_RET_NONE:
-			ulogd_abort("%s: invalid key '%s' (type %d)\n", upi->id,
-						key->name, key->type);
+			BUG();
 			break;
 			
 		case ULOGD_RET_RAW:

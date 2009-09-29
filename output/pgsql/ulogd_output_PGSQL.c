@@ -85,8 +85,7 @@ __pgsql_err(struct ulogd_pluginstance *pi, int *pgret)
 	case PGRES_COPY_OUT:
 	case PGRES_COPY_IN:
 	default:
-		PQclear(priv->pgres);
-		abort();					/* unsupported */
+		BUG();
 	}
 
 	return 0;

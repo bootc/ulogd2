@@ -66,6 +66,9 @@ void __ulogd_abort(const char *, int, const char *, ...) __noreturn;
 #define ulogd_abort(fmt, args...) \
 	__ulogd_abort(__FILE__, __LINE__, fmt, ## args)
 
+#define BUG()				__ulogd_abort(__FILE__, __LINE__, "BUG");
+#define BUG_ON(expr)		do { if (expr) BUG(); } while (0)
+
 /***********************************************************************
  * file descriptor handling
  ***********************************************************************/
