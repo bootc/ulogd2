@@ -148,7 +148,7 @@ void key_set_str(struct ulogd_key *, char *);
 /* key accessors */
 int key_i8(const struct ulogd_key *);
 int key_i16(const struct ulogd_key *);
-int key_32(const struct ulogd_key *);
+int key_i32(const struct ulogd_key *);
 unsigned key_u8(const struct ulogd_key *);
 unsigned key_u16(const struct ulogd_key *);
 unsigned key_u32(const struct ulogd_key *);

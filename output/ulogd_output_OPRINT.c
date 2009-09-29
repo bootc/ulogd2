@@ -95,43 +95,64 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 	
 	fprintf(opi->of, "===>PACKET BOUNDARY\n");
 	for (i = 0; i < upi->input.num_keys; i++) {
-		struct ulogd_key *ret = key_src(&upi->input.keys[i]);
+		struct ulogd_key *key = key_src(&upi->input.keys[i]);
 
-		if (ret == NULL || !key_valid(ret)) {
-			upi_log(upi, ULOGD_NOTICE, "no result for '%s'\n",
-				  upi->input.keys[i].name);
+		if (!key || !key_valid(key)) {
+			upi_log(upi, ULOGD_NOTICE, "no result for '%s'\n", key->name);
 			continue;
 		}
 
-		fprintf(opi->of,"%s=", ret->name);
-		switch (ret->type) {
-			case ULOGD_RET_STRING:
-				fprintf(opi->of, "%s\n",
-					(char *) ret->u.value.ptr);
-				break;
-			case ULOGD_RET_BOOL:
-			case ULOGD_RET_INT8:
-			case ULOGD_RET_INT16:
-			case ULOGD_RET_INT32:
-				fprintf(opi->of, "%d\n", ret->u.value.i32);
-				break;
-			case ULOGD_RET_UINT8:
-			case ULOGD_RET_UINT16:
-			case ULOGD_RET_UINT32:
-				fprintf(opi->of, "%u\n", ret->u.value.ui32);
-				break;
-			case ULOGD_RET_IPADDR:
-			{
-				struct in_addr addr = (struct in_addr){ key_u32(ret), };
+		fprintf(opi->of,"%s=", key->name);
+		switch (key->type) {
+		case ULOGD_RET_STRING:
+			fprintf(opi->of, "%s\n", key_str(key));
+			break;
 
-				inet_ntop(AF_INET, &addr, opi->buf, OPR_BUF_LEN);
-				fprintf(opi->of, "%s\n", opi->buf);
-				break;
-			}
-			case ULOGD_RET_NONE:
-				fprintf(opi->of, "<none>");
-				break;
-			default: fprintf(opi->of, "default");
+		case ULOGD_RET_BOOL:
+			fprintf(opi->of, "%d\n", key_bool(key));
+			break;
+
+		case ULOGD_RET_INT8:
+			fprintf(opi->of, "%d\n", key_i8(key));
+			break;
+
+		case ULOGD_RET_INT16:
+			fprintf(opi->of, "%d\n", key_i16(key));
+			break;
+
+		case ULOGD_RET_INT32:
+			fprintf(opi->of, "%d\n", key_i32(key));
+			break;
+
+		case ULOGD_RET_UINT8:
+			fprintf(opi->of, "%u\n", key_u8(key));
+			break;
+			
+		case ULOGD_RET_UINT16:
+			fprintf(opi->of, "%u\n", key_u16(key));
+			break;
+			
+		case ULOGD_RET_UINT32:
+			fprintf(opi->of, "%u\n", key_u32(key));
+			break;
+			
+		case ULOGD_RET_IPADDR:
+		{
+			struct in_addr addr = (struct in_addr){ key_u32(key), };
+			
+			inet_ntop(AF_INET, &addr, opi->buf, OPR_BUF_LEN);
+			fprintf(opi->of, "%s\n", opi->buf);
+			break;
+		}
+		
+		case ULOGD_RET_NONE:
+			ulogd_abort("%s: invalid key '%s' (type %d)\n", upi->id,
+						key->name, key->type);
+			break;
+			
+		case ULOGD_RET_RAW:
+		default:
+			break;
 		}
 	}
 
