@@ -66,22 +66,7 @@ enum ulogd_dtype {
 
 /* structure describing an input  / output parameter of a plugin */
 struct ulogd_key {
-	/* length of the returned value (only for lengthed types */
-	u_int32_t len;
-
-	/* type of the returned value */
-	enum ulogd_ktype type;
-
-	u_int16_t flags;
-
-	/* name of this key */
-	char name[ULOGD_MAX_KEYLEN+1];
-
-	/* IETF IPFIX attribute ID */
-	struct {
-		u_int32_t	vendor;
-		u_int16_t	field_id;
-	} ipfix;
+	uint16_t flags;
 
 	union {
 		union {
@@ -100,6 +85,21 @@ struct ulogd_key {
 		} value;
 		struct ulogd_key *source;
 	} u;
+
+	/* type of the returned value */
+	enum ulogd_ktype type;
+
+	/* name of this key */
+	char name[ULOGD_MAX_KEYLEN+1];
+
+	/* IETF IPFIX attribute ID */
+	struct {
+		uint32_t	vendor;
+		uint16_t	field_id;
+	} ipfix;
+
+	/* length of the returned value (for variable-length types) */
+	uint32_t len;
 };
 
 struct ulogd_keyset {
