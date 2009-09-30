@@ -167,7 +167,7 @@ nflog_handle_msg(struct nl_object *obj, void *arg)
 	struct nfnl_log *nflog_obj = (struct nfnl_log *)obj;
 	struct ulogd_key *out = upi->output.keys;
 	const struct timeval *tv;
-	char *prefix;
+	const char *prefix;
 	unsigned flags = 0;
 	int len;
 
@@ -197,8 +197,10 @@ nflog_handle_msg(struct nl_object *obj, void *arg)
 	key_set_u32(&out[K_OOB_IFI_IN], nfnl_log_get_indev(nflog_obj));
 	key_set_u32(&out[K_OOB_IFI_OUT], nfnl_log_get_outdev(nflog_obj));
 
-	key_set_u32(&out[K_OOB_SEQ], nfnl_log_get_seq(nflog_obj));
-	key_set_u32(&out[K_OOB_SEQ_GLOBAL], nfnl_log_get_seq_global(nflog_obj));
+	if (nfnl_log_test_seq(nflog_obj))
+		key_set_u32(&out[K_OOB_SEQ], nfnl_log_get_seq(nflog_obj));
+	if (nfnl_log_test_seq_global(nflog_obj))
+		key_set_u32(&out[K_OOB_SEQ_GLOBAL], nfnl_log_get_seq_global(nflog_obj));
 
 #if 0
 	/* Astaro logmark */
