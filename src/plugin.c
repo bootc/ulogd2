@@ -951,6 +951,15 @@ key_set_str(struct ulogd_key *key, char *str)
 	key->flags |= ULOGD_RETF_VALID;
 }
 
+void
+key_set_in6(struct ulogd_key *key, const struct in6_addr *addr)
+{
+	__check(key, ULOGD_RET_IP6ADDR);
+
+	memcpy(&key->u.value.in6, addr, sizeof(struct in6_addr));
+	key->flags |= ULOGD_RETF_VALID;
+}
+
 /* key accessors */
 int
 key_i8(const struct ulogd_key *key)
@@ -1042,6 +1051,14 @@ key_str(const struct ulogd_key *key)
 	return key->u.value.str;
 }
 
+void
+key_in6(const struct ulogd_key *key, struct in6_addr *addr)
+{
+	__check(key, ULOGD_RET_IP6ADDR);
+
+	memcpy(addr, &key->u.value.in6, sizeof(*addr));
+}
+
 int key_src_i8(const struct ulogd_key *key)
 {
 	return key_i8(key_src(key));
@@ -1105,6 +1122,12 @@ char *
 key_src_str(const struct ulogd_key *key)
 {
 	return key_str(key_src(key));
+}
+
+void
+key_src_in6(const struct ulogd_key *key, struct in6_addr *addr)
+{
+	return key_in6(key_src(key), addr);
 }
 
 /**

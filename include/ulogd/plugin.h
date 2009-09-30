@@ -20,6 +20,9 @@
 #ifndef PLUGIN_H
 #define PLUGIN_H
 
+#include <netinet/in.h>
+
+
 /* key types */
 enum ulogd_ktype {
 	ULOGD_RET_NONE = 0,
@@ -81,24 +84,24 @@ struct ulogd_key {
 	} ipfix;
 
 	union {
-		/* and finally the returned value */
 		union {
-			u_int8_t	b;
-			u_int8_t	ui8;
-			u_int16_t	ui16;
-			u_int32_t	ui32;
-			u_int64_t	ui64;
-			int8_t		i8;
-			int16_t		i16;
-			int32_t		i32;
-			int64_t		i64;
-			void		*ptr;
-			char		*str;
+			int8_t i8;
+			int16_t i16;
+			int32_t i32;
+			int64_t i64;
+			uint8_t b;
+			uint8_t ui8;
+			uint16_t ui16;
+			uint32_t ui32;
+			uint64_t ui64;
+			void *ptr;
+			char *str;
+			struct in6_addr in6;
 		} value;
 		struct ulogd_key *source;
 	} u;
 
-	/* private date owned by plugin */
+	/* private data owned by plugin */
 	void *priv;
 };
 
@@ -142,6 +145,7 @@ void key_set_u64(struct ulogd_key *, uint64_t);
 void key_set_bool(struct ulogd_key *, bool);
 void key_set_ptr(struct ulogd_key *, void *);
 void key_set_str(struct ulogd_key *, char *);
+void key_set_in6(struct ulogd_key *, const struct in6_addr *);
 
 /* key accessors */
 int key_i8(const struct ulogd_key *);
@@ -155,6 +159,7 @@ uint64_t key_u64(const struct ulogd_key *);
 bool key_bool(const struct ulogd_key *);
 void *key_ptr(const struct ulogd_key *);
 char *key_str(const struct ulogd_key *);
+void key_in6(const struct ulogd_key *, struct in6_addr *);
 
 /* src key accessors */
 int key_src_i8(const struct ulogd_key *);
@@ -168,6 +173,7 @@ uint64_t key_src_u64(const struct ulogd_key *);
 bool key_src_bool(const struct ulogd_key *);
 void *key_src_ptr(const struct ulogd_key *);
 char *key_src_str(const struct ulogd_key *);
+void key_src_in6(const struct ulogd_key *, struct in6_addr *);
 
 bool key_type_eq(const struct ulogd_key *, const struct ulogd_key *);
 
