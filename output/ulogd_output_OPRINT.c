@@ -142,6 +142,16 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 			break;
 		}
 		
+		case ULOGD_RET_IP6ADDR:
+		{
+			struct in6_addr addr;
+
+			key_in6(key, &addr);
+			inet_ntop(AF_INET6, &addr, opi->buf, OPR_BUF_LEN);
+			fprintf(opi->of, "%s=%s\n", key->name, opi->buf);
+			break;
+		}
+		
 		case ULOGD_RET_NONE:
 			BUG();
 			break;
