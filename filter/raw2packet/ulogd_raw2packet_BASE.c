@@ -34,18 +34,26 @@
 #include <ulogd/ipfix_protocol.h>
 #include <sys/socket.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/udp.h>
 
+#define NEXTHDR_TCP		IPPROTO_TCP
+#define NEXTHDR_UDP		IPPROTO_UDP
+#define NEXTHDR_ICMP	IPPROTO_ICMP
+#define NEXTHDR_ICMP6	58
+#define NEXTHDR_NONE	59
 
 enum {
 	I_RawPkt = 0,
+	I_OobFamily,
 };
 
 static struct ulogd_key in_keys[] = {
 	[I_RawPkt] = KEY(RAW, "raw.pkt"),
+	[I_OobFamily] = KEY(UINT8, "oob.family"),
 };
 
 enum {
@@ -59,6 +67,10 @@ enum {
 	O_IpCsum,
 	O_IpId,
 	O_IpFragOff,
+	O_Ip6SAddr,
+	O_Ip6DAddr,
+	O_Ip6Len,					/* payload len */
+	O_Ip6Hlim,
 	O_TcpSPort,
 	O_TcpDPort,
 	O_TcpSeq,
@@ -90,9 +102,6 @@ enum {
 	O_AhEspSpi,
 };
 
-/***********************************************************************
- * 			IP HEADER
- ***********************************************************************/
 static struct ulogd_key out_keys[] = {
 	[O_IpSAddr] = KEY_IPFIX(IPADDR, "ip.saddr", IETF, sourceIPv4Address),
 	[O_IpDAddr] = KEY_IPFIX(IPADDR, "ip.daddr", IETF, destinationIPv4Address),
@@ -104,6 +113,10 @@ static struct ulogd_key out_keys[] = {
 	[O_IpCsum] = KEY(UINT16, "ip.csum"),
 	[O_IpId] = KEY_IPFIX(UINT16, "ip.id", IETF, identificationIPv4),
 	[O_IpFragOff] = KEY_IPFIX(UINT16, "ip.fragoff", IETF, fragmentOffsetIPv4),
+	[O_Ip6SAddr] = KEY(IP6ADDR, "ip6.saddr"),
+	[O_Ip6DAddr] = KEY(IP6ADDR, "ip6.daddr"),
+	[O_Ip6Len] = KEY(UINT16, "ip6.len"),
+	[O_Ip6Hlim] = KEY(UINT8, "ip6.hlim"),
 	[O_TcpSPort] = KEY_IPFIX(UINT16, "tcp.sport", IETF, tcpSourcePort),
 	[O_TcpDPort] = KEY_IPFIX(UINT16, "tcp.dport", IETF, tcpDestinationPort),
 	[O_TcpSeq] = KEY_IPFIX(UINT32, "tcp.seq", IETF, tcpSequenceNumber),
@@ -136,23 +149,12 @@ static struct ulogd_key out_keys[] = {
 	[O_AhEspSpi] = KEY(UINT32, "ahesp.spi"),
 };
 
-static void *
-ipv4_data(const struct iphdr *iph)
-{
-	return (void *)((uint8_t *)iph + iph->ihl * 4);
-}
-
-/***********************************************************************
- * 			TCP HEADER
- ***********************************************************************/
 
 static int
-_interp_tcp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
+tcp_interp(const struct ulogd_pluginstance *pi, const void *data)
 {
 	struct ulogd_key *ret = pi->output.keys;
-	const struct tcphdr *tcph = ipv4_data(iph);
-
-	assert(iph->protocol == IPPROTO_TCP);
+	const struct tcphdr *tcph = data;
 
 	key_set_u16(&ret[O_TcpSPort], ntohs(tcph->source));
 	key_set_u16(&ret[O_TcpDPort], ntohs(tcph->dest));
@@ -180,14 +182,11 @@ _interp_tcp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 /***********************************************************************
  * 			UDP HEADER
  ***********************************************************************/
-
 static int
-_interp_udp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
+udp_interp(const struct ulogd_pluginstance *pi, const void *data)
 {
 	struct ulogd_key *ret = pi->output.keys;
-	const struct udphdr *udph = ipv4_data(iph);
-
-	assert(iph->protocol == IPPROTO_UDP);
+	const struct udphdr *udph = data;
 
 	key_set_u16(&ret[O_UdpSPort], ntohs(udph->source));
 	key_set_u16(&ret[O_UdpDPort], ntohs(udph->dest));
@@ -197,18 +196,12 @@ _interp_udp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 	return 0;
 }
 
-/***********************************************************************
- * 			ICMP HEADER
- ***********************************************************************/
-
 static int
-_interp_icmp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
+icmp_interp(const struct ulogd_pluginstance *pi, const void *data)
 {
 	struct ulogd_key *ret = pi->output.keys;
-	struct icmphdr *icmph = ipv4_data(iph);
+	const struct icmphdr *icmph = data;
 
-	assert(iph->protocol == IPPROTO_ICMP);
-	
 	key_set_u8(&ret[O_IcmpType], icmph->type);
 	key_set_u8(&ret[O_IcmpCode], icmph->code);
 
@@ -235,19 +228,12 @@ _interp_icmp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 	return 0;
 }
 
-/***********************************************************************
- * 			IPSEC HEADER 
- ***********************************************************************/
-
 static int
-_interp_ahesp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
+ahesp_interp(const struct ulogd_pluginstance *pi, const void *data)
 {
 #if 0
-	struct ulogd_key *keys = &pi->output.keys[AhEspBase];
-	struct esphdr *esph = protoh;
-
-	if (iph->protocol != IPPROTO_ESP)
-		return NULL;
+	struct ulogd_key *out = &pi->output.keys;
+	struct esphdr *esph = data;
 
 	key_set_u32(keys[O_AhEspSpi], ntohl(esph->spi));
 #endif
@@ -256,39 +242,100 @@ _interp_ahesp(const struct ulogd_pluginstance *pi, const struct iphdr *iph)
 }
 
 static int
-_interp_iphdr(struct ulogd_pluginstance *pi, unsigned *flags)
+l4_interp(struct ulogd_pluginstance *pi, int proto, const void *data)
 {
-	struct ulogd_key *ret = pi->output.keys;
-	const struct iphdr *iph = key_src_ptr(pi->input.keys);
+	int ret;
 
-	key_set_u32(&ret[0], ntohl(iph->saddr));
-	key_set_u32(&ret[1], ntohl(iph->daddr));
-	key_set_u8(&ret[2], iph->protocol);
-	key_set_u8(&ret[3], iph->tos);
-	key_set_u8(&ret[4], iph->ttl);
-	key_set_u16(&ret[5], ntohs(iph->tot_len));
-	key_set_u8(&ret[6], iph->ihl);
-	key_set_u16(&ret[7], ntohs(iph->check));
-	key_set_u16(&ret[8], ntohs(iph->id));
-	key_set_u16(&ret[9], ntohs(iph->frag_off));
+	if (!data)
+		return -1;
 
-	switch (iph->protocol) {
+	switch (proto) {
 	case IPPROTO_TCP:
-		_interp_tcp(pi, iph);
+		ret = tcp_interp(pi, data);
 		break;
 
 	case IPPROTO_UDP:
-		_interp_udp(pi, iph);
+		ret = udp_interp(pi, data);
+			return -1;
 		break;
 
 	case IPPROTO_ICMP:
-		_interp_icmp(pi, iph);
+		ret = icmp_interp(pi, data);
 		break;
 
 	case IPPROTO_AH:
 	case IPPROTO_ESP:
-		_interp_ahesp(pi, iph);
+		ret = ahesp_interp(pi, data);
 		break;
+	}
+
+	return ret;
+}
+
+static int
+ip_interp(struct ulogd_pluginstance *pi)
+{
+	const struct ulogd_key *in = pi->input.keys;
+	struct ulogd_key *out = pi->output.keys;
+	const struct iphdr *iph = key_src_ptr(&in[I_RawPkt]);
+
+	key_set_u32(&out[O_IpSAddr], ntohl(iph->saddr));
+	key_set_u32(&out[O_IpDAddr], ntohl(iph->daddr));
+	key_set_u8(&out[O_IpProto], iph->protocol);
+	key_set_u8(&out[O_IpTos], iph->tos);
+	key_set_u8(&out[O_IpTtl], iph->ttl);
+	key_set_u16(&out[O_IpTotLen], ntohs(iph->tot_len));
+	key_set_u8(&out[O_IpIhl], iph->ihl);
+	key_set_u16(&out[O_IpCsum], ntohs(iph->check));
+	key_set_u16(&out[O_IpId], ntohs(iph->id));
+	key_set_u16(&out[O_IpFragOff], ntohs(iph->frag_off));
+
+	return l4_interp(pi, iph->protocol, (void *)iph + iph->ihl * 4);
+}
+
+static int
+ip6_interp(struct ulogd_pluginstance *pi)
+{
+	const struct ulogd_key *in = pi->input.keys;
+	struct ulogd_key *out = pi->output.keys;
+	const struct ip6_hdr *ip6h = key_src_ptr(&in[I_RawPkt]);
+	const uint8_t *data = (uint8_t *)ip6h + sizeof(*ip6h);
+	uint8_t nexthdr;
+
+	key_set_in6(&out[O_Ip6SAddr], &ip6h->ip6_src);
+	key_set_in6(&out[O_Ip6DAddr], &ip6h->ip6_dst);
+	key_set_u16(&out[O_Ip6Len], ntohs(ip6h->ip6_plen));
+	key_set_u8(&out[O_Ip6Hlim], ip6h->ip6_hlim);
+
+	/* skip extension headers */
+	nexthdr = ip6h->ip6_nxt;
+	do {
+		if (nexthdr == NEXTHDR_NONE)
+			break;
+		if (nexthdr == NEXTHDR_TCP || nexthdr == NEXTHDR_UDP
+			|| nexthdr == NEXTHDR_ICMP6) {
+			key_set_u8(&out[O_IpProto], nexthdr);
+			return l4_interp(pi, nexthdr, data);
+		}
+
+		nexthdr = data[0];
+		data += (data[1] + 1) << 3;
+	} while (1);
+
+	return 0;
+}
+
+static int
+base_interp(struct ulogd_pluginstance *pi, unsigned *flags)
+{
+	const struct ulogd_key *in = pi->input.keys;
+
+	if (key_src_u8(&in[I_OobFamily]) == AF_INET) {
+		if (ip_interp(pi) < 0)
+			return ULOGD_IRET_ERR;
+	} else if (key_src_u8(&in[I_OobFamily]) == AF_INET6) {
+		if (ip6_interp(pi) < 0)
+			return ULOGD_IRET_ERR;
 	}
 
 	return 0;
@@ -306,7 +353,7 @@ static struct ulogd_plugin base_plugin = {
 		.num_keys = ARRAY_SIZE(out_keys),
 		.type = ULOGD_DTYPE_PACKET,
 		},
-	.interp = &_interp_iphdr,
+	.interp = base_interp,
 	.rev = ULOGD_PLUGIN_REVISION,
 };
 
