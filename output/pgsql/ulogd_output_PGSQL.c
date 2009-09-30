@@ -174,6 +174,7 @@ static int
 pgsql_get_columns(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *priv = upi_priv(upi);
+	struct ulogd_key *in;
 	char *pgbuf;
 	int i, k, tuples;
 	int ret = ULOGD_IRET_AGAIN;
@@ -234,20 +235,20 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 		goto err_again;
 	}
 
-	/* skip columns with leading underscore */
-	for (i = 0, k = 0; i < upi->input.num_keys; i++) {
-		strncpy(upi->input.keys[k].name, PQgetvalue(priv->pgres, i, 0),
-				ULOGD_MAX_KEYLEN);
+	in = upi->input.keys;
+	for (i = k = 0; i < upi->input.num_keys; i++) {
+		strncpy(in[k].name, PQgetvalue(priv->pgres, i, 0), ULOGD_MAX_KEYLEN);
 
-		if (upi->input.keys[k].name[0] == '_') {
-			pr_fn_debug("ignoring column '%s'\n", upi->input.keys[k].name);
+		/* skip columns with leading underscore */
+		if (in[k].name[0] == '_') {
+			pr_fn_debug("ignoring column '%s'\n", in[k].name);
 			continue;
 		}
 
 		/* replace all underscores with dots */
-		strntr(upi->input.keys[k].name, '_', '.');
+		strntr(in[k].name, '_', '.');
 
-		pr_fn_debug("field '%s' found: ", upi->input.keys[k].name);
+		pr_fn_debug("field '%s' found: ", in[k].name);
 
 		k++;
 	}
