@@ -53,6 +53,7 @@ enum {
 	K_OOB_MARK,
 	K_OOB_IFI_IN,
 	K_OOB_IFI_OUT,
+	K_OOB_FAMILY,
 	K_OOB_HOOK,
 	K_RAW_MAC_LEN,
 	K_OOB_SEQ,
@@ -77,6 +78,7 @@ static struct ulogd_key output_keys[] = {
 							   ingressInterface),
 	[K_OOB_IFI_OUT] = KEY_IPFIX(UINT32, "oob.ifindex_out", IETF,
 								egressInterface),
+	[K_OOB_FAMILY] = KEY(UINT8, "oob.family"),
 	[K_OOB_HOOK] = KEY_IPFIX(UINT8, "oob.hook", NETFILTER, NF_hook),
 	[K_RAW_MAC_LEN] = KEY(UINT16, "raw.mac_len"),
 	[K_OOB_SEQ] = KEY_IPFIX(UINT32, "oob.seq.local", NETFILTER, NF_seq_local),
@@ -172,6 +174,8 @@ nflog_handle_msg(struct nl_object *obj, void *arg)
 	pr_fn_debug("pi=%p\n", upi);
 
 	key_set_u8(&out[K_OOB_HOOK], nfnl_log_get_hook(nflog_obj));
+	key_set_u8(&out[K_OOB_FAMILY], nfnl_log_get_family(nflog_obj));
+	BUG_ON(!key_u8(&out[K_OOB_FAMILY]));
 
 	key_set_ptr(&out[K_RAW_MAC], (void*)nfnl_log_get_hwaddr(nflog_obj, &len));
 	key_set_u16(&out[K_RAW_MAC_LEN], len);
