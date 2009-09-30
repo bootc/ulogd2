@@ -1,4 +1,5 @@
 o ulogd_key: make key.name a (const char *)
+o NFLOG.seq seems to be always set (fix it!)
 
 - autoconf/automake detection of libnetfilter_{log,conntrack}, mysql, pgsql, sqlite3, pcap
 - conditional compilation of NFLOG, CTNL, PGSQL, MYSQL, SQLITE3, PCAP plugins

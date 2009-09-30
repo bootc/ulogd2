@@ -126,6 +126,10 @@ enum InKeys {
 	InRawPktLen,
 	InIpTos,
 	InIpTtl,
+	InIp6SAddr,
+	InIp6DAddr,
+	InIp6Len,
+	InIp6Hlim,
 	InTcpSPort,
 	InTcpDPort,
 	InUdpSPort,
@@ -149,6 +153,10 @@ struct ulogd_key astaro_in_keys[] = {
 	[InIpSAddr] = KEY(IPADDR, "ip.saddr"),
 	[InIpDAddr] = KEY(IPADDR, "ip.daddr"),
 	[InIpProto] = KEY(UINT8, "ip.protocol"),
+	[InIp6SAddr] = KEY(IP6ADDR, "ip6.saddr"),
+	[InIp6DAddr] = KEY(IP6ADDR, "ip6.daddr"),
+	[InIp6Len] = KEY(UINT16, "ip6.len"),
+	[InIp6Hlim] = KEY(UINT8, "ip6.hlim"),
 	[InRawPktLen] = KEY(UINT32, "raw.pktlen"),
 	[InIpTos] = KEY(UINT8, "ip.tos"),
 	[InIpTtl] = KEY(UINT8, "ip.ttl"),
@@ -239,14 +247,18 @@ static struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
 	[InRawMac] = { NULL, lh_log_mac, LH_F_ALWAYS },
 	[InIpSAddr] = { "srcip", },
 	[InIpDAddr] = { "dstip", },
-	[InIpProto] = { "proto", NULL },
+	[InIpProto] = { "proto", },
+	[InIp6SAddr] = { "srcip", },
+	[InIp6DAddr] = { "dstip", },
 	[InRawPktLen] = { "length", },
 	[InIpTos] = { "tos", lh_log_tos },
 	[InIpTtl] = { "ttl", },
-	[InTcpSPort] = { "srcport", NULL, },
-	[InTcpDPort] = { "dstport", NULL, },
-	[InUdpSPort] = { "srcport", NULL, },
-	[InUdpDPort] = { "dstport", NULL, },
+	[InIp6Len] = { "len", },
+	[InIp6Hlim] = { "hlim", },
+	[InTcpSPort] = { "srcport", },
+	[InTcpDPort] = { "dstport", },
+	[InUdpSPort] = { "srcport", },
+	[InUdpDPort] = { "dstport", },
 	[InTcpAck] = { NULL, NULL, LH_F_NOLOG },
 	[InTcpPsh] = { NULL, NULL, LH_F_NOLOG },
 	[InTcpRst] = { NULL, NULL, LH_F_NOLOG },
@@ -291,26 +303,13 @@ static int
 print_key(char *buf, size_t len, const struct ulogd_key *key,
 		  const char *name)
 {
-	char *pch = buf;
+	char str[64], *pch = buf;
 
 	switch (key->type) {
 	case ULOGD_RET_STRING:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ", name,
 						key_src_str(key));
 		break;
-		
-	case ULOGD_RET_IPADDR:
-	{
-		struct in_addr addr = (struct in_addr){ key_src_u32(key), };
-		char __str[16];
-		const char *str;
-
-		str = inet_ntop(AF_INET, &addr, __str, sizeof(__str));
-
-		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ",
-						name, str);
-		break;
-	}
 		
 	case ULOGD_RET_UINT8:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
@@ -329,6 +328,28 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 							key_src_u32(key));
 		break;
 		
+	case ULOGD_RET_IPADDR:
+	{
+		struct in_addr addr = (struct in_addr){ key_src_u32(key), };
+
+		inet_ntop(AF_INET, &addr, str, sizeof(str));
+		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ",
+						name, str);
+		break;
+	}
+		
+	case ULOGD_RET_IP6ADDR:
+	{
+		struct in6_addr addr;
+
+		key_src_in6(key, &addr);
+		inet_ntop(AF_INET6, &addr, str, sizeof(str));
+
+		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ",
+						name, str);
+		break;
+	}
+
 	default:
 		break;
 	};
@@ -460,7 +481,6 @@ astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct astaro_priv *priv = upi_priv(pi);
 	const struct ulogd_key *in = pi->input.keys;
-	struct ulogd_key *ces = pi->input.keys;
 	static char buf[1024];
 	char *pch = buf, *end = buf + sizeof(buf);
 	unsigned type;
@@ -468,7 +488,6 @@ astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 	type = log_prefix2type(log_types, key_src_valid(&in[InOobPrefix]) ?
 						   key_src_str(&in[InOobPrefix]) : NULL);
 	
-	/* static part */
 	pch += snprintf(pch, end - pch,
 					"id=\"%u\" severity=\"info\" sys=\"SecureNet\" " 
 					"sub=\"%s\" name=\"%s\" action=\"%s\" ",
