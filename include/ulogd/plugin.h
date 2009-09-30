@@ -42,8 +42,6 @@ enum ulogd_ktype {
 #define ULOGD_RETF_NONE		0x0000
 #define ULOGD_RETF_VALID	0x0001	/* contains a valid result */
 #define ULOGD_RETF_FREE		0x0002	/* ptr needs to be free()d */
-#define ULOGD_RETF_NEEDED	0x0004	/* this parameter is actually needed
-					 * by some downstream plugin */
 
 #define ULOGD_KEYF_OPTIONAL	0x0100	/* this key is optional */
 #define ULOGD_KEYF_INACTIVE	0x0200	/* marked as inactive (i.e. totally
