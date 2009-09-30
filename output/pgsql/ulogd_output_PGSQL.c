@@ -224,7 +224,7 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	upi_log(upi, ULOGD_DEBUG, "using %d/%d columns of table\n",
 			upi->input.num_keys, tuples);
 
-	upi->input.keys = ulogd_alloc_keyset(upi->input.num_keys, 0);
+	upi->input.keys = ulogd_alloc_keyset(upi->input.num_keys);
 	if (upi->input.keys == NULL) {
 		upi_log(upi, ULOGD_ERROR, "error allocating keyset: %m\n");
 

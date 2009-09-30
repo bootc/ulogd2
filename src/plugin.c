@@ -1214,27 +1214,15 @@ ulogd_key_size(const struct ulogd_key *key)
  * @return Newly allocated key space or %NULL.
  */
 struct ulogd_key *
-ulogd_alloc_keyset(int num_keys, size_t priv_size)
+ulogd_alloc_keyset(int num_keys)
 {
 	struct ulogd_key *keys;
-	void *priv;
-	size_t size;
-	int i;
 
 	if (num_keys <= 0)
 		return NULL;
 
-	size = num_keys * (sizeof(struct ulogd_key) + priv_size);
-	if ((priv = keys = malloc(size)) == NULL)
+	if ((keys = calloc(num_keys, sizeof(struct ulogd_key))) == NULL)
 		return NULL;
-
-	memset(keys, 0, size);
-
-	if (priv_size > 0) {
-		priv += num_keys * sizeof(struct ulogd_key);
-		for (i = 0; i < num_keys; i++)
-			keys[i].priv = priv + i * priv_size;
-	}
 
 	return keys;
 }

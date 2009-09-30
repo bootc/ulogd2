@@ -100,9 +100,6 @@ struct ulogd_key {
 		} value;
 		struct ulogd_key *source;
 	} u;
-
-	/* private data owned by plugin */
-	void *priv;
 };
 
 struct ulogd_keyset {
@@ -202,7 +199,7 @@ key_src_valid(const struct ulogd_key *key)
 }
 
 int ulogd_key_size(const struct ulogd_key *key);
-struct ulogd_key *ulogd_alloc_keyset(int n, size_t priv_size);
+struct ulogd_key *ulogd_alloc_keyset(int n);
 struct ulogd_key *ulogd_key_find(const struct ulogd_keyset *,
 								 const char *name);
 
@@ -375,12 +372,6 @@ struct ulogd_pluginstance_stack {
 	ulogd_log((lvl), "%s: " fmt, pi->id, ## __VA_ARGS__)
 
 int upi_for_each(int (*)(struct ulogd_pluginstance *, void *), void *);
-
-static inline void *
-upi_key_priv(const struct ulogd_key *key)
-{
-	return key->priv;
-}
 
 /* register a new interpreter plugin */
 void ulogd_register_plugin(struct ulogd_plugin *me);
