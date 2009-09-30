@@ -121,8 +121,7 @@ ulogd2syslog_loglevel[] = {
 
 /* log message to the logfile */
 static void
-__ulogd_vlog(enum ulogd_loglevel level, const char *file, int line,
-			const char *fmt, va_list ap)
+__ulogd_vlog(enum ulogd_loglevel level, const char *fmt, va_list ap)
 {
 	if (level < loglevel_ce.u.value)
 		return;
@@ -132,8 +131,7 @@ __ulogd_vlog(enum ulogd_loglevel level, const char *file, int line,
 }
 
 void
-__ulogd_log(enum ulogd_loglevel level, const char *file, int line,
-			const char *fmt, ...)
+ulogd_log(enum ulogd_loglevel level, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -143,7 +141,7 @@ __ulogd_log(enum ulogd_loglevel level, const char *file, int line,
 
 	if (logfile == NULL) {
 		va_start(ap, fmt);
-		__ulogd_vlog(level, file, line, fmt, ap);
+		__ulogd_vlog(level, fmt, ap);
 		va_end(ap);
 
 		return;
@@ -151,14 +149,9 @@ __ulogd_log(enum ulogd_loglevel level, const char *file, int line,
 }
 
 void
-__ulogd_abort(const char *file, int line, const char *fmt, ...)
+ulogd_bug(const char *file, int line)
 {
-	va_list ap;
-
-	va_start(ap, fmt);
-	__ulogd_vlog(ULOGD_FATAL, file, line, fmt, ap);
-	va_end(ap);
-
+	ulogd_log(ULOGD_FATAL, "BUG at %s:%d\n", file, line);
 	abort();
 }
 

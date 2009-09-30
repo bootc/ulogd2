@@ -24,9 +24,10 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 #define __fmt_printf(idx, first) \
-						__attribute__ ((format (printf,(idx),(first))))
+						__attribute__((format (printf,(idx),(first))))
 
-#define __noreturn		__attribute__ ((noreturn))
+#define __noreturn		__attribute__((noreturn))
+#define __cold			__attribute__((cold))
 
 enum ulogd_loglevel {
 	ULOGD_DEBUG = 1,	/* debugging information */
@@ -51,22 +52,14 @@ enum GlobalState {
 void ulogd_set_state(enum GlobalState);
 enum GlobalState ulogd_get_state(void);
 
-/* write a message to the daemons' logfile */
-void __ulogd_log(enum ulogd_loglevel, const char *file, int line,
-				 const char *fmt, ...) __fmt_printf(4, 5);
+void ulogd_log(enum ulogd_loglevel, const char *fmt, ...)
+				__fmt_printf(2, 3) __cold;
 
-/* macro for logging including filename and line number */
-#define ulogd_log(level, format, args...) \
-	__ulogd_log(level, __FILE__, __LINE__, format, ## args)
-/* backwards compatibility */
 #define ulogd_error(format, args...) ulogd_log(ULOGD_ERROR, format, ## args)
 
-void __ulogd_abort(const char *, int, const char *, ...) __noreturn;
+void ulogd_bug(const char *, int) __noreturn __cold;
 
-#define ulogd_abort(fmt, args...) \
-	__ulogd_abort(__FILE__, __LINE__, fmt, ## args)
-
-#define BUG()				__ulogd_abort(__FILE__, __LINE__, "BUG");
+#define BUG()				ulogd_bug(__FILE__, __LINE__);
 #define BUG_ON(expr)		do { if (expr) BUG(); } while (0)
 
 /***********************************************************************
