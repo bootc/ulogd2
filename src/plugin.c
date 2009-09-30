@@ -844,18 +844,16 @@ ulogd_upi_reset_cfg(struct ulogd_pluginstance *pi)
 
 /* key API */
 static void
-__check(const struct ulogd_key *key, unsigned type)
+__check_set(const struct ulogd_key *key, unsigned type)
 {
-#ifdef DEBUG
 	BUG_ON(!key);
 	BUG_ON(!(key->type & type));
-#endif /* DEBUG */
 }
 
 void
 key_set_i8(struct ulogd_key *key, int v)
 {
-	__check(key, ULOGD_RET_INT8);
+	__check_set(key, ULOGD_RET_INT8);
 
 	key->u.value.i8 = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -864,7 +862,7 @@ key_set_i8(struct ulogd_key *key, int v)
 void
 key_set_i16(struct ulogd_key *key, int v)
 {
-	__check(key, ULOGD_RET_INT16);
+	__check_set(key, ULOGD_RET_INT16);
 
 	key->u.value.i16 = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -873,7 +871,7 @@ key_set_i16(struct ulogd_key *key, int v)
 void
 key_set_i32(struct ulogd_key *key, int v)
 {
-	__check(key, ULOGD_RET_INT32);
+	__check_set(key, ULOGD_RET_INT32);
 
 	key->u.value.i32 = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -882,7 +880,7 @@ key_set_i32(struct ulogd_key *key, int v)
 void
 key_set_u8(struct ulogd_key *key, unsigned v)
 {
-	__check(key, ULOGD_RET_UINT8);
+	__check_set(key, ULOGD_RET_UINT8);
 
 	key->u.value.ui8 = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -891,7 +889,7 @@ key_set_u8(struct ulogd_key *key, unsigned v)
 void
 key_set_u16(struct ulogd_key *key, unsigned v)
 {
-	__check(key, ULOGD_RET_UINT16);
+	__check_set(key, ULOGD_RET_UINT16);
 
 	key->u.value.ui16 = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -900,7 +898,7 @@ key_set_u16(struct ulogd_key *key, unsigned v)
 void
 key_set_u32(struct ulogd_key *key, unsigned v)
 {
-	__check(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
+	__check_set(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
 
 	key->u.value.ui32 = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -909,7 +907,7 @@ key_set_u32(struct ulogd_key *key, unsigned v)
 void
 key_set_i64(struct ulogd_key *key, int64_t v)
 {
-	__check(key, ULOGD_RET_INT64);
+	__check_set(key, ULOGD_RET_INT64);
 
 	key->u.value.i64 = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -918,7 +916,7 @@ key_set_i64(struct ulogd_key *key, int64_t v)
 void
 key_set_u64(struct ulogd_key *key, uint64_t v)
 {
-	__check(key, ULOGD_RET_UINT64);
+	__check_set(key, ULOGD_RET_UINT64);
 
 	key->u.value.ui64 = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -927,7 +925,7 @@ key_set_u64(struct ulogd_key *key, uint64_t v)
 void
 key_set_bool(struct ulogd_key *key, bool v)
 {
-	__check(key, ULOGD_RET_BOOL);
+	__check_set(key, ULOGD_RET_BOOL);
 
 	key->u.value.b = v;
 	key->flags |= ULOGD_RETF_VALID;
@@ -936,7 +934,7 @@ key_set_bool(struct ulogd_key *key, bool v)
 void
 key_set_ptr(struct ulogd_key *key, void *ptr)
 {
-	__check(key, ULOGD_RET_RAW);
+	__check_set(key, ULOGD_RET_RAW);
 
 	key->u.value.ptr = ptr;
 	key->flags |= ULOGD_RETF_VALID;
@@ -945,7 +943,7 @@ key_set_ptr(struct ulogd_key *key, void *ptr)
 void
 key_set_str(struct ulogd_key *key, char *str)
 {
-	__check(key, ULOGD_RET_STRING);
+	__check_set(key, ULOGD_RET_STRING);
 
 	key->u.value.str = str;
 	key->flags |= ULOGD_RETF_VALID;
@@ -954,17 +952,24 @@ key_set_str(struct ulogd_key *key, char *str)
 void
 key_set_in6(struct ulogd_key *key, const struct in6_addr *addr)
 {
-	__check(key, ULOGD_RET_IP6ADDR);
+	__check_set(key, ULOGD_RET_IP6ADDR);
 
 	memcpy(&key->u.value.in6, addr, sizeof(struct in6_addr));
 	key->flags |= ULOGD_RETF_VALID;
 }
 
-/* key accessors */
+static void
+__check_get(const struct ulogd_key *key, unsigned type)
+{
+	BUG_ON(!key);
+	BUG_ON(!(key->type & type));
+	BUG_ON(!key_valid(key));
+}
+
 int
 key_i8(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_INT8);
+	__check_get(key, ULOGD_RET_INT8);
 
 	return key->u.value.i8;
 }
@@ -972,7 +977,7 @@ key_i8(const struct ulogd_key *key)
 int
 key_i16(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_INT16);
+	__check_get(key, ULOGD_RET_INT16);
 
 	return key->u.value.i16;
 }
@@ -980,7 +985,7 @@ key_i16(const struct ulogd_key *key)
 int
 key_i32(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_INT32);
+	__check_get(key, ULOGD_RET_INT32);
 
 	return key->u.value.i32;
 }
@@ -988,7 +993,7 @@ key_i32(const struct ulogd_key *key)
 unsigned
 key_u8(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_UINT8);
+	__check_get(key, ULOGD_RET_UINT8);
 
 	return key->u.value.ui8;
 }
@@ -996,7 +1001,7 @@ key_u8(const struct ulogd_key *key)
 unsigned
 key_u16(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_UINT16);
+	__check_get(key, ULOGD_RET_UINT16);
 
 	return key->u.value.ui16;
 }
@@ -1006,7 +1011,7 @@ key_u32(const struct ulogd_key *key)
 {
 	/* currently, IP addresses are encoded as u32.  A strong typesafety
 	   might require to add key_get_ipaddr() as well. */
-	__check(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
+	__check_get(key, ULOGD_RET_UINT32 | ULOGD_RET_IPADDR);
 
 	return key->u.value.ui32;
 }
@@ -1014,7 +1019,7 @@ key_u32(const struct ulogd_key *key)
 int64_t
 key_i64(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_INT64);
+	__check_get(key, ULOGD_RET_INT64);
 
 	return key->u.value.i64;
 }
@@ -1022,7 +1027,7 @@ key_i64(const struct ulogd_key *key)
 uint64_t
 key_u64(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_UINT64);
+	__check_get(key, ULOGD_RET_UINT64);
 
 	return key->u.value.ui64;
 }
@@ -1030,7 +1035,7 @@ key_u64(const struct ulogd_key *key)
 bool
 key_bool(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_BOOL);
+	__check_get(key, ULOGD_RET_BOOL);
 
 	return !!key->u.value.b;
 }
@@ -1038,7 +1043,7 @@ key_bool(const struct ulogd_key *key)
 void *
 key_ptr(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_RAW);
+	__check_get(key, ULOGD_RET_RAW);
 
 	return key->u.value.ptr;
 }
@@ -1046,7 +1051,7 @@ key_ptr(const struct ulogd_key *key)
 char *
 key_str(const struct ulogd_key *key)
 {
-	__check(key, ULOGD_RET_STRING);
+	__check_get(key, ULOGD_RET_STRING);
 
 	return key->u.value.str;
 }
@@ -1054,7 +1059,7 @@ key_str(const struct ulogd_key *key)
 void
 key_in6(const struct ulogd_key *key, struct in6_addr *addr)
 {
-	__check(key, ULOGD_RET_IP6ADDR);
+	__check_get(key, ULOGD_RET_IP6ADDR);
 
 	memcpy(addr, &key->u.value.in6, sizeof(*addr));
 }

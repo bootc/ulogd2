@@ -192,7 +192,7 @@ key_set_src(struct ulogd_key *key, struct ulogd_key *src_key)
 static inline bool
 key_valid(const struct ulogd_key *key)
 {
-	return key != NULL && key->flags & ULOGD_RETF_VALID;
+	return key->flags & ULOGD_RETF_VALID;
 }
 
 static inline bool
