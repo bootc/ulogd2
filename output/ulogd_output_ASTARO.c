@@ -30,6 +30,13 @@
 /* config accessors */
 #define CFG_FACILITY(pi)	((pi)->config_kset->ces[0].u.string)
 #define CFG_LEVEL(pi)		((pi)->config_kset->ces[1].u.string)
+/*
+ * The 'blackhole' config switch is a short-term solution for HA setups
+ * where we want a running ulogd which does just no loggging as long
+ * as it is in slave mode.  Generally a generic mechanism for all output
+ * plugins would be preferable.
+ */
+#define CFG_BLACKHOLE(pi)	((pi)->config_kset->ces[2].u.value)
 
 /* packetfilter range */
 #define __PF_BASE		2000
@@ -269,10 +276,11 @@ static struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
 };
 
 static const struct config_keyset astaro_kset = {
-	.num_ces = 2,
+	.num_ces = 3,
 	.ces = {
 		CONFIG_KEY_STR("facility", 0),
 		CONFIG_KEY_STR("level", 0),
+		CONFIG_KEY_INT("blackhole", 0),
 	},
 };
 
@@ -485,6 +493,9 @@ astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 	char *pch = buf, *end = buf + sizeof(buf);
 	unsigned type;
 	
+	if (CFG_BLACKHOLE(pi))
+		return ULOGD_IRET_OK;
+
 	type = log_prefix2type(log_types, key_src_valid(&in[InOobPrefix]) ?
 						   key_src_str(&in[InOobPrefix]) : NULL);
 	
@@ -563,15 +574,18 @@ astaro_configure(struct ulogd_pluginstance *pi)
 		return -EINVAL;
 	}
 
-	return 0;
+	return ULOGD_IRET_OK;
 }
 
 static int
 astaro_fini(struct ulogd_pluginstance *pi)
 {
+	if (CFG_BLACKHOLE(pi))
+		return ULOGD_IRET_OK;
+
 	closelog();
 
-	return 0;
+	return ULOGD_IRET_OK;
 }
 
 static int
@@ -579,12 +593,17 @@ astaro_start(struct ulogd_pluginstance *pi)
 {
 	int i;
 
+	if (CFG_BLACKHOLE(pi)) {
+		upi_log(pi, ULOGD_INFO, "running in blackhole mode\n");
+		return ULOGD_IRET_OK;
+	}
+
 	openlog("ulogd", LOG_NDELAY | LOG_PID, LOG_DAEMON);
 
 	for (i = 0; log_types[i].prefix; i++)
 		log_types[i].prefix_len = strlen(log_types[i].prefix);
 
-	return 0;
+	return ULOGD_IRET_OK;
 }
 
 static struct ulogd_plugin astaro_plugin = {
