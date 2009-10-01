@@ -29,6 +29,9 @@
 #define __noreturn		__attribute__((noreturn))
 #define __cold			__attribute__((cold))
 
+#define LIKELY(expr)	__builtin_expect(!!(expr), 1)
+#define UNLIKELY(expr)	__builtin_expect(!!(expr), 0)
+
 enum ulogd_loglevel {
 	ULOGD_DEBUG = 1,	/* debugging information */
 	ULOGD_INFO = 3,
@@ -60,7 +63,7 @@ void ulogd_log(enum ulogd_loglevel, const char *fmt, ...)
 void ulogd_bug(const char *, int) __noreturn __cold;
 
 #define BUG()				ulogd_bug(__FILE__, __LINE__);
-#define BUG_ON(expr)		do { if (expr) BUG(); } while (0)
+#define BUG_ON(expr)		do { if (UNLIKELY(expr)) BUG(); } while (0)
 
 /***********************************************************************
  * file descriptor handling
