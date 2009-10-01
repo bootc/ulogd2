@@ -286,6 +286,9 @@ ulogd_db_configure(struct ulogd_pluginstance *upi)
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
+	if (blackhole_ce(upi->config_kset).u.value)
+		return ULOGD_IRET_OK;
+
 	if (check_driver(upi) < 0)
 		return ULOGD_IRET_ERR;
 
@@ -329,6 +332,11 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 
 	pr_fn_debug("pi=%p\n", upi);
 
+	if (blackhole_ce(upi->config_kset).u.value) {
+		upi_log(upi, ULOGD_INFO, "running in blackhole mode");
+		return ULOGD_IRET_OK;
+	}
+
 	if ((ret = di->driver->open_db(upi)) < 0)
 		return ret;
 
@@ -366,6 +374,9 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 	struct db_instance *di = upi_priv(upi);
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
+
+	if (blackhole_ce(upi->config_kset).u.value)
+		return ULOGD_IRET_OK;
 
 	di->driver->close_db(upi);
 
@@ -566,6 +577,9 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi, unsigned *flags)
 	int ret = ULOGD_IRET_OK;
 
 	pr_fn_debug("pi=%p\n", pi);
+
+	if (blackhole_ce(pi->config_kset).u.value)
+		return ULOGD_IRET_OK;
 
 	if ((row = db_row_new(pi)) == NULL)
 		return ULOGD_IRET_ERR;

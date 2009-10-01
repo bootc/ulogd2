@@ -82,15 +82,16 @@ db_has_prepare(const struct db_instance *di)
  * buffer=N		Buffer size used for batching.  If this limit is reached
  *				a commit is forced (or after timer elapsed).
  */
-#define DB_CES \
+#define DB_CES											   \
 		CONFIG_KEY("table", STRING, CONFIG_OPT_MANDATORY), \
 		CONFIG_KEY("reconnect", INT, 0),				   \
 		CONFIG_KEY("ip_as_string", INT, 0),				   \
 		CONFIG_KEY("connect_timeout", INT, 0),			   \
 		CONFIG_KEY_INT("buffer", ULOGD_DB_BUFFER_DEFAULT), \
-		CONFIG_KEY("disable", INT, 0)
+		CONFIG_KEY_INT("disable", 0),					   \
+		CONFIG_KEY_INT("blackhole", 0)
 
-#define DB_CE_NUM	6
+#define DB_CE_NUM	7
 
 #define table_ce(x)	(x->ces[0])
 #define reconnect_ce(x)	(x->ces[1])
@@ -98,6 +99,7 @@ db_has_prepare(const struct db_instance *di)
 #define timeout_ce(x)	(x->ces[3])
 #define db_buffer_ce(x)	(x->ces[4])
 #define disable_ce(x)	(x->ces[5])
+#define blackhole_ce(x)	(x->ces[6])
 
 int ulogd_db_start(struct ulogd_pluginstance *upi);
 int ulogd_db_stop(struct ulogd_pluginstance *upi);
