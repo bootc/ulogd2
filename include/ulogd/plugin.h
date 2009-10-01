@@ -220,12 +220,6 @@ struct ulogd_plugin {
 	/* global list of plugins */
 	struct llist_head list;
 
-	/* revision number, incremented on API changes */
-	unsigned rev;
-
-	/* name of this plugin (set by plugin) */
-	char name[ULOGD_MAX_KEYLEN+1];
-
 	unsigned flags;
 
 	const struct ulogd_keyset input;
@@ -279,6 +273,12 @@ struct ulogd_plugin {
 
 	/* configuration parameters */
 	const struct config_keyset *config_kset;
+
+	/* name of this plugin (set by plugin) */
+	const char *name;
+
+	/* revision number, incremented on API changes */
+	unsigned rev;
 
 	/* size of instance->priv */
 	unsigned priv_size;
