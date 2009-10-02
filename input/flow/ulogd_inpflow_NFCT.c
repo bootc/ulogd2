@@ -150,16 +150,16 @@ static struct ulogd_key nfct_okeys[] = {
 	[O_L4_DPORT] = KEY_IPFIX(UINT16, "l4.dport", IETF,
 							 destinationTransportPort),
 	/* FIXME: this could also be octetDeltaCount */
-	[O_RAW_IN_PKTLEN] = KEY_IPFIX(UINT32, "raw.in.pktlen", IETF,
+	[O_RAW_IN_PKTLEN] = KEY_IPFIX(UINT64, "raw.in.pktlen", IETF,
 								  octetTotalCount),
 	/* FIXME: this could also be packetDeltaCount */
-	[O_RAW_IN_PKTCOUNT] = KEY_IPFIX(UINT32, "raw.in.pktcount", IETF,
+	[O_RAW_IN_PKTCOUNT] = KEY_IPFIX(UINT64, "raw.in.pktcount", IETF,
 									packetTotalCount),
 	/* FIXME: this could also be octetDeltaCount */
-	[O_RAW_OUT_PKTLEN] = KEY_IPFIX(UINT32, "raw.out.pktlen", IETF,
+	[O_RAW_OUT_PKTLEN] = KEY_IPFIX(UINT64, "raw.out.pktlen", IETF,
 								   octetTotalCount),
 	/* FIXME: this could also be packetDeltaCount */
-	[O_RAW_OUT_PKTCOUNT] = KEY_IPFIX(UINT32, "raw.out.pktcount",
+	[O_RAW_OUT_PKTCOUNT] = KEY_IPFIX(UINT64, "raw.out.pktcount",
 									 IETF, packetTotalCount),
 	[O_ICMP_CODE] = KEY_IPFIX(UINT8, "icmp.code", IETF, icmpCodeIPv4),
 	[O_ICMP_TYPE] = KEY_IPFIX(UINT8, "icmp.type", IETF, icmpTypeIPv4),
