@@ -313,32 +313,34 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 {
 	char str[64], *pch = buf;
 
+	key = key_src(key);
+
 	switch (key->type) {
 	case ULOGD_RET_STRING:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ", name,
-						key_src_str(key));
+						key_str(key));
 		break;
 		
 	case ULOGD_RET_UINT8:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-						key_src_u8(key));
+						key_u8(key));
 		break;
 		
 	case ULOGD_RET_UINT16:
-		if (key->u.value.ui16 != 0)
+		if (key_u16(key))
 			pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-							key_src_u16(key));
+							key_u16(key));
 		break;
 		
 	case ULOGD_RET_UINT32:
-		if (key->u.value.ui32 != 0)
+		if (key_u32(key))
 			pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-							key_src_u32(key));
+							key_u32(key));
 		break;
 		
 	case ULOGD_RET_IPADDR:
 	{
-		struct in_addr addr = (struct in_addr){ key_src_u32(key), };
+		struct in_addr addr = (struct in_addr){ key_u32(key), };
 
 		inet_ntop(AF_INET, &addr, str, sizeof(str));
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ",
@@ -350,7 +352,7 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 	{
 		struct in6_addr addr;
 
-		key_src_in6(key, &addr);
+		key_in6(key, &addr);
 		inet_ntop(AF_INET6, &addr, str, sizeof(str));
 
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ",
