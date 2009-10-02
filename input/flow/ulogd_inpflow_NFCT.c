@@ -57,7 +57,7 @@
 
 typedef enum { START, UPDATE, STOP, __TIME_MAX } TIMES;
 
-union ct_protoinfo {
+union ct_l4protoinfo {
 	uint32_t all;
 	struct {
 		uint16_t sport;
@@ -78,7 +78,7 @@ struct ct_tuple {
 	uint32_t dst;
 	uint8_t family;
 	uint8_t l4proto;
-	union ct_protoinfo pinfo;
+	union ct_l4protoinfo l4info;
 };
 
 struct conntrack {
@@ -263,7 +263,7 @@ ct_dump_tuple(const struct ct_tuple *t)
 {
 	printf("IP src=%lu dst=%lu family=%u l4proto=%u dport=%u\n",
 		   (unsigned long)t->src, (unsigned long)t->dst,
-		   t->family, t->l4proto, htons(t->pinfo.tcp.dport));
+		   t->family, t->l4proto, htons(t->l4info.tcp.dport));
 }
 
 static int
@@ -290,13 +290,13 @@ nfnl_ct_to_tuple(const struct nfnl_ct *nfnl_ct, struct ct_tuple *t)
 	switch (t->l4proto) {
 	case IPPROTO_TCP:
 	case IPPROTO_UDP:
-		t->pinfo.tcp.sport = ntohs(nfnl_ct_get_src_port(nfnl_ct, 0));
-		t->pinfo.tcp.dport = ntohs(nfnl_ct_get_src_port(nfnl_ct, 1));
+		t->l4info.tcp.sport = ntohs(nfnl_ct_get_src_port(nfnl_ct, 0));
+		t->l4info.tcp.dport = ntohs(nfnl_ct_get_src_port(nfnl_ct, 1));
 		break;
 
 	case IPPROTO_ICMP:
-		t->pinfo.icmp.type = nfnl_ct_get_icmp_type(nfnl_ct, 0);
-		t->pinfo.icmp.code = nfnl_ct_get_icmp_code(nfnl_ct, 0);
+		t->l4info.icmp.type = nfnl_ct_get_icmp_type(nfnl_ct, 0);
+		t->l4info.icmp.code = nfnl_ct_get_icmp_code(nfnl_ct, 0);
 		break;
 
 	default:
@@ -499,7 +499,7 @@ tcache_hash(const struct cache *c, const struct ct_tuple *t)
 	if (rnd == 0U)
 		rnd = rand();
 
-	return jhash_3words(t->src, t->dst ^ t->l4proto, t->pinfo.all,
+	return jhash_3words(t->src, t->dst ^ t->l4proto, t->l4info.all,
 						rnd) % c->c_num_heads;
 }
 
@@ -645,8 +645,8 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
     case IPPROTO_TCP:
     case IPPROTO_UDP:
     case IPPROTO_SCTP:
-		key_set_u16(&out[O_L4_SPORT], ct->tuple.pinfo.tcp.sport);
-		key_set_u16(&out[O_L4_DPORT], ct->tuple.pinfo.tcp.dport);
+		key_set_u16(&out[O_L4_SPORT], ct->tuple.l4info.tcp.sport);
+		key_set_u16(&out[O_L4_DPORT], ct->tuple.l4info.tcp.dport);
 		break;
 
     case IPPROTO_ICMP:
