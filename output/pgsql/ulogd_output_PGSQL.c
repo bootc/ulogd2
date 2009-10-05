@@ -42,12 +42,13 @@ static const struct config_keyset pgsql_kset = {
 		CONFIG_KEY_STR("schema", "public"),
 	},
 };
-#define db_ce(x)	(x->ces[DB_CE_NUM+0])
-#define host_ce(x)	(x->ces[DB_CE_NUM+1])
-#define user_ce(x)	(x->ces[DB_CE_NUM+2])
-#define pass_ce(x)	(x->ces[DB_CE_NUM+3])
-#define port_ce(x)	(x->ces[DB_CE_NUM+4])
-#define schema_ce(x)	(x->ces[DB_CE_NUM+5])
+
+#define db_ce(pi)		ulogd_config_str((pi), DB_CE_NUM)
+#define host_ce(pi)		ulogd_config_str((pi), DB_CE_NUM + 1)
+#define user_ce(pi)		ulogd_config_str((pi), DB_CE_NUM + 2)
+#define pass_ce(pi)		ulogd_config_str((pi), DB_CE_NUM + 3)
+#define port_ce(pi)		ulogd_config_int((pi), DB_CE_NUM + 4)
+#define schema_ce(pi)	ulogd_config_str((pi), DB_CE_NUM + 5)
 
 
 static int
@@ -125,15 +126,14 @@ static int
 pgsql_namespace(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *priv = upi_priv(upi);
-	char *pgbuf;
+	char *pgbuf, *schema = schema_ce(upi);
 
 	pr_fn_debug("pi=%p\n", upi);
 
 	if (priv->dbh == NULL)
 		return ULOGD_IRET_AGAIN;
 
-	if (asprintf(&pgbuf, PGSQL_HAVE_NAMESPACE_TEMPLATE,
-				 schema_ce(upi->config_kset).u.string) < 0) {
+	if (asprintf(&pgbuf, PGSQL_HAVE_NAMESPACE_TEMPLATE, schema) < 0) {
 		upi_log(upi, ULOGD_ERROR, "namespace: %m\n");
 
 		return ULOGD_IRET_ERR;
@@ -149,10 +149,8 @@ pgsql_namespace(struct ulogd_pluginstance *upi)
 
 	PQclear(priv->pgres);
 
-	priv->db_inst.schema = schema_ce(upi->config_kset).u.string;
-
-	upi_log(upi, ULOGD_DEBUG, "using schema '%s'\n",
-			  schema_ce(upi->config_kset).u.string);
+	priv->db_inst.schema = schema;
+	upi_log(upi, ULOGD_DEBUG, "using schema '%s'\n", schema);
 
 	free(pgbuf);
 	
@@ -365,11 +363,11 @@ static int
 pgsql_open_db(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_priv *pi = upi_priv(upi);
-	char *server = host_ce(upi->config_kset).u.string;
-	unsigned int port = port_ce(upi->config_kset).u.value;
-	char *user = user_ce(upi->config_kset).u.string;
-	char *pass = pass_ce(upi->config_kset).u.string;
-	char *db = db_ce(upi->config_kset).u.string;
+	char *server = host_ce(upi);
+	unsigned port = port_ce(upi);
+	char *user = user_ce(upi);
+	char *pass = pass_ce(upi);
+	char *db = db_ce(upi);
 	char *connstr;
 	int errret = ULOGD_IRET_AGAIN;
 	int len;
