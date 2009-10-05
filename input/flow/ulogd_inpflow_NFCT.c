@@ -695,12 +695,13 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 		break;
 	}
 
-	/* TODO check if counters are there */
-	key_set_u64(&out[O_RAW_IN_PKTLEN], nfnl_ct_get_bytes(nfnl_ct, 0));
-	key_set_u64(&out[O_RAW_IN_PKTCOUNT], nfnl_ct_get_packets(nfnl_ct, 0));
+	if (nfnl_ct_test_bytes(nfnl_ct, 0)) {
+		key_set_u64(&out[O_RAW_IN_PKTLEN], nfnl_ct_get_bytes(nfnl_ct, 0));
+		key_set_u64(&out[O_RAW_IN_PKTCOUNT], nfnl_ct_get_packets(nfnl_ct, 0));
 
-	key_set_u64(&out[O_RAW_OUT_PKTLEN], nfnl_ct_get_bytes(nfnl_ct, 1));
-	key_set_u64(&out[O_RAW_OUT_PKTCOUNT], nfnl_ct_get_packets(nfnl_ct, 1));
+		key_set_u64(&out[O_RAW_OUT_PKTLEN], nfnl_ct_get_bytes(nfnl_ct, 1));
+		key_set_u64(&out[O_RAW_OUT_PKTCOUNT], nfnl_ct_get_packets(nfnl_ct, 1));
+	}
 
 	if (nfnl_ct_test_mark(nfnl_ct))
 		key_set_u32(&out[O_CT_MARK], nfnl_ct_get_mark(nfnl_ct));
