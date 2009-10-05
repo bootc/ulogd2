@@ -42,15 +42,15 @@ enum {
 
 
 struct config_entry {
-	char key[CONFIG_KEY_LEN];	/* name of config directive */
 	u_int8_t type;			/* type; see above */
-	u_int8_t options;		/* options; see above  */
-	u_int8_t hit;			/* found? */
 	union {
 		char *string;
 		int value;
 		int (*parser)(const char *argstr);
 	} u;
+	u_int8_t options;		/* options; see above  */
+	u_int8_t hit;			/* found? */
+	const char *key;
 };
 
 /**
