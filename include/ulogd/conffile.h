@@ -89,6 +89,9 @@ struct config_entry {
 			.options = o,				\
 		}
 
+int config_int(const struct config_entry *);
+char *config_str(const struct config_entry *);
+
 struct config_keyset {
 	unsigned int num_ces;
 	struct config_entry ces[];

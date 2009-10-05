@@ -405,4 +405,8 @@ int stack_for_each(int (*)(struct ulogd_pluginstance_stack *, void *),
 int stack_fsm(struct ulogd_pluginstance_stack *);
 int stack_reconfigure(struct ulogd_pluginstance_stack *);
 
+/* pluginstance config space API */
+int ulogd_config_int(const struct ulogd_pluginstance *pi, int off);
+char *ulogd_config_str(const struct ulogd_pluginstance *pi, int off);
+
 #endif /* PLUGIN_H */

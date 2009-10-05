@@ -237,3 +237,17 @@ config_str_set(struct config_entry *ce, const char *val)
 	
 	return 0;
 }
+
+int
+config_int(const struct config_entry *ce)
+{
+	BUG_ON(!ce || ce->type != CONFIG_TYPE_INT);
+	return ce->u.value;
+}
+
+char *
+config_str(const struct config_entry *ce)
+{
+	BUG_ON(!ce || ce->type != CONFIG_TYPE_STRING);
+	return ce->u.string;
+}

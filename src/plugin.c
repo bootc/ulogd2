@@ -1250,3 +1250,31 @@ ulogd_plugin_init(void)
 
 	return 0;
 }
+
+/* accessors to the plugin configuration space */
+struct config_entry *
+ulogd_config_get(const struct ulogd_pluginstance *pi, int off)
+{
+	struct config_keyset *set = pi->config_kset;
+
+	if (off < 0 || off >= set->num_ces)
+		return NULL;
+	
+	return &set->ces[off];
+}
+
+int
+ulogd_config_int(const struct ulogd_pluginstance *pi, int off)
+{
+	struct config_entry *ce = ulogd_config_get(pi, off);
+
+	return config_int(ce);
+}
+
+char *
+ulogd_config_str(const struct ulogd_pluginstance *pi, int off)
+{
+	struct config_entry *ce = ulogd_config_get(pi, off);
+
+	return config_str(ce);
+}
