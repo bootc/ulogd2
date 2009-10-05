@@ -207,7 +207,7 @@ sql_createstmt(struct ulogd_pluginstance *upi)
 {
 	struct db_instance *mi = upi_priv(upi);
 	unsigned int size;
-	char *table = table_ce(upi->config_kset).u.string;
+	char *table = table_ce(upi);
 	int i;
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
@@ -286,19 +286,19 @@ ulogd_db_configure(struct ulogd_pluginstance *upi)
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
-	if (blackhole_ce(upi->config_kset).u.value)
+	if (blackhole_ce(upi))
 		return ULOGD_IRET_OK;
 
 	if (check_driver(upi) < 0)
 		return ULOGD_IRET_ERR;
 
-	if (disable_ce(upi->config_kset).u.value != 0) {
+	if (disable_ce(upi)) {
 		upi_log(upi, ULOGD_INFO, "disabled in config\n");
 
 		return ULOGD_IRET_OK;
 	}
 
-	di->buffer_size = db_buffer_ce(upi->config_kset).u.value;
+	di->buffer_size = db_buffer_ce(upi);
 	di->max_backlog = 1024 * di->buffer_size;
 
 	/* Second: Open Database */
@@ -332,7 +332,7 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 
 	pr_fn_debug("pi=%p\n", upi);
 
-	if (blackhole_ce(upi->config_kset).u.value) {
+	if (blackhole_ce(upi)) {
 		upi_log(upi, ULOGD_INFO, "running in blackhole mode");
 		return ULOGD_IRET_OK;
 	}
@@ -375,7 +375,7 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
-	if (blackhole_ce(upi->config_kset).u.value)
+	if (blackhole_ce(upi))
 		return ULOGD_IRET_OK;
 
 	di->driver->close_db(upi);
@@ -402,13 +402,13 @@ _init_reconnect(struct ulogd_pluginstance *upi)
 
 	pr_debug("%s: upi=%p\n", __func__, upi);
 
-	if (reconnect_ce(upi->config_kset).u.value) {
+	if (reconnect_ce(upi)) {
 		di->reconnect = time(NULL);
 		if (di->reconnect != TIME_ERR) {
 			upi_log(upi, ULOGD_ERROR, "no connection to database, "
-				  "attempting to reconnect after %u seconds\n",
-				  reconnect_ce(upi->config_kset).u.value);
-			di->reconnect += reconnect_ce(upi->config_kset).u.value;
+					"attempting to reconnect after %u seconds\n",
+					reconnect_ce(upi));
+			di->reconnect += reconnect_ce(upi);
 			di->interp = &_init_db;
 			return -1;
 		}
@@ -469,7 +469,7 @@ __interp_db(struct ulogd_pluginstance *upi)
 				sprintf(di->stmt_ins, "%u,", res->u.value.ui16);
 				break;
 			case ULOGD_RET_IPADDR:
-				if (asstring_ce(upi->config_kset).u.value) {
+				if (asstring_ce(upi)) {
 					memset(&addr, 0, sizeof(addr));
 					addr.s_addr = ntohl(res->u.value.ui32);
 					*(di->stmt_ins++) = '\'';
@@ -578,7 +578,7 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi, unsigned *flags)
 
 	pr_fn_debug("pi=%p\n", pi);
 
-	if (blackhole_ce(pi->config_kset).u.value)
+	if (blackhole_ce(pi))
 		return ULOGD_IRET_OK;
 
 	if ((row = db_row_new(pi)) == NULL)

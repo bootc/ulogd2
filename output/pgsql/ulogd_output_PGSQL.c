@@ -186,11 +186,9 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 
 	if (priv->db_inst.schema)
 		ret = asprintf(&pgbuf, PGSQL_GETCOLUMN_TEMPLATE_SCHEMA,
-					   table_ce(upi->config_kset).u.string,
-					   priv->db_inst.schema);
+					   table_ce(upi), priv->db_inst.schema);
 	else
-		ret = asprintf(&pgbuf, PGSQL_GETCOLUMN_TEMPLATE,
-					   table_ce(upi->config_kset).u.string);
+		ret = asprintf(&pgbuf, PGSQL_GETCOLUMN_TEMPLATE, table_ce(upi));
 	if (ret < 0) {
 		upi_log(upi, ULOGD_FATAL, "error creating schema: %m\n");
 		return ULOGD_IRET_ERR;
@@ -279,7 +277,7 @@ pgsql_prepare(struct ulogd_pluginstance *pi)
 {
 	struct pgsql_priv *priv = upi_priv(pi);
 	struct db_instance *di = &priv->db_inst;
-	char *table = table_ce(pi->config_kset).u.string;
+	char *table = table_ce(pi);
 	char *query, *pch;
 	int i, pgret;
 

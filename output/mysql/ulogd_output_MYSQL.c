@@ -89,11 +89,13 @@ static const struct config_keyset kset_mysql = {
 		},
 	},
 };
-#define db_ce(x)	(x->ces[DB_CE_NUM+0])
-#define	host_ce(x)	(x->ces[DB_CE_NUM+1])
-#define user_ce(x)	(x->ces[DB_CE_NUM+2])
-#define pass_ce(x)	(x->ces[DB_CE_NUM+3])
-#define port_ce(x)	(x->ces[DB_CE_NUM+4])
+
+#define db_ce(pi)	ulogd_config_str((pi), DB_CE_NUM)
+#define	host_ce(pi)	ulogd_config_str((pi), DB_CE_NUM + 1)
+#define user_ce(pi)	ulogd_config_str((pi), DB_CE_NUM + 2)
+#define pass_ce(pi)	ulogd_config_str((pi), DB_CE_NUM + 3)
+#define port_ce(pi)	ulogd_config_int((pi), DB_CE_NUM + 4)
+
 /* find out which columns the table has */
 static int get_columns_mysql(struct ulogd_pluginstance *upi)
 {
@@ -108,8 +110,7 @@ static int get_columns_mysql(struct ulogd_pluginstance *upi)
 		return -1;
 	}
 
-	result = mysql_list_fields(mi->dbh, 
-				   table_ce(upi->config_kset).u.string, NULL);
+	result = mysql_list_fields(mi->dbh, table_ce(upi), NULL);
 	if (!result) {
 		ulogd_log(ULOGD_ERROR, "error in list_fields(): %s\n",
 			  mysql_error(mi->dbh));
@@ -172,12 +173,12 @@ static int close_db_mysql(struct ulogd_pluginstance *upi)
 static int open_db_mysql(struct ulogd_pluginstance *upi)
 {
 	struct mysql_instance *mi = upi_priv(upi);
-	unsigned int connect_timeout = timeout_ce(upi->config_kset).u.value;
-	char *server = host_ce(upi->config_kset).u.string;
-	u_int16_t port = port_ce(upi->config_kset).u.value;
-	char *user = user_ce(upi->config_kset).u.string;
-	char *pass = pass_ce(upi->config_kset).u.string;
-	char *db = db_ce(upi->config_kset).u.string;
+	unsigned connect_timeout = timeout_ce(upi);
+	char *server = host_ce(upi);
+	u_int16_t port = port_ce(upi);
+	char *user = user_ce(upi);
+	char *pass = pass_ce(upi);
+	char *db = db_ce(upi);
 
 	mi->dbh = mysql_init(NULL);
 	if (!mi->dbh) {

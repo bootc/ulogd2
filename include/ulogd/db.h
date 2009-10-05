@@ -91,15 +91,16 @@ db_has_prepare(const struct db_instance *di)
 		CONFIG_KEY_INT("disable", 0),					   \
 		CONFIG_KEY_INT("blackhole", 0)
 
-#define DB_CE_NUM	7
+#define __DB_CE_BASE			0
+#define DB_CE_NUM				7
 
-#define table_ce(x)	(x->ces[0])
-#define reconnect_ce(x)	(x->ces[1])
-#define asstring_ce(x)	(x->ces[2])
-#define timeout_ce(x)	(x->ces[3])
-#define db_buffer_ce(x)	(x->ces[4])
-#define disable_ce(x)	(x->ces[5])
-#define blackhole_ce(x)	(x->ces[6])
+#define table_ce(pi)			ulogd_config_str(pi, __DB_CE_BASE)
+#define reconnect_ce(pi)		ulogd_config_int(pi, __DB_CE_BASE + 1)
+#define asstring_ce(pi)			ulogd_config_int(pi, __DB_CE_BASE + 2)
+#define timeout_ce(pi)			ulogd_config_int(pi, __DB_CE_BASE + 3)
+#define db_buffer_ce(pi)		ulogd_config_int(pi, __DB_CE_BASE + 4)
+#define disable_ce(pi)			ulogd_config_int(pi, __DB_CE_BASE + 5)
+#define blackhole_ce(pi)		ulogd_config_int(pi, __DB_CE_BASE + 6)
 
 int ulogd_db_start(struct ulogd_pluginstance *upi);
 int ulogd_db_stop(struct ulogd_pluginstance *upi);
