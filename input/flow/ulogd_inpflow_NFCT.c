@@ -35,6 +35,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <netlink/netfilter/nfnl.h>
 #include <netlink/netfilter/ct.h>
@@ -57,6 +58,11 @@
 
 typedef enum { START, UPDATE, STOP, __TIME_MAX } TIMES;
 
+union ct_addr {
+	struct in_addr in;
+	struct in6_addr in6;
+};
+
 union ct_l4protoinfo {
 	uint32_t all;
 	struct {
@@ -74,8 +80,8 @@ union ct_l4protoinfo {
 
 /* this is our key which identifies the conntracks in the hash */
 struct ct_tuple {
-	uint32_t src;
-	uint32_t dst;
+	union ct_addr src;
+	union ct_addr dst;
 	uint8_t family;
 	uint8_t l4proto;
 	union ct_l4protoinfo l4info;
@@ -122,6 +128,8 @@ struct nfct_priv {
 enum {
 	O_IP_SADDR = 0,
 	O_IP_DADDR,
+	O_IP6_SADDR,
+	O_IP6_DADDR,
 	O_IP_PROTO,
 	O_L4_SPORT,
 	O_L4_DPORT,
@@ -145,6 +153,8 @@ static unsigned num_conntrack;
 static struct ulogd_key nfct_okeys[] = {
 	[O_IP_SADDR] = KEY_IPFIX(IPADDR, "ip.saddr", IETF, sourceIPv4Address),
 	[O_IP_DADDR] = KEY_IPFIX(IPADDR, "ip.daddr", IETF,destinationIPv4Address),
+	[O_IP6_SADDR] = KEY(IP6ADDR, "ip6.saddr"),
+	[O_IP6_DADDR] = KEY(IP6ADDR, "ip6.daddr"),
 	[O_IP_PROTO] = KEY_IPFIX(UINT8, "ip.protocol", IETF, protocolIdentifier),
 	[O_L4_SPORT] = KEY_IPFIX(UINT16, "l4.sport", IETF, sourceTransportPort),
 	[O_L4_DPORT] = KEY_IPFIX(UINT16, "l4.dport", IETF,
@@ -261,30 +271,48 @@ ct_tuple_cmp(const struct ct_tuple *t1, const struct ct_tuple *t2)
 static void
 ct_dump_tuple(const struct ct_tuple *t)
 {
-	printf("IP src=%lu dst=%lu family=%u l4proto=%u dport=%u\n",
-		   (unsigned long)t->src, (unsigned long)t->dst,
-		   t->family, t->l4proto, htons(t->l4info.tcp.dport));
+	char src[64], dst[64];
+
+	if (t->family == AF_INET || t->family == AF_INET6) {
+		inet_ntop(t->family, &t->src.in, src, sizeof(src));
+		inet_ntop(t->family, &t->dst.in, dst, sizeof(dst));
+	} else {
+		ulogd_log(ULOGD_NOTICE, "unsupported proto family %u\n", t->family);
+		return;
+	}
+
+	printf("tuple: family=%u src=%s dst=%s l4proto=%u dport=%u\n",
+		   t->family, src, dst, t->l4proto, htons(t->l4info.tcp.dport));
 }
 
 static int
 nfnl_ct_to_tuple(const struct nfnl_ct *nfnl_ct, struct ct_tuple *t)
 {
-	struct nl_addr *nl_addr;
+	struct nl_addr *nl_saddr, *nl_daddr;
 
-	if (t == NULL)
+	if (!t)
 		return -1;
 
 	memset(t, 0, sizeof(*t));
 
-	if ((nl_addr = nfnl_ct_get_src(nfnl_ct, 0 /* orig */)) == NULL)
-		return -1;
-	t->src = *((uint32_t *)nl_addr_get_binary_addr(nl_addr));
-
-	if ((nl_addr = nfnl_ct_get_dst(nfnl_ct, 0 /* orig */)) == NULL)
-		return -1;
-	t->dst = *((uint32_t *)nl_addr_get_binary_addr(nl_addr));
-
 	t->family = nfnl_ct_get_family(nfnl_ct);
+	if ((nl_saddr = nfnl_ct_get_src(nfnl_ct, 0 /* orig */)) == NULL)
+		return -1;
+	if ((nl_daddr = nfnl_ct_get_dst(nfnl_ct, 0 /* orig */)) == NULL)
+		return -1;
+
+	if (t->family == AF_INET) {
+		memcpy(&t->src.in, nl_addr_get_binary_addr(nl_saddr),
+			   sizeof(struct in_addr));
+		memcpy(&t->dst.in, nl_addr_get_binary_addr(nl_daddr),
+			   sizeof(struct in_addr));
+	} else if (t->family == AF_INET6) {
+		memcpy(&t->src.in6, nl_addr_get_binary_addr(nl_saddr),
+			   sizeof(struct in6_addr));
+		memcpy(&t->dst.in6, nl_addr_get_binary_addr(nl_daddr),
+			   sizeof(struct in6_addr));
+	}
+
 	t->l4proto = nfnl_ct_get_proto(nfnl_ct);
 
 	switch (t->l4proto) {
@@ -495,11 +523,14 @@ static ct_hash_t
 tcache_hash(const struct cache *c, const struct ct_tuple *t)
 {
 	static unsigned rnd;
+	uint32_t src, dst;
 
-	if (rnd == 0U)
+	if (!rnd)
 		rnd = rand();
 
-	return jhash_3words(t->src, t->dst ^ t->l4proto, t->l4info.all,
+	src = (uint32_t)t->src.in.s_addr;
+	dst = (uint32_t)t->dst.in.s_addr;
+	return jhash_3words(src, dst ^ t->l4proto, t->l4info.all,
 						rnd) % c->c_num_heads;
 }
 
@@ -637,8 +668,14 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 
 	ct->time[STOP].tv_sec = t_now;
 
-	key_set_u32(&out[O_IP_SADDR], ntohl(ct->tuple.src));
-    key_set_u32(&out[O_IP_DADDR], ntohl(ct->tuple.dst));
+	if (ct->tuple.family == AF_INET) {
+		key_set_u32(&out[O_IP_SADDR], ct->tuple.src.in.s_addr);
+		key_set_u32(&out[O_IP_DADDR], ct->tuple.dst.in.s_addr);
+	} else if (ct->tuple.family == AF_INET6) {
+		key_set_in6(&out[O_IP6_SADDR], &ct->tuple.src.in6);
+		key_set_in6(&out[O_IP6_DADDR], &ct->tuple.dst.in6);
+	} else
+		BUG();
     key_set_u8(&out[O_IP_PROTO], ct->tuple.l4proto);
 
 	switch (ct->tuple.l4proto) {
