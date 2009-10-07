@@ -840,7 +840,7 @@ ulogd_upi_reset_cfg(struct ulogd_pluginstance *pi)
 
 /* key API */
 void
-ulogd_value_to_ascii(struct ulogd_value *val, char *buf, size_t len)
+ulogd_value_to_ascii(const struct ulogd_value *val, char *buf, size_t len)
 {
 	switch (val->type) {
 	case ULOGD_RET_INT8:
