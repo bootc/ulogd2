@@ -160,6 +160,30 @@ err_rollback:
 	return rows;
 }
 
+static int
+db_alloc_columns(struct db_instance *di, size_t cols)
+{
+	if (!di)
+		return -1;
+
+	di->cols = calloc(cols, sizeof(struct db_column));
+	if (!di->cols) {
+		ulogd_log(ULOGD_FATAL, "%s: out of memory\n", __func__);
+		return -1;
+	}
+
+	return 0;
+}
+
+static void
+db_free_columns(struct db_instance *di)
+{
+	if (di) {
+		free(di->cols);
+		di->cols = NULL;
+	}
+}
+
 /**
  * Periodic database timer, reponsible for committing database rows.
  *
@@ -379,7 +403,7 @@ err_inval:
 }
 
 /**
- * Parse a database keymap
+ * Map ulogd keys to database columns by keymap
  *
  * @arg str		String to parse
  * @arg set		Pointer to array of ulogd keys
@@ -387,12 +411,15 @@ err_inval:
  * @return 0 on success, <0 on error
  */
 int
-keymap_parse(const char *str, struct ulogd_keyset *set)
+keymap_map_keys(const char *str, struct ulogd_keyset *set,
+				struct db_instance *di)
 {
-	int tok, state = 0, keyno = 0;
+	int tok, state = 0, keyno = 0, col;
 
-	if (!str || !set)
+	if (!str || !set || !di) {
+		ulogd_log(ULOGD_ERROR, "%s: %s\n", __func__, strerror(EINVAL));
 		return -1;
+	}
 
 	BUG_ON(!set->keys || !set->num_keys);
 
@@ -417,8 +444,12 @@ keymap_parse(const char *str, struct ulogd_keyset *set)
 		case 2:
 			if (tok != TOK_NUM)
 				goto err_inval;
+			BUG_ON(!set->keys[keyno].name);
+			col = atoi(lexbuf);
+			set->keys[keyno].col = &di->cols[col];
+			ulogd_log(ULOGD_DEBUG, "db: key%d ('%s') maps to col%d\n",
+					  keyno, set->keys[keyno].name, col);
 			keyno++;
-			/* TODO set number */
 			state++;
 			break;
 
@@ -449,17 +480,20 @@ ulogd_db_map_keys(struct ulogd_pluginstance *pi)
 {
 	struct db_instance *di = upi_priv(pi);
 	struct ulogd_keyset *set = &pi->input;
-	int ret, cols;
+	int ret;
 	char *keymap = keymap_ce(pi);
 
 	if (keymap) {
-		if ((set->num_keys = keymap_check(keymap, &cols)) < 0)
+		if ((set->num_keys = keymap_check(keymap, &di->num_cols)) < 0)
 			return -1;
 
 		if ((set->keys = ulogd_alloc_keyset(set->num_keys)) == NULL)
 			return -1;
 
-		if (keymap_parse(keymap, set) < 0)
+		if (db_alloc_columns(di, di->num_cols) < 0)
+			goto err_free;
+
+		if (keymap_map_keys(keymap, set, di) < 0)
 			goto err_free;
 	} else {
 		if ((ret = di->driver->get_columns(pi)) < 0)
@@ -469,6 +503,7 @@ ulogd_db_map_keys(struct ulogd_pluginstance *pi)
 	return 0;
 
 err_free:
+	db_free_columns(di);
 	ulogd_free_keyset(set);
 	return -1;
 }

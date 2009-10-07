@@ -47,7 +47,14 @@ struct db_row {
 	unsigned flow_duration;
 };
 
+struct db_column {
+	struct ulogd_key *key;
+};
+
 struct db_instance {
+	struct db_column *cols;
+	int num_cols;
+
 	char *stmt; /* buffer for our insert statement */
 	char *stmt_val; /* pointer to the beginning of the "VALUES" part */
 	char *stmt_ins; /* pointer to current inser position in statement */

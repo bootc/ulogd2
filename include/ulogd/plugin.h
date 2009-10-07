@@ -86,6 +86,11 @@ struct ulogd_key {
 		struct ulogd_key *source;
 	} u;
 
+	/*
+	 * Map to database column
+	 */
+	struct db_column *col;
+
 	/* type of the returned value */
 	enum ulogd_ktype type;
 
