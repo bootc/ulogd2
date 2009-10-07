@@ -483,6 +483,37 @@ db_map_keys(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
+static int
+db_open(struct ulogd_pluginstance *pi)
+{
+	struct db_instance *di = upi_priv(pi);
+
+	if (!(di->flags & DB_F_OPEN)) {
+		int ret;
+
+		if ((ret = di->driver->open_db(pi)) < 0)
+			return ret;
+
+		di->flags |= DB_F_OPEN;
+	}
+
+	return ULOGD_IRET_OK;
+}
+
+static int
+db_close(struct ulogd_pluginstance *pi)
+{
+	struct db_instance *di = upi_priv(pi);
+
+	if (di->flags & DB_F_OPEN) {
+		di->flags &= ~DB_F_OPEN;
+
+		return di->driver->close_db(pi);
+	}
+
+	return ULOGD_IRET_OK;
+}
+
 /**
  * Map ulogd keys to database columns.
  */
@@ -547,23 +578,21 @@ ulogd_db_configure(struct ulogd_pluginstance *upi)
 	if (insert_ce(upi))
 		di->stmt = strdup(insert_ce(upi));
 
-	/* Second: Open Database */
-	if ((ret = di->driver->open_db(upi)) < 0)
-		return ret;
+	if ((ret = db_open(upi)) < 0)
+		goto err_free;
 
 	if ((ret = ulogd_db_map_keys(upi)) < 0)
 		goto err_close;
-
-	/* close here because of restart logic later */
-	(void)di->driver->close_db(upi);
 
 	ulogd_init_timer(&di->timer, 1 SEC, db_timer_cb, upi, TIMER_F_PERIODIC);
 
 	return 0;
 
+err_free:
+	free(di->stmt);
+	di->stmt = NULL;
 err_close:
-	(void)di->driver->close_db(upi);
-
+	db_close(upi);
 	return ret;
 }
 
@@ -580,7 +609,7 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 		return ULOGD_IRET_OK;
 	}
 
-	if ((ret = di->driver->open_db(upi)) < 0)
+	if ((ret = db_open(upi)) < 0)
 		return ret;
 
 	if (db_has_prepare(di)) {
@@ -602,8 +631,7 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 	return 0;
 
 err_close:
-	di->driver->close_db(upi);
-
+	db_close(upi);
 	return -1;
 }
 
@@ -617,8 +645,7 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 	if (blackhole_ce(upi))
 		return ULOGD_IRET_OK;
 
-	di->driver->close_db(upi);
-
+	db_close(upi);
 	upi_log(upi, ULOGD_INFO, "database connection closed\n");
 
 	/* try to free our dynamically allocated input key array */
