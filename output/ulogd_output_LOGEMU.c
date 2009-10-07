@@ -47,15 +47,8 @@
 static char hostname[HOST_NAME_MAX+1];
 
 static struct ulogd_key logemu_inp[] = {
-	{
-		.type = ULOGD_RET_STRING,
-		.name = "print",
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_KEYF_OPTIONAL,
-		.name = "oob.time.sec",
-	},
+	KEY(STRING, "print"),
+	KEY_FLAGS(UINT32, "oob.time.sec", ULOGD_KEYF_OPTIONAL),
 };
 
 static const struct config_keyset logemu_kset = {
@@ -91,7 +84,7 @@ static int _output_logemu(struct ulogd_pluginstance *upi, unsigned *flags)
 		time_t now;
 
 		if (res[1].u.source && (res[1].u.source->flags & ULOGD_RETF_VALID))
-			now = (time_t) res[1].u.source->u.value.ui32;
+			now = (time_t) key_src_u32(&res[1]);
 		else
 			now = time(NULL);
 
@@ -99,8 +92,7 @@ static int _output_logemu(struct ulogd_pluginstance *upi, unsigned *flags)
 		if ((tmp = strchr(timestr, '\n')))
 			*tmp = '\0';
 
-		fprintf(li->of, "%.15s %s %s", timestr, hostname,
-				res[0].u.source->u.value.str);
+		fprintf(li->of, "%.15s %s %s", timestr, hostname, key_src_str(&res[0]));
 
 		if (upi->config_kset->ces[1].u.value)
 			fflush(li->of);

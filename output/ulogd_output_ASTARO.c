@@ -315,7 +315,7 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 
 	key = key_src(key);
 
-	switch (key->type) {
+	switch (key_type(key)) {
 	case ULOGD_RET_STRING:
 		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ", name,
 						key_str(key));

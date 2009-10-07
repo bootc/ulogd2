@@ -697,31 +697,31 @@ __interp_db(struct ulogd_pluginstance *upi)
 		}
 
 		if (key_valid(res)) {
-			switch (key->type) {
+			switch (key_type(key)) {
 				char *tmpstr;
 				struct in_addr addr;
 			case ULOGD_RET_INT8:
-				sprintf(di->stmt_ins, "%d,", res->u.value.i8);
+				sprintf(di->stmt_ins, "%d,", key_i8(res));
 				break;
 			case ULOGD_RET_INT16:
-				sprintf(di->stmt_ins, "%d,", res->u.value.i16);
+				sprintf(di->stmt_ins, "%d,", key_i16(res));
 				break;
 			case ULOGD_RET_INT32:
-				sprintf(di->stmt_ins, "%d,", res->u.value.i32);
+				sprintf(di->stmt_ins, "%d,", key_i32(res));
 				break;
 			case ULOGD_RET_INT64:
-				sprintf(di->stmt_ins, "%lld,", res->u.value.i64);
+				sprintf(di->stmt_ins, "%lld,", key_i64(res));
 				break;
 			case ULOGD_RET_UINT8:
-				sprintf(di->stmt_ins, "%u,", res->u.value.ui8);
+				sprintf(di->stmt_ins, "%u,", key_u8(res));
 				break;
 			case ULOGD_RET_UINT16:
-				sprintf(di->stmt_ins, "%u,", res->u.value.ui16);
+				sprintf(di->stmt_ins, "%u,", key_u16(res));
 				break;
 			case ULOGD_RET_IPADDR:
 				if (asstring_ce(upi)) {
 					memset(&addr, 0, sizeof(addr));
-					addr.s_addr = ntohl(res->u.value.ui32);
+					addr.s_addr = ntohl(key_u32(res));
 					*(di->stmt_ins++) = '\'';
 					tmpstr = inet_ntoa(addr);
 					di->driver->escape_string(upi, di->stmt_ins,
@@ -732,21 +732,21 @@ __interp_db(struct ulogd_pluginstance *upi)
 				}
 				/* fallthrough when logging IP as u_int32_t */
 			case ULOGD_RET_UINT32:
-				sprintf(di->stmt_ins, "%u,", res->u.value.ui32);
+				sprintf(di->stmt_ins, "%u,", key_u32(res));
 				break;
 			case ULOGD_RET_UINT64:
-				sprintf(di->stmt_ins, "%llu,", res->u.value.ui64);
+				sprintf(di->stmt_ins, "%llu,", key_u64(res));
 				break;
 			case ULOGD_RET_BOOL:
-				sprintf(di->stmt_ins, "'%d',", res->u.value.b);
+				sprintf(di->stmt_ins, "'%d',", key_bool(res));
 				break;
 			case ULOGD_RET_STRING:
 				*(di->stmt_ins++) = '\'';
-				if (res->u.value.ptr) {
+				if (key_ptr(res)) {
 					di->stmt_ins +=
 						di->driver->escape_string(upi, di->stmt_ins,
-												  res->u.value.ptr,
-												  strlen(res->u.value.ptr));
+												  key_ptr(res),
+												  strlen(key_ptr(res)));
 				}
 				sprintf(di->stmt_ins, "',");
 				break;
@@ -756,7 +756,7 @@ __interp_db(struct ulogd_pluginstance *upi)
 				break;
 			default:
 				upi_log(upi, ULOGD_NOTICE, "unknown type %d for %s\n",
-						res->type, upi->input.keys[i].name);
+						key_type(res), upi->input.keys[i].name);
 				break;
 			}
 		} else {

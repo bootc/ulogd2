@@ -30,60 +30,20 @@
 #include <netinet/ip_icmp.h>
 
 struct ulogd_key printflow_keys[] = {
-	{
-		.type = ULOGD_RET_IPADDR,
-		.flags = ULOGD_RETF_NONE,
-		.name = "ip.saddr",
-	},
-	{
-		.type = ULOGD_RET_IPADDR,
-		.flags = ULOGD_RETF_NONE,
-		.name = "ip.daddr",
-	},
-	{
-		.type = ULOGD_RET_UINT8,
-		.flags = ULOGD_RETF_NONE,
-		.name = "ip.protocol",
-	},
-	{
-		.type = ULOGD_RET_UINT16,
-		.flags = ULOGD_RETF_NONE,
-		.name = "l4.sport",
-	},
-	{
-		.type = ULOGD_RET_UINT16,
-		.flags = ULOGD_RETF_NONE,
-		.name = "l4.dport",
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
-		.name = "raw.pktlen",
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
-		.name = "raw.pktcount",
-	},
-	{
-		.type = ULOGD_RET_UINT8,
-		.flags = ULOGD_RETF_NONE,
-		.name = "icmp.code",
-	},
-	{
-		.type = ULOGD_RET_UINT8,
-		.flags = ULOGD_RETF_NONE,
-		.name = "icmp.type",
-	},
-	{
-		.type = ULOGD_RET_BOOL,
-		.flags = ULOGD_RETF_NONE,
-		.name = "dir",
-	},
+	KEY(IPADDR, "ip.saddr"),
+	KEY(IPADDR, "ip.daddr"),
+	KEY(UINT8, "ip.protocol"),
+	KEY(UINT16, "l4.sport"),
+	KEY(UINT16, "l4.dport"),
+	KEY(UINT32, "raw.pktlen"),
+	KEY(UINT32, "raw.pktcount"),
+	KEY(UINT8, "icmp.code"),
+	KEY(UINT8,  "icmp.type"),
+	KEY(BOOL, "dir"),
 };
 int printflow_keys_num = sizeof(printflow_keys)/sizeof(*printflow_keys);
 
-#define GET_VALUE(res, x)	(res[x].u.source->u.value)
+#define GET_VALUE(res, x)	(res[x].u.source->u.val)
 #define GET_FLAGS(res, x)	(res[x].u.source->flags)
 #define pp_is_valid(res, x)	(GET_FLAGS(res, x) & ULOGD_RETF_VALID)
 

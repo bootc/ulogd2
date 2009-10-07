@@ -57,7 +57,6 @@ static unsigned char *_get_next_blank(unsigned char* begp, unsigned char *endp)
 
 static int interp_pwsniff(struct ulogd_pluginstance *pi, unsigned *flags)
 {
-	struct ulogd_key *inp = pi->input.keys;
 	struct ulogd_key *ret = pi->output.keys;
 	struct iphdr *iph;
 	void *protoh;
@@ -69,7 +68,7 @@ static int interp_pwsniff(struct ulogd_pluginstance *pi, unsigned *flags)
 	if (!key_src_valid(&pi->input.keys[0]))
 		return 0;
 	
-	iph = (struct iphdr *) pi->input.keys[0].u.value.ptr;
+	iph = (struct iphdr *) key_ptr(&pi->input.keys[0]);
 	protoh = (u_int32_t *)iph + iph->ihl;
 	tcph = protoh;
 	tcplen = ntohs(iph->tot_len) - iph->ihl * 4;
@@ -114,21 +113,21 @@ static int interp_pwsniff(struct ulogd_pluginstance *pi, unsigned *flags)
 
 	if (len) {
 		key_set_ptr(&ret[0], malloc(len + 1));
-		if (!ret[0].u.value.ptr) {
+		if (!key_ptr(&ret[0])) {
 			ulogd_log(ULOGD_ERROR, "OOM (size=%u)\n", len);
 			return 0;
 		}
-		strncpy((char *) ret[0].u.value.ptr, (char *)begp, len);
-		*((char *)ret[0].u.value.ptr + len + 1) = '\0';
+		strncpy((char *) key_ptr(&ret[0]), (char *)begp, len);
+		*((char *)key_ptr(&ret[0]) + len + 1) = '\0';
 	}
 	if (pw_len) {
 		key_set_ptr(&ret[1], malloc(pw_len + 1));
-		if (!ret[1].u.value.ptr){
+		if (!key_ptr(&ret[1])){
 			ulogd_log(ULOGD_ERROR, "OOM (size=%u)\n", pw_len);
 			return 0;
 		}
-		strncpy((char *)ret[1].u.value.ptr, (char *)pw_begp, pw_len);
-		*((char *)ret[1].u.value.ptr + pw_len + 1) = '\0';
+		strncpy((char *)key_ptr(&ret[1]), (char *)pw_begp, pw_len);
+		*(ret[1].u.val.str + pw_len + 1) = '\0';
 
 	}
 	return 0;
@@ -141,16 +140,8 @@ static struct ulogd_key pwsniff_inp[] = {
 };
 
 static struct ulogd_key pwsniff_outp[] = {
-	{
-		.name	= "pwsniff.user",
-		.type	= ULOGD_RET_STRING,
-		.flags	= ULOGD_RETF_FREE,
-	},
-	{
-		.name 	= "pwsniff.pass",
-		.type	= ULOGD_RET_STRING,
-		.flags	= ULOGD_RETF_FREE,
-	},
+	KEY_FLAGS(STRING, "pwsniff.user", ULOGD_RETF_FREE),
+	KEY_FLAGS(STRING, "pwsniff.pass", ULOGD_RETF_FREE),
 };
 
 static struct ulogd_plugin pwsniff_plugin = {

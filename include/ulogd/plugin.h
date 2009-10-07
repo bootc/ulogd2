@@ -64,25 +64,31 @@ enum ulogd_dtype {
 	ULOGD_DTYPE_SINK	= 0x0010, /* sink of data, no output keys */
 };
 
+struct ulogd_value {
+	enum ulogd_ktype type;
+
+	union {
+		int8_t i8;
+		int16_t i16;
+		int32_t i32;
+		int64_t i64;
+		uint8_t b;
+		uint8_t ui8;
+		uint16_t ui16;
+		uint32_t ui32;
+		uint64_t ui64;
+		void *ptr;
+		char *str;
+		struct in6_addr in6;
+	};
+};
+
 /* structure describing an input  / output parameter of a plugin */
 struct ulogd_key {
 	uint16_t flags;
 
 	union {
-		union {
-			int8_t i8;
-			int16_t i16;
-			int32_t i32;
-			int64_t i64;
-			uint8_t b;
-			uint8_t ui8;
-			uint16_t ui16;
-			uint32_t ui32;
-			uint64_t ui64;
-			void *ptr;
-			char *str;
-			struct in6_addr in6;
-		} value;
+		struct ulogd_value val;
 		struct ulogd_key *source;
 	} u;
 
@@ -90,9 +96,6 @@ struct ulogd_key {
 	 * Map to database column
 	 */
 	struct db_column *col;
-
-	/* type of the returned value */
-	enum ulogd_ktype type;
 
 	/* name of this key */
 	char name[ULOGD_MAX_KEYLEN+1];
@@ -117,20 +120,32 @@ struct ulogd_keyset {
 };
 
 /* key initializers */
-#define IPFIX(v, f)								\
-		{										\
-			.vendor = IPFIX_VENDOR_ ## v,		\
-			.field_id = IPFIX_ ## f,			\
-		}
-
-#define KEY(t,n)					\
-	{								\
-		.type = ULOGD_RET_ ## t,	\
-		.name = (n),				\
-	}
-#define KEY_IPFIX(t, n, v, f)			\
+#define KEY(t, n)						\
 	{									\
-		.type = ULOGD_RET_ ## t,		\
+		.u.val.type = ULOGD_RET_ ## t,	\
+		.name = (n),					\
+	}
+#define KEY_FLAGS(t, n, fl)				\
+	{									\
+		.flags = (fl),					\
+		.u.val.type = ULOGD_RET_ ## t,	\
+		.name = (n),					\
+	}
+#define IPFIX(v, f)								\
+	{											\
+		.vendor = IPFIX_VENDOR_ ## v,			\
+		.field_id = IPFIX_ ## f,				\
+	}
+#define KEY_IPFIX(t, n, v, f)				\
+	{										\
+		.u.val.type = ULOGD_RET_ ## t,		\
+		.name = (n),						\
+		.ipfix = IPFIX(v, f),				\
+	}
+#define KEY_IPFIX_FLAGS(t, n, v, f, fl)		\
+	{										\
+		.flags = (fl),						\
+		.u.val.type = ULOGD_RET_ ## t,		\
 		.name = (n),					\
 		.ipfix = IPFIX(v, f),			\
 	}
@@ -177,7 +192,10 @@ void *key_src_ptr(const struct ulogd_key *);
 char *key_src_str(const struct ulogd_key *);
 void key_src_in6(const struct ulogd_key *, struct in6_addr *);
 
+enum ulogd_ktype key_type(const struct ulogd_key *);
 bool key_type_eq(const struct ulogd_key *, const struct ulogd_key *);
+void key_free(struct ulogd_key *key);
+void key_reset(struct ulogd_key *key);
 
 static inline struct ulogd_key *
 key_src(const struct ulogd_key *key)

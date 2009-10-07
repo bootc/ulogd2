@@ -25,11 +25,7 @@
 #include <ulogd/printflow.h>
 
 static struct ulogd_key printflow_outp[] = {
-	{
-		.type = ULOGD_RET_STRING,
-		.flags = ULOGD_RETF_NONE,
-		.name = "print",
-	},
+	KEY(STRING, "print"),
 };
 
 static int printflow_interp(struct ulogd_pluginstance *upi, unsigned *flags)

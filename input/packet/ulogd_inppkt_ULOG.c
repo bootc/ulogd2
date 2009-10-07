@@ -59,13 +59,9 @@ static const struct config_keyset libulog_kset = {
 };
 
 static struct ulogd_key output_keys[] = {
-	{ 
-		.type = ULOGD_RET_STRING, 
-		.flags = ULOGD_RETF_FREE, 
-		.name = "raw.mac", 
-	},
+	KEY_FLAGS(STRING, "raw.mac", ULOGD_RETF_FREE),
 	{
-		.type = ULOGD_RET_RAW,
+		.u.val.type = ULOGD_RET_RAW,
 		.flags = ULOGD_RETF_FREE,
 		.name = "raw.pkt",
 		.ipfix = {
@@ -74,7 +70,7 @@ static struct ulogd_key output_keys[] = {
 			},
 	},
 	{
-		.type = ULOGD_RET_UINT32,
+		.u.val.type = ULOGD_RET_UINT32,
 		.flags = ULOGD_RETF_NONE,
 		.name = "raw.pktlen",
 		.ipfix = { 
@@ -83,7 +79,7 @@ static struct ulogd_key output_keys[] = {
 		},
 	},
 	{
-		.type = ULOGD_RET_UINT32,
+		.u.val.type = ULOGD_RET_UINT32,
 		.flags = ULOGD_RETF_NONE,
 		.name = "raw.pktcount",
 		.ipfix = { 
@@ -92,11 +88,11 @@ static struct ulogd_key output_keys[] = {
 		},
 	},
 	{
-		.type = ULOGD_RET_STRING,
+		.u.val.type = ULOGD_RET_STRING,
 		.flags = ULOGD_RETF_NONE, 
 		.name = "oob.prefix", 
 	},
-	{ 	.type = ULOGD_RET_UINT32, 
+	{ 	.u.val.type = ULOGD_RET_UINT32, 
 		.flags = ULOGD_RETF_NONE, 
 		.name = "oob.time.sec", 
 		.ipfix = { 
@@ -104,26 +100,10 @@ static struct ulogd_key output_keys[] = {
 			.field_id = 22 
 		},
 	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
-		.name = "oob.time.usec", 
-	},
-	{
-		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
-		.name = "oob.mark", 
-	},
-	{
-		.type = ULOGD_RET_STRING,
-		.flags = ULOGD_RETF_NONE,
-		.name = "oob.in", 
-	},
-	{
-		.type = ULOGD_RET_STRING,
-		.flags = ULOGD_RETF_NONE,
-		.name = "oob.out", 
-	},
+	KEY(UINT32, "oob.time.usec"),
+	KEY(UINT32, "oob.mark"),
+	KEY(STRING, "oob.in"),
+	KEY(STRING, "oob.out"),
 };
 
 static int interp_packet(struct ulogd_pluginstance *ip, ulog_packet_msg_t *pkt)

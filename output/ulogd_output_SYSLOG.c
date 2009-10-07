@@ -36,10 +36,7 @@
 
 
 static struct ulogd_key syslog_inp[] = {
-	{
-		.type = ULOGD_RET_STRING,
-		.name = "print",
-	},
+	KEY(STRING, "print"),
 };
 
 static const struct config_keyset syslog_kset = {
@@ -61,8 +58,7 @@ static int syslog_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 	struct ulogd_key *res = upi->input.keys;
 
 	if (res[0].u.source->flags & ULOGD_RETF_VALID)
-		syslog(li->syslog_level | li->syslog_facility, "%s",
-				res[0].u.source->u.value.str);
+		syslog(li->syslog_level | li->syslog_facility, "%s", key_str(&res[0]));
 
 	return 0;
 }

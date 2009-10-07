@@ -25,11 +25,7 @@
 #include <ulogd/printpkt.h>
 
 static struct ulogd_key printpkt_outp[] = {
-	{
-		.type = ULOGD_RET_STRING,
-		.flags = ULOGD_RETF_NONE,
-		.name = "print",
-	},
+	KEY(STRING, "print"),
 };
 
 static int printpkt_interp(struct ulogd_pluginstance *upi, unsigned *flags)

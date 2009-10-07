@@ -37,23 +37,12 @@ enum OutKeys {
 
 
 static struct ulogd_key static_in_keys[] = {
-	[InFlowStartSec] = {
-		.type = ULOGD_RET_UINT32,
-		.name = "flow.start.sec",
-	},
+	[InFlowStartSec] = KEY(UINT32, "flow.start.sec"),
 };
 
 static struct ulogd_key static_out_keys[] = {
-	[OutFlowCount] = {
-		.type = ULOGD_RET_INT32,
-		.flags = ULOGD_RETF_NONE,
-		.name = "flow.count",
-	},
-	[OutFlowStartDay] = {
-		.type = ULOGD_RET_UINT32,
-		.flags = ULOGD_RETF_NONE,
-		.name = "flow.start.day",
-	},
+	[OutFlowCount] = KEY(INT32, "flow.count"),
+	[OutFlowStartDay] = KEY(UINT32, "flow.start.day"),
 };
 
 

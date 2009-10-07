@@ -100,7 +100,7 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 		if (!key || !key_valid(key))
 			continue;
 
-		switch (key->type) {
+		switch (key_type(key)) {
 		case ULOGD_RET_STRING:
 			fprintf(opi->of, "%s=%s\n", key->name, key_str(key));
 			break;
