@@ -424,6 +424,7 @@ __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 
 	pr_fn_debug("pi=%p\n", pi);
 
+#if 0
 	utoa(row->ip_saddr, priv->param_val[0], 32);
 	utoa(row->ip_daddr, priv->param_val[1], 32);
 	utoa(row->ip_proto, priv->param_val[2], 32);
@@ -435,6 +436,7 @@ __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 	utoa(row->flow_start_day, priv->param_val[8], 32);
 	utoa(row->flow_start_sec, priv->param_val[9], 32);
 	utoa(row->flow_duration, priv->param_val[10], 32);
+#endif /* 0 */
 
 	priv->pgres = PQexecPrepared(priv->dbh, "insert",
 								 pi->input.num_keys,

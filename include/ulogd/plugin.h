@@ -83,6 +83,8 @@ struct ulogd_value {
 	};
 };
 
+struct db_column;
+
 /* structure describing an input  / output parameter of a plugin */
 struct ulogd_key {
 	union {

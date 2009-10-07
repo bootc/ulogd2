@@ -31,20 +31,13 @@ struct db_driver {
 
 /**
  * A generic database row.
+ *
+ * The number and contents of the values has to be in sync with
+ * %db_instace.cols.
  */
 struct db_row {
 	struct llist_head link;
-	uint32_t ip_saddr;
-	uint32_t ip_daddr;
-	unsigned char ip_proto;
-	unsigned l4_dport;
-	uint64_t raw_in_pktlen;
-	uint64_t raw_in_pktcount;
-	uint64_t raw_out_pktlen;
-	uint64_t raw_out_pktcount;
-	unsigned flow_start_day;
-	unsigned flow_start_sec;
-	unsigned flow_duration;
+	struct ulogd_value value[];
 };
 
 struct db_column {

@@ -48,14 +48,20 @@ static char lexbuf[32];
 struct db_row *
 db_row_new(struct ulogd_pluginstance *pi)
 {
+	struct db_instance *di = upi_priv(pi);
 	struct db_row *row;
+	size_t size;
 
-	pr_fn_debug("pi=%p\n", pi);
+	BUG_ON(!di->num_cols);
 
-	if ((row = calloc(1, sizeof(struct db_row))) == NULL) {
+	size = sizeof(struct db_row) + di->num_cols * sizeof(struct ulogd_value);
+	if ((row = malloc(size)) == NULL) {
 		upi_log(pi, ULOGD_FATAL, "out of memory\n");
 		return NULL;
 	}
+
+	/* the key values don't need to be set to zero */
+	memset(row, 0, sizeof(*row));
 
 	return row;
 }
@@ -497,7 +503,6 @@ ulogd_db_map_keys(struct ulogd_pluginstance *pi)
 {
 	struct db_instance *di = upi_priv(pi);
 	struct ulogd_keyset *set = &pi->input;
-	int ret;
 	char *keymap = keymap_ce(pi);
 
 	if (keymap) {
@@ -823,28 +828,42 @@ int
 ulogd_db_interp_batch(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct db_instance *di = upi_priv(pi);
+	struct ulogd_key *key, *in = pi->input.keys;
 	struct db_row *row;
-	int ret = ULOGD_IRET_OK;
+	int i, ret = ULOGD_IRET_OK;
 
 	pr_fn_debug("pi=%p\n", pi);
 
 	if (blackhole_ce(pi))
 		return ULOGD_IRET_OK;
 
+	for (i = 0; i < pi->input.num_keys; i++) {
+		key = &in[i];
+
+		if (!key_src_valid(key))
+			continue;
+
+		BUG_ON(!key->col);
+		BUG_ON(key->col->key);
+
+		key->col->key = key_src(key);
+	}
+
 	if ((row = db_row_new(pi)) == NULL)
 		return ULOGD_IRET_ERR;
 
-	row->ip_saddr = key_src_u32(&pi->input.keys[0]);
-	row->ip_daddr = key_src_u32(&pi->input.keys[1]);
-	row->ip_proto = key_src_u8(&pi->input.keys[2]);
-	row->l4_dport = key_src_u16(&pi->input.keys[3]);
-	row->raw_in_pktlen = key_src_u64(&pi->input.keys[4]);
-	row->raw_in_pktcount = key_src_u64(&pi->input.keys[5]);
-	row->raw_out_pktlen = key_src_u64(&pi->input.keys[6]);
-	row->raw_out_pktcount = key_src_u64(&pi->input.keys[7]);
-	row->flow_start_day = key_src_u32(&pi->input.keys[8]);
-	row->flow_start_sec = key_src_u32(&pi->input.keys[9]);
-	row->flow_duration = key_src_u32(&pi->input.keys[10]);
+	/*
+	 * iterate over the database columns and copy key values, zero out
+	 * everything else.
+	 */
+	for (i = 0; i < di->num_cols; i++) {
+		key = di->cols[i].key;
+
+		if (!key)
+			memset(&row->value[i], 0, sizeof(struct ulogd_value));
+		else
+			memcpy(&row->value[i], &key->u.val, sizeof(struct ulogd_value));
+	}
 
 	if (db_row_add(pi, row) < 0)
 		return ULOGD_IRET_OK;
