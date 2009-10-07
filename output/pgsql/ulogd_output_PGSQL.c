@@ -18,6 +18,9 @@
 #include <ulogd/db.h>
 #include <libpq-fe.h>
 
+#define NPARAMS			16
+#define PARAM_LEN		48		/* enough for an IPv6 address */
+
 
 struct pgsql_priv {
 	struct db_instance db_inst;	/* must come first */
@@ -25,7 +28,7 @@ struct pgsql_priv {
 	PGresult *pgres;
 	unsigned char pgsql_have_schemas;
 
-	char *param_val[20];
+	char *param_val[NPARAMS];
 };
 
 
@@ -410,36 +413,23 @@ pgsql_escape_string(struct ulogd_pluginstance *upi,
 	return 0;
 }
 
-static inline void
-__ulltoa(unsigned long long v, char *out, size_t outlen)
-{
-	snprintf(out, outlen, "%llu", v);
-}
-
 static int
 __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 {
 	struct pgsql_priv *priv = upi_priv(pi);
-	int pgret;
+	struct db_instance *di = &priv->db_inst;
+	int i, pgret;
 
 	pr_fn_debug("pi=%p\n", pi);
 
-#if 0
-	utoa(row->ip_saddr, priv->param_val[0], 32);
-	utoa(row->ip_daddr, priv->param_val[1], 32);
-	utoa(row->ip_proto, priv->param_val[2], 32);
-	utoa(row->l4_dport, priv->param_val[3], 32);
-	__ulltoa(row->raw_in_pktlen, priv->param_val[4], 32);
-	__ulltoa(row->raw_in_pktcount, priv->param_val[5], 32);
-	__ulltoa(row->raw_out_pktlen, priv->param_val[6], 32);
-	__ulltoa(row->raw_out_pktcount, priv->param_val[7], 32);
-	utoa(row->flow_start_day, priv->param_val[8], 32);
-	utoa(row->flow_start_sec, priv->param_val[9], 32);
-	utoa(row->flow_duration, priv->param_val[10], 32);
-#endif /* 0 */
+	for (i = 0; i < di->num_cols; i++) {
+		const struct ulogd_value *val = &row->value[i];
+
+		ulogd_value_to_ascii(val, priv->param_val[i], PARAM_LEN);
+	}
 
 	priv->pgres = PQexecPrepared(priv->dbh, "insert",
-								 pi->input.num_keys,
+								 di->num_cols,
 								 (const char * const *)priv->param_val,
 								 NULL, NULL /* param_fmts */,
 								 0 /* want result in text format */);
@@ -537,6 +527,38 @@ pgsql_configure(struct ulogd_pluginstance *upi)
 	return ulogd_db_configure(upi);
 }
 
+static int
+pgsql_start(struct ulogd_pluginstance *pi)
+{
+	struct pgsql_priv *priv = upi_priv(pi);
+	struct db_instance *di = &priv->db_inst;
+	int i;
+
+	for (i = 0; i < di->num_cols; i++)
+		priv->param_val[i] = malloc(PARAM_LEN);
+
+	return ulogd_db_start(pi);
+}
+
+static int
+pgsql_stop(struct ulogd_pluginstance *pi)
+{
+	struct pgsql_priv *priv = upi_priv(pi);
+	struct db_instance *di = &priv->db_inst;
+	int i, ret;
+
+	ret = ulogd_db_stop(pi);
+
+	for (i = 0; i < di->num_cols; i++) {
+		if (priv->param_val[i]) {
+			free(priv->param_val[i]);
+			priv->param_val[i] = NULL;
+		}
+	}
+
+	return ret;
+}
+
 static struct ulogd_plugin pgsql_plugin = { 
 	.name = "PGSQL",
 	.flags = ULOGD_PF_RECONF,
@@ -551,8 +573,8 @@ static struct ulogd_plugin pgsql_plugin = {
 	.config_kset = &pgsql_kset,
 	.priv_size = sizeof(struct pgsql_priv),
 	.configure = &pgsql_configure,
-	.start = &ulogd_db_start,
-	.stop = &ulogd_db_stop,
+	.start = &pgsql_start,
+	.stop = &pgsql_stop,
 	.interp = &ulogd_db_interp_batch,
 	.rev = ULOGD_PLUGIN_REVISION,
 };

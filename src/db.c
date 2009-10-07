@@ -172,8 +172,8 @@ db_alloc_columns(struct db_instance *di, size_t cols)
 	if (!di)
 		return -1;
 
-	di->cols = calloc(cols, sizeof(struct db_column));
-	if (!di->cols) {
+	di->col = calloc(cols, sizeof(struct db_column));
+	if (!di->col) {
 		ulogd_log(ULOGD_FATAL, "%s: out of memory\n", __func__);
 		return -1;
 	}
@@ -185,8 +185,8 @@ static void
 db_free_columns(struct db_instance *di)
 {
 	if (di) {
-		free(di->cols);
-		di->cols = NULL;
+		free(di->col);
+		di->col = NULL;
 	}
 }
 
@@ -452,7 +452,7 @@ keymap_map_keys(const char *str, struct ulogd_keyset *set,
 				goto err_inval;
 			BUG_ON(!set->keys[keyno].name);
 			col = atoi(lexbuf);
-			set->keys[keyno].col = &di->cols[col];
+			set->keys[keyno].col = &di->col[col];
 			ulogd_log(ULOGD_DEBUG, "db: key%d ('%s') maps to col%d\n",
 					  keyno, set->keys[keyno].name, col);
 			keyno++;
@@ -857,7 +857,7 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi, unsigned *flags)
 	 * everything else.
 	 */
 	for (i = 0; i < di->num_cols; i++) {
-		key = di->cols[i].key;
+		key = di->col[i].key;
 
 		if (!key)
 			memset(&row->value[i], 0, sizeof(struct ulogd_value));

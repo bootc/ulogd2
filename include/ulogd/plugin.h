@@ -83,6 +83,9 @@ struct ulogd_value {
 	};
 };
 
+void ulogd_value_to_ascii(struct ulogd_value *, char *, size_t);
+
+
 struct db_column;
 
 /* structure describing an input  / output parameter of a plugin */

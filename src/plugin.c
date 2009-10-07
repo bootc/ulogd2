@@ -21,6 +21,8 @@
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
 
+#include <arpa/inet.h>
+
 /* linked list for all registered plugins */
 static LLIST_HEAD(ulogd_plugins);
 static LLIST_HEAD(ulogd_pi_stacks);
@@ -837,6 +839,43 @@ ulogd_upi_reset_cfg(struct ulogd_pluginstance *pi)
 }
 
 /* key API */
+void
+ulogd_value_to_ascii(struct ulogd_value *val, char *buf, size_t len)
+{
+	switch (val->type) {
+	case ULOGD_RET_INT8:
+	case ULOGD_RET_INT16:
+	case ULOGD_RET_INT32:
+	case ULOGD_RET_UINT8:
+	case ULOGD_RET_UINT16:
+	case ULOGD_RET_UINT32:
+	case ULOGD_RET_BOOL:
+		utoa(val->ui32, buf, len);
+		break;
+
+	case ULOGD_RET_INT64:
+	case ULOGD_RET_UINT64:
+		utoa(val->ui64, buf, len);
+		break;
+
+	case ULOGD_RET_STRING:
+		strncpy(buf, val->str, len - 1);
+		buf[len - 1] = '\0';
+		break;
+
+	case ULOGD_RET_IPADDR:
+		inet_ntop(AF_INET, &val->ui32, buf, len);
+		break;
+
+	case ULOGD_RET_IP6ADDR:
+		inet_ntop(AF_INET6, &val->in6, buf, len);
+		break;
+
+	default:
+		break;
+	}
+}
+
 static void
 __check_set(const struct ulogd_key *key, unsigned type)
 {

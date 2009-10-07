@@ -45,7 +45,7 @@ struct db_column {
 };
 
 struct db_instance {
-	struct db_column *cols;
+	struct db_column *col;
 	int num_cols;
 
 	char *stmt; /* buffer for our insert statement */

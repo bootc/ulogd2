@@ -19,6 +19,7 @@
 #include "config.h"
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/plugin.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -118,6 +119,12 @@ utoa(unsigned v, char *str, size_t len)
 	}
 
 	return len - (end - str);
+}
+
+static inline void
+ulltoa(unsigned long long v, char *out, size_t outlen)
+{
+	snprintf(out, outlen, "%llu", v);
 }
 
 /**
