@@ -472,6 +472,23 @@ err_inval:
 	return -1;
 }
 
+/*
+ * Mapy ulogd keys to database columns
+ */
+static int
+db_map_keys(struct ulogd_pluginstance *pi)
+{
+	struct db_instance *di = upi_priv(pi);
+	int ret;
+
+	if ((ret = di->driver->get_columns(pi)) < 0)
+		return -1;
+
+	/* TODO map to database columns */
+
+	return 0;
+}
+
 /**
  * Map ulogd keys to database columns.
  */
@@ -496,7 +513,7 @@ ulogd_db_map_keys(struct ulogd_pluginstance *pi)
 		if (keymap_map_keys(keymap, set, di) < 0)
 			goto err_free;
 	} else {
-		if ((ret = di->driver->get_columns(pi)) < 0)
+		if (db_map_keys(pi) < 0)
 			return -1;
 	}
 
@@ -573,6 +590,7 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 		return ret;
 
 	if (db_has_prepare(di)) {
+		BUG_ON(!di->stmt);
 		if (di->driver->prepare(upi) < 0) {
 			upi_log(upi, ULOGD_FATAL, "prepare failed\n");
 			goto err_close;

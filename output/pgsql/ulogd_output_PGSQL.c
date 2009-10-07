@@ -262,79 +262,32 @@ err_again:
 }
 
 /**
- * The prepared insert statement has the form
+ * Prepare the given statement
  *
- *   INSERT INTO mytable (col_1,col_2,...) VALUES ($1,$2,...);
- *
- * where $1,$2,... are the placeholders for the actual values which
- * are inserted.
- *
- * Columns with leading underscore are skipped, which is currently used
- * to ignore AUTOFILL columns at INSERT time.
+ * $1,$2,... are the placeholders for the actual values which are
+ * inserted.
  */
 static int
 pgsql_prepare(struct ulogd_pluginstance *pi)
 {
 	struct pgsql_priv *priv = upi_priv(pi);
 	struct db_instance *di = &priv->db_inst;
-	char *table = table_ce(pi);
-	char *query, *pch;
-	int i, pgret;
+	int pgret;
 
-	pr_fn_debug("pi=%p\n", pi);
-
-	if ((pch = query = malloc(1024)) == NULL)
-		return -1;
-
-	if (di->schema != NULL)
-		pch += sprintf(pch, "INSERT INTO %s.%s (",
-				di->schema, table);
-	else
-		pch += sprintf(pch, "INSERT INTO %s (", table);
-
-	for (i = 0; i < pi->input.num_keys; i++) {
-		char name[ULOGD_MAX_KEYLEN + 1];
-
-		strncpy(name, pi->input.keys[i].name, ULOGD_MAX_KEYLEN);
-		strntr(name, '.', '_');
-
-		pch += sprintf(pch, "%s", name);
-		if (i + 1 < pi->input.num_keys)
-			*pch++ = ',';
-	}
-
-	pch += sprintf(pch, ") VALUES (");
-
-	for (i = 0; i < pi->input.num_keys; i++) {
-		pch += sprintf(pch, "$%d", i + 1);
-		if (i + 1 < pi->input.num_keys)
-			*pch++ = ',';
-
-		priv->param_val[i] = malloc(32);
-	}
-
-	*pch = '\0';
-	strcat(pch, ");");
-
-	pr_fn_debug("%s: prepare-stmt: %s\n", pi->id, query);
-
-	priv->pgres = PQprepare(priv->dbh, "insert", query,
-							pi->input.num_keys, NULL /* paramTypes */);
+	upi_log(pi, ULOGD_INFO, "prepare: %s\n", di->stmt);
+	priv->pgres = PQprepare(priv->dbh, "insert", di->stmt, di->num_cols,
+							NULL /* paramTypes */);
 	if (__pgsql_err(pi, &pgret) < 0)
 		goto err_free;
 
 	if (pgret == PGRES_TUPLES_OK)
 		PQclear(priv->pgres);
 
-	free(query);
-
 	upi_log(pi, ULOGD_DEBUG, "statement prepared\n");
 
 	return 0;
 
 err_free:
-	free(query);
-
 	return -1;
 }
 
