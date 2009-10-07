@@ -40,7 +40,7 @@
 #define TOK_COLON		':'
 
 
-static char lexbuf[32];
+static char keymap_lexbuf[32];
 
 
 /* generic row handling */
@@ -313,7 +313,7 @@ check_driver(struct ulogd_pluginstance *pi)
 static int
 keymap_lexer(const char **in)
 {
-	char *out = lexbuf, *end = lexbuf + sizeof(lexbuf) - 1;
+	char *out = keymap_lexbuf, *end = keymap_lexbuf + sizeof(keymap_lexbuf) - 1;
 	int tok = TOK_INVAL;
 
 	if (!in || !(*in)[0])
@@ -376,7 +376,7 @@ keymap_check(const char *str, int *cols)
 			if (tok != TOK_NUM)
 				goto err_inval;
 			num_keys++;
-			*cols = max(*cols, atoi(lexbuf) + 1);
+			*cols = max(*cols, atoi(keymap_lexbuf) + 1);
 			state++;
 			break;
 
@@ -428,7 +428,7 @@ keymap_map_keys(const char *str, struct ulogd_keyset *set,
 		case 0:
 			if (tok != TOK_NAME)
 				goto err_inval;
-			xstrncpy(set->keys[keyno].name, lexbuf, ULOGD_MAX_KEYLEN);
+			xstrncpy(set->keys[keyno].name, keymap_lexbuf, ULOGD_MAX_KEYLEN);
 			state++;
 			break;
 
@@ -442,7 +442,7 @@ keymap_map_keys(const char *str, struct ulogd_keyset *set,
 			if (tok != TOK_NUM)
 				goto err_inval;
 			BUG_ON(!set->keys[keyno].name);
-			col = atoi(lexbuf);
+			col = atoi(keymap_lexbuf);
 			set->keys[keyno].col = &di->col[col];
 			ulogd_log(ULOGD_DEBUG, "db: key%d ('%s') maps to col%d\n",
 					  keyno, set->keys[keyno].name, col);
