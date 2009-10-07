@@ -52,6 +52,8 @@
 #define pr_fn_debug(fmt, ...)
 #endif /* DEBUG */
 
+char *xstrncpy(char *, const char *, size_t);
+
 int set_sockbuf_len(int fd, int rcv_len, int snd_len);
 
 /* translate characters in string */

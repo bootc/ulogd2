@@ -23,6 +23,15 @@
 #include <sys/socket.h>
 
 
+char *
+xstrncpy(char *dst, const char *src, size_t n)
+{
+	strncpy(dst, src, n);
+	dst[n - 1] = '\0';
+
+	return dst;
+}
+
 int
 set_sockbuf_len(int fd, int rcv_len, int snd_len)
 {
