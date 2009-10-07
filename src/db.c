@@ -28,8 +28,19 @@
 #include <ulogd/plugin.h>
 #include <ulogd/db.h>
 #include <time.h>
+#include <ctype.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#define TOK_INVAL		-1
+#define TOK_NONE		0
+#define TOK_NAME		1
+#define TOK_NUM			2
+#define TOK_COMMA		','
+#define TOK_COLON		':'
+
+
+static char lexbuf[32];
 
 
 /* generic row handling */
@@ -278,6 +289,190 @@ check_driver(struct ulogd_pluginstance *pi)
 	return 0;
 }
 
+static int
+keymap_lexer(const char **in)
+{
+	char *out = lexbuf, *end = lexbuf + sizeof(lexbuf) - 1;
+	int tok = TOK_INVAL;
+
+	if (!in || !(*in)[0])
+		return TOK_NONE;
+
+	if (**in && isalpha(**in)) {
+		*out++ = *(*in)++;
+		while (**in && out < end && (isalnum(**in) || **in == '.'))
+			*out++ = *(*in)++;
+		tok = TOK_NAME;
+	} else if (**in && **in >= '0' && **in <= '9' && out < end) {
+		while (**in && **in >= '0' && **in <= '9' && out < end)
+			*out++ = *(*in)++;
+		tok = TOK_NUM;
+	} else if (**in == ',' || **in == ':') {
+		tok = *(*in)++;
+		return tok;
+	}
+
+	*out = '\0';
+
+	return tok;
+}
+
+/**
+ * Determine number of keys and database columns in keymap
+ *
+ * @arg str		keymap string to parse
+ * @arg cols	Number of database columns used
+ *
+ * @return number of keys on success, <0 on error
+ */
+static int
+keymap_check(const char *str, int *cols)
+{
+	int tok, state = 0, num_keys = 0;
+
+	if (!str || !cols)
+		return -1;
+
+	*cols = 0;
+	while ((tok = keymap_lexer(&str)) != TOK_NONE) {
+		if (tok == TOK_INVAL)
+			goto err_inval;
+
+		switch (state) {
+		case 0:
+			if (tok != TOK_NAME)
+				goto err_inval;
+			state++;
+			break;
+
+		case 1:
+			if (tok != TOK_COLON)
+				goto err_inval;
+			state++;
+			break;
+
+		case 2:
+			if (tok != TOK_NUM)
+				goto err_inval;
+			num_keys++;
+			*cols = max(*cols, atoi(lexbuf) + 1);
+			state++;
+			break;
+
+		case 3:
+			if (tok == TOK_NONE)
+				return 0;
+			else if (tok == TOK_COMMA)
+				state = 0;
+			break;
+
+		default:
+			BUG();
+		}
+	}
+
+	return num_keys;
+
+err_inval:
+	ulogd_log(ULOGD_FATAL, "invalid keymap: %s\n", str);
+	return -1;
+}
+
+/**
+ * Parse a database keymap
+ *
+ * @arg str		String to parse
+ * @arg set		Pointer to array of ulogd keys
+ *
+ * @return 0 on success, <0 on error
+ */
+int
+keymap_parse(const char *str, struct ulogd_keyset *set)
+{
+	int tok, state = 0, keyno = 0;
+
+	if (!str || !set)
+		return -1;
+
+	BUG_ON(!set->keys || !set->num_keys);
+
+	while ((tok = keymap_lexer(&str)) != TOK_NONE) {
+		if (tok == TOK_INVAL)
+			goto err_inval;
+
+		switch (state) {
+		case 0:
+			if (tok != TOK_NAME)
+				goto err_inval;
+			xstrncpy(set->keys[keyno].name, lexbuf, ULOGD_MAX_KEYLEN);
+			state++;
+			break;
+
+		case 1:
+			if (tok != TOK_COLON)
+				goto err_inval;
+			state++;
+			break;
+
+		case 2:
+			if (tok != TOK_NUM)
+				goto err_inval;
+			keyno++;
+			/* TODO set number */
+			state++;
+			break;
+
+		case 3:
+			if (tok == TOK_NONE)
+				return 0;
+			else if (tok == TOK_COMMA)
+				state = 0;
+			break;
+
+		default:
+			BUG();
+		}
+	}
+
+	return 0;
+
+err_inval:
+	ulogd_log(ULOGD_FATAL, "invalid keymap: %s\n", str);
+	return -1;
+}
+
+/**
+ * Map ulogd keys to database columns.
+ */
+int
+ulogd_db_map_keys(struct ulogd_pluginstance *pi)
+{
+	struct db_instance *di = upi_priv(pi);
+	struct ulogd_keyset *set = &pi->input;
+	int ret, cols;
+	char *keymap = keymap_ce(pi);
+
+	if (keymap) {
+		if ((set->num_keys = keymap_check(keymap, &cols)) < 0)
+			return -1;
+
+		if ((set->keys = ulogd_alloc_keyset(set->num_keys)) == NULL)
+			return -1;
+
+		if (keymap_parse(keymap, set) < 0)
+			goto err_free;
+	} else {
+		if ((ret = di->driver->get_columns(pi)) < 0)
+			return -1;
+	}
+
+	return 0;
+
+err_free:
+	ulogd_free_keyset(set);
+	return -1;
+}
+
 int
 ulogd_db_configure(struct ulogd_pluginstance *upi)
 {
@@ -305,8 +500,7 @@ ulogd_db_configure(struct ulogd_pluginstance *upi)
 	if ((ret = di->driver->open_db(upi)) < 0)
 		return ret;
 
-	/* Third: Determine required input keys for given table */
-	if ((ret = di->driver->get_columns(upi)) < 0)
+	if ((ret = ulogd_db_map_keys(upi)) < 0)
 		goto err_close;
 
 	/* close here because of restart logic later */

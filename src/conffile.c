@@ -22,7 +22,6 @@
 #include <ulogd/common.h>
 #include <ulogd/conffile.h>
 
-
 /* points to config entry with error */
 struct config_entry *config_errce = NULL;
 

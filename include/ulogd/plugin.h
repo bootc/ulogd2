@@ -200,6 +200,7 @@ key_src_valid(const struct ulogd_key *key)
 
 int ulogd_key_size(const struct ulogd_key *key);
 struct ulogd_key *ulogd_alloc_keyset(int n);
+void ulogd_free_keyset(struct ulogd_keyset *);
 struct ulogd_key *ulogd_key_find(const struct ulogd_keyset *,
 								 const char *name);
 

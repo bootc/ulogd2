@@ -89,10 +89,11 @@ db_has_prepare(const struct db_instance *di)
 		CONFIG_KEY("connect_timeout", INT, 0),			   \
 		CONFIG_KEY_INT("buffer", ULOGD_DB_BUFFER_DEFAULT), \
 		CONFIG_KEY_INT("disable", 0),					   \
-		CONFIG_KEY_INT("blackhole", 0)
+		CONFIG_KEY_INT("blackhole", 0),					   \
+		CONFIG_KEY_STR("keymap", NULL)
 
 #define __DB_CE_BASE			0
-#define DB_CE_NUM				7
+#define DB_CE_NUM				8
 
 #define table_ce(pi)			ulogd_config_str(pi, __DB_CE_BASE)
 #define reconnect_ce(pi)		ulogd_config_int(pi, __DB_CE_BASE + 1)
@@ -101,6 +102,7 @@ db_has_prepare(const struct db_instance *di)
 #define db_buffer_ce(pi)		ulogd_config_int(pi, __DB_CE_BASE + 4)
 #define disable_ce(pi)			ulogd_config_int(pi, __DB_CE_BASE + 5)
 #define blackhole_ce(pi)		ulogd_config_int(pi, __DB_CE_BASE + 6)
+#define keymap_ce(pi)			ulogd_config_str(pi, __DB_CE_BASE + 7)
 
 int ulogd_db_start(struct ulogd_pluginstance *upi);
 int ulogd_db_stop(struct ulogd_pluginstance *upi);

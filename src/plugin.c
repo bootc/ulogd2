@@ -1227,6 +1227,13 @@ ulogd_alloc_keyset(int num_keys)
 	return keys;
 }
 
+void
+ulogd_free_keyset(struct ulogd_keyset *set)
+{
+	free(set->keys);
+	set->num_keys = 0;
+}
+
 struct ulogd_key *
 ulogd_key_find(const struct ulogd_keyset *set, const char *name)
 {
