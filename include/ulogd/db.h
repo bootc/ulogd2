@@ -11,20 +11,18 @@
 #define ULOGD_DB_BUFFER_DEFAULT	100
 
 struct db_driver {
-	/* set input keys depending on database shema (required) */
-	int (* get_columns)(struct ulogd_pluginstance *upi);
-
 	/* prepare SQL statement (optional) */
 	int (* prepare)(struct ulogd_pluginstance *);
 
 	int (* interp)(struct ulogd_pluginstance *);
-
 	int (* commit)(struct ulogd_pluginstance *, int);
 
 	int (* open_db)(struct ulogd_pluginstance *upi);
 	int (* close_db)(struct ulogd_pluginstance *upi);
-	int (* escape_string)(struct ulogd_pluginstance *upi,
-			     char *dst, const char *src, unsigned int len);
+
+	/* set input keys depending on database shema (optional) */
+	int (* get_columns)(struct ulogd_pluginstance *upi);
+
 	int (*execute)(struct ulogd_pluginstance *upi,
 			const char *stmt, unsigned int len);
 };

@@ -199,18 +199,6 @@ static int open_db_mysql(struct ulogd_pluginstance *upi)
 	return 0;
 }
 
-static int escape_string_mysql(struct ulogd_pluginstance *upi,
-				char *dst, const char *src, unsigned int len)
-{
-	struct mysql_instance *mi = upi_priv(upi);
-
-#ifdef OLD_MYSQL
-	return mysql_escape_string(dst, src, len);
-#else
-	return mysql_real_escape_string(mi->dbh, dst, src, len);
-#endif /* OLD_MYSQL */
-}
-
 static int execute_mysql(struct ulogd_pluginstance *upi,
 			 const char *stmt, unsigned int len)
 {
@@ -231,7 +219,6 @@ static struct db_driver db_driver_mysql = {
 	.get_columns	= &get_columns_mysql,
 	.open_db	= &open_db_mysql,
 	.close_db	= &close_db_mysql,
-	.escape_string	= &escape_string_mysql,
 	.execute	= &execute_mysql,
 };
 

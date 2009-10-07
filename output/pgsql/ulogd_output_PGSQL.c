@@ -403,17 +403,6 @@ err_close:
 }
 
 static int
-pgsql_escape_string(struct ulogd_pluginstance *upi,
-					char *dst, const char *src, unsigned int len)
-{
-	pr_fn_debug("pi=%p\n", upi);
-
-	PQescapeString(dst, src, strlen(src)); 
-
-	return 0;
-}
-
-static int
 __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 {
 	struct pgsql_priv *priv = upi_priv(pi);
@@ -513,7 +502,6 @@ static struct db_driver db_driver_pgsql = {
 	.commit = &pgsql_commit,
 	.open_db = &pgsql_open_db,
 	.close_db = &pgsql_close_db,
-	.escape_string = &pgsql_escape_string,
 	.execute = &pgsql_execute,
 };
 
