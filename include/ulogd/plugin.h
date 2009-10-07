@@ -85,12 +85,12 @@ struct ulogd_value {
 
 /* structure describing an input  / output parameter of a plugin */
 struct ulogd_key {
-	uint16_t flags;
-
 	union {
 		struct ulogd_value val;
 		struct ulogd_key *source;
 	} u;
+
+	uint16_t flags;
 
 	/*
 	 * Map to database column
