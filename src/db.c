@@ -531,6 +531,9 @@ ulogd_db_configure(struct ulogd_pluginstance *upi)
 	di->buffer_size = db_buffer_ce(upi);
 	di->max_backlog = 1024 * di->buffer_size;
 
+	if (insert_ce(upi))
+		di->stmt = strdup(insert_ce(upi));
+
 	/* Second: Open Database */
 	if ((ret = di->driver->open_db(upi)) < 0)
 		return ret;
