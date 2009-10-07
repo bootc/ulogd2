@@ -230,15 +230,6 @@ ulogd_db_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 	return dbi->interp(upi);
 }
 
-/* no connection, plugin disabled */
-static int
-disabled_interp_db(struct ulogd_pluginstance *upi)
-{
-	pr_debug("%s: upi=%p\n", __func__, upi);
-
-	return 0;
-}
-
 #define SQL_INSERTTEMPL   "insert into X (Y) values (Z)"
 #define SQL_VALSIZE	100
 
@@ -576,8 +567,6 @@ err_close:
 	return ret;
 }
 
-static int _init_db(struct ulogd_pluginstance *upi);
-
 int
 ulogd_db_start(struct ulogd_pluginstance *upi)
 {
@@ -606,11 +595,6 @@ ulogd_db_start(struct ulogd_pluginstance *upi)
 	INIT_LLIST_HEAD(&di->rows);
 	INIT_LLIST_HEAD(&di->rows_committed);
 	di->num_rows = 0;
-
-	/* note that this handler is only used for those DB plugins which
-	   use ulogd_db_interp(), others use their own handler (such
-	   as pgsql). */
-	di->interp = _init_db;
 
 	if (ulogd_register_timer(&di->timer) < 0)
 		return -1;
@@ -648,164 +632,6 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 	ulogd_unregister_timer(&di->timer);
 
 	return 0;
-}
-
-static int
-_init_reconnect(struct ulogd_pluginstance *upi)
-{
-	struct db_instance *di = upi_priv(upi);
-
-	pr_debug("%s: upi=%p\n", __func__, upi);
-
-	if (reconnect_ce(upi)) {
-		di->reconnect = time(NULL);
-		if (di->reconnect != TIME_ERR) {
-			upi_log(upi, ULOGD_ERROR, "no connection to database, "
-					"attempting to reconnect after %u seconds\n",
-					reconnect_ce(upi));
-			di->reconnect += reconnect_ce(upi);
-			di->interp = &_init_db;
-			return -1;
-		}
-	}
-
-	/* Disable plugin permanently */
-	upi_log(upi, ULOGD_ERROR, "permanently disabling plugin\n");
-	di->interp = &disabled_interp_db;
-
-	return 0;
-}
-
-/* our main output function, called by ulogd if ulogd_db_interp() is
-   set as interpreter function in the plugin. */
-static int
-__interp_db(struct ulogd_pluginstance *upi)
-{
-	struct db_instance *di = upi_priv(upi);
-	int i;
-
-	pr_debug("%s: upi=%p\n", __func__, upi);
-
-	di->stmt_ins = di->stmt_val;
-
-	for (i = 0; i < upi->input.num_keys; i++) {
-		struct ulogd_key *key = &upi->input.keys[i];
-		struct ulogd_key *res = key_src(key);
-
-		if (key->flags & ULOGD_KEYF_INACTIVE)
-			continue;
-
-		if (res == NULL) {
-			upi_log(upi, ULOGD_NOTICE, "no source for '%s'\n",
-				  upi->input.keys[i].name);
-			continue;
-		}
-
-		if (key_valid(res)) {
-			switch (key_type(key)) {
-				char *tmpstr;
-				struct in_addr addr;
-			case ULOGD_RET_INT8:
-				sprintf(di->stmt_ins, "%d,", key_i8(res));
-				break;
-			case ULOGD_RET_INT16:
-				sprintf(di->stmt_ins, "%d,", key_i16(res));
-				break;
-			case ULOGD_RET_INT32:
-				sprintf(di->stmt_ins, "%d,", key_i32(res));
-				break;
-			case ULOGD_RET_INT64:
-				sprintf(di->stmt_ins, "%lld,", key_i64(res));
-				break;
-			case ULOGD_RET_UINT8:
-				sprintf(di->stmt_ins, "%u,", key_u8(res));
-				break;
-			case ULOGD_RET_UINT16:
-				sprintf(di->stmt_ins, "%u,", key_u16(res));
-				break;
-			case ULOGD_RET_IPADDR:
-				if (asstring_ce(upi)) {
-					memset(&addr, 0, sizeof(addr));
-					addr.s_addr = ntohl(key_u32(res));
-					*(di->stmt_ins++) = '\'';
-					tmpstr = inet_ntoa(addr);
-					di->driver->escape_string(upi, di->stmt_ins,
-											  tmpstr, strlen(tmpstr));
-					di->stmt_ins = di->stmt + strlen(di->stmt);
-					sprintf(di->stmt_ins, "',");
-					break;
-				}
-				/* fallthrough when logging IP as u_int32_t */
-			case ULOGD_RET_UINT32:
-				sprintf(di->stmt_ins, "%u,", key_u32(res));
-				break;
-			case ULOGD_RET_UINT64:
-				sprintf(di->stmt_ins, "%llu,", key_u64(res));
-				break;
-			case ULOGD_RET_BOOL:
-				sprintf(di->stmt_ins, "'%d',", key_bool(res));
-				break;
-			case ULOGD_RET_STRING:
-				*(di->stmt_ins++) = '\'';
-				if (key_ptr(res)) {
-					di->stmt_ins +=
-						di->driver->escape_string(upi, di->stmt_ins,
-												  key_ptr(res),
-												  strlen(key_ptr(res)));
-				}
-				sprintf(di->stmt_ins, "',");
-				break;
-			case ULOGD_RET_RAW:
-				upi_log(upi, ULOGD_NOTICE, "%s: type RAW not supported by MySQL\n",
-						upi->input.keys[i].name);
-				break;
-			default:
-				upi_log(upi, ULOGD_NOTICE, "unknown type %d for %s\n",
-						key_type(res), upi->input.keys[i].name);
-				break;
-			}
-		} else {
-			/* no result, we have to fake something */
-			di->stmt_ins += sprintf(di->stmt_ins, "NULL,");
-		}
-
-		di->stmt_ins = di->stmt + strlen(di->stmt);
-	}
-	*(di->stmt_ins - 1) = ')';
-
-	/* now we have created our statement, insert it */
-
-	if (di->driver->execute(upi, di->stmt, strlen(di->stmt)) < 0)
-		return _init_db(upi);
-
-	return 0;
-}
-
-static int
-_init_db(struct ulogd_pluginstance *upi)
-{
-	struct db_instance *di = upi_priv(upi);
-
-	pr_debug("%s: upi=%p\n", __func__, upi);
-
-	if (di->reconnect && di->reconnect > time(NULL))
-		return 0;
-
-	if (di->driver->open_db(upi)) {
-		upi_log(upi, ULOGD_ERROR, "can't establish database connection\n");
-		return _init_reconnect(upi);
-	}
-
-	/* The di->interp hook function is only called from ulogd_db_interp()
-	 * nowadays.  Plugins with more advanced commit logic (prepared
-	 * statements, batching, ...) have their own handler. */
-	di->interp = __interp_db;
-
-	di->reconnect = 0;
-
-	/* call the interpreter function to actually write the
-	 * log line that we wanted to write */
-	return di->interp(upi);
 }
 
 int
