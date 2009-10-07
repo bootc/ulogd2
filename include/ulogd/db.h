@@ -47,19 +47,12 @@ struct db_column {
 #define DB_F_OPEN				0x0001
 
 struct db_instance {
-	struct db_column *col;
-	int num_cols;
-
 	unsigned flags;
 
-	char *stmt; /* buffer for our insert statement */
-	char *stmt_val; /* pointer to the beginning of the "VALUES" part */
-	char *stmt_ins; /* pointer to current inser position in statement */
-	char *schema;
-	time_t reconnect;
-	struct db_driver *driver;
+	const struct db_driver *driver;
 
-	struct ulogd_timer timer;
+	struct db_column *col;
+	int num_cols;
 
 	/* batching */
 	struct llist_head rows;
@@ -69,6 +62,12 @@ struct db_instance {
 	int max_backlog;
 
 	unsigned overlimit_msg : 1;
+
+	struct ulogd_timer timer;
+
+	char *stmt; /* buffer for our insert statement */
+	char *stmt_val; /* pointer to the beginning of the "VALUES" part */
+	char *schema;
 };
 
 static inline bool
