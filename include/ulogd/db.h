@@ -57,7 +57,6 @@ struct db_instance {
 	char *stmt_ins; /* pointer to current inser position in statement */
 	char *schema;
 	time_t reconnect;
-	int (*interp)(struct ulogd_pluginstance *upi);
 	struct db_driver *driver;
 
 	struct ulogd_timer timer;

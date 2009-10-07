@@ -218,19 +218,6 @@ db_timer_cb(struct ulogd_timer *t)
 	}
 }
 
-/* this is a wrapper that just calls the current real interp function */
-int
-ulogd_db_interp(struct ulogd_pluginstance *upi, unsigned *flags)
-{
-	struct db_instance *dbi = upi_priv(upi);
-
-	pr_debug("%s: upi=%p\n", __func__, upi);
-
-	assert(dbi->interp != NULL);
-
-	return dbi->interp(upi);
-}
-
 #define SQL_INSERTTEMPL   "insert into X (Y) values (Z)"
 #define SQL_VALSIZE	100
 
@@ -678,7 +665,7 @@ ulogd_db_signal(struct ulogd_pluginstance *upi, int signal)
 }
 
 int
-ulogd_db_interp_batch(struct ulogd_pluginstance *pi, unsigned *flags)
+ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct db_instance *di = upi_priv(pi);
 	struct ulogd_key *key, *in = pi->input.keys;
