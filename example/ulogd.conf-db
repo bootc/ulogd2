@@ -1,0 +1,35 @@
+# ulogd.conf-db
+#
+# A sample database setup for flow based accounting.
+#
+# Holger Eitzenberger <heitzenberger@astaro.com>
+
+[global]
+logfile="syslog"
+
+loglevel=1
+
+plugin="/home/holger/proj/ulogd/ulogd/input/flow/.libs/ulogd_inpflow_NFCT.so"
+plugin="/home/holger/proj/ulogd/ulogd/filter/.libs/ulogd_filter_STATIC.so"
+plugin="/home/holger/proj/ulogd/ulogd/output/pgsql/.libs/ulogd_output_PGSQL.so"
+
+# flow-based accouting
+stack=ct1:NFCT,st1:STATIC,pg1:PGSQL
+
+[ct1]
+#disable=1
+
+[st1]
+
+[pg1]
+host="localhost"
+db="accounting"
+table="accounting"
+user="holger"
+pass="secret"
+# the SQL insert command to use instead of querying the database schema
+# for the table.  ins_accounting() is a stored procedure.
+insert="select ins_accounting($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)"
+# define a mapping from ulogd key names to database columns
+keymap="ip.saddr:0,ip.daddr:1,ip6.saddr:0,ip6.daddr:1,ip.protocol:2,l4.dport:3,raw.in.pktlen:4,raw.in.pktcount:5,raw.out.pktlen:6,raw.out.pktcount:7,flow.start.sec:8,flow.duration:9"
+
