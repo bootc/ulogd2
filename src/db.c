@@ -39,8 +39,9 @@
 #define TOK_COMMA		','
 #define TOK_COLON		':'
 
+#define KEYMAP_LEX_LEN	32
 
-static char keymap_lexbuf[32];
+static char keymap_lexbuf[KEYMAP_LEX_LEN];
 
 
 /* generic row handling */
@@ -71,7 +72,7 @@ __db_row_del(struct ulogd_pluginstance *pi, struct db_row *row)
 {
 	pr_fn_debug("pi=%p row=%p\n", pi, row);
 
-	if (row != NULL) {
+	if (row) {
 		struct db_instance *di = upi_priv(pi);
 
 		free(row);
@@ -300,11 +301,7 @@ check_driver(struct ulogd_pluginstance *pi)
 	const struct db_instance *di = upi_priv(pi);
 	const struct db_driver *drv = di->driver;
 
-	if (drv->open_db == NULL || drv->close_db == NULL
-		|| drv->get_columns == NULL)
-		return -1;
-
-	if (drv->commit == NULL)
+	if (!drv->open_db || !drv->close_db || !drv->commit)
 		return -1;
 
 	return 0;
@@ -313,7 +310,7 @@ check_driver(struct ulogd_pluginstance *pi)
 static int
 keymap_lexer(const char **in)
 {
-	char *out = keymap_lexbuf, *end = keymap_lexbuf + sizeof(keymap_lexbuf) - 1;
+	char *out = keymap_lexbuf, *end = keymap_lexbuf + KEYMAP_LEX_LEN - 1;
 	int tok = TOK_INVAL;
 
 	if (!in || !(*in)[0])
