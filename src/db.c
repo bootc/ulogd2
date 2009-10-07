@@ -832,8 +832,6 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi, unsigned *flags)
 	struct db_row *row;
 	int i, ret = ULOGD_IRET_OK;
 
-	pr_fn_debug("pi=%p\n", pi);
-
 	if (blackhole_ce(pi))
 		return ULOGD_IRET_OK;
 
@@ -864,6 +862,9 @@ ulogd_db_interp_batch(struct ulogd_pluginstance *pi, unsigned *flags)
 		else
 			memcpy(&row->value[i], &key->u.val, sizeof(struct ulogd_value));
 	}
+
+	/* reset key pointers */
+	memset(di->col, 0, di->num_cols * sizeof(struct db_column));
 
 	if (db_row_add(pi, row) < 0)
 		return ULOGD_IRET_OK;
