@@ -880,7 +880,11 @@ static void
 __check_set(const struct ulogd_key *key, unsigned type)
 {
 	BUG_ON(!key);
-	BUG_ON(!(key_type(key) & type));
+	if (UNLIKELY(!(key_type(key) & type))) {
+		ulogd_log(ULOGD_FATAL, "%s: invalid key set (%d <-> %d)\n",
+				  key->name, key_type(key), type);
+		BUG();
+	}
 }
 
 void
@@ -995,8 +999,13 @@ static void
 __check_get(const struct ulogd_key *key, unsigned type)
 {
 	BUG_ON(!key);
-	BUG_ON(!(key_type(key) & type));
 	BUG_ON(!key_valid(key));
+
+	if (UNLIKELY(!(key_type(key) & type))) {
+		ulogd_log(ULOGD_FATAL, "%s: invalid key access (%d <-> %d)\n",
+				  key->name, key_type(key), type);
+		BUG();
+	}
 }
 
 int
