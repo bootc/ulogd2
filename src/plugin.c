@@ -1201,7 +1201,6 @@ key_reset(struct ulogd_key *key)
 	if (key->flags & ULOGD_RETF_FREE)
 		key_free(key);
 
-	memset(&key->u.val, 0, sizeof(key->u.val));
 	key->flags &= ~ULOGD_RETF_VALID;
 }
 
