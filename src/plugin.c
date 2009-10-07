@@ -1298,6 +1298,21 @@ ulogd_alloc_keyset(int num_keys)
 }
 
 void
+ulogd_dump_keyset(const struct ulogd_keyset *set)
+{
+	int i;
+
+	if (!set)
+		return;
+
+	for (i = 0; i < set->num_keys; i++) {
+		struct ulogd_key *key = &set->keys[i];
+		printf("key[%02d]: name='%s' type='%d'\n", i, key->name,
+			   key_type(key));
+	}
+}
+
+void
 ulogd_free_keyset(struct ulogd_keyset *set)
 {
 	free(set->keys);
