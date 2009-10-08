@@ -438,5 +438,8 @@ int stack_reconfigure(struct ulogd_pluginstance_stack *);
 /* pluginstance config space API */
 int ulogd_config_int(const struct ulogd_pluginstance *pi, int off);
 char *ulogd_config_str(const struct ulogd_pluginstance *pi, int off);
+void ulogd_config_set_int(struct ulogd_pluginstance *pi, int off, int v);
+void ulogd_config_set_str(struct ulogd_pluginstance *pi, int off,
+						  const char *str);
 
 #endif /* PLUGIN_H */

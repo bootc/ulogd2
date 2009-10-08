@@ -91,13 +91,13 @@ struct config_entry {
 
 int config_int(const struct config_entry *);
 char *config_str(const struct config_entry *);
+void config_set_int(struct config_entry *, int);
+void config_set_str(struct config_entry *, const char *);
 
 struct config_keyset {
 	unsigned int num_ces;
 	struct config_entry ces[];
 };
-
-int config_str_set(struct config_entry *, const char *);
 
 /* if an error occurs, config_errce is set to the erroneous ce */
 extern struct config_entry *config_errce;

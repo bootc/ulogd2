@@ -1369,3 +1369,19 @@ ulogd_config_str(const struct ulogd_pluginstance *pi, int off)
 
 	return config_str(ce);
 }
+
+void
+ulogd_config_set_int(struct ulogd_pluginstance *pi, int off, int v)
+{
+	struct config_entry *ce = ulogd_config_get(pi, off);
+
+	config_set_int(ce, v);
+}
+
+void
+ulogd_config_set_str(struct ulogd_pluginstance *pi, int off, const char *str)
+{
+	struct config_entry *ce = ulogd_config_get(pi, off);
+
+	return config_set_str(ce, str);
+}
