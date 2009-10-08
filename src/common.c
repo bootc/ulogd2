@@ -20,6 +20,8 @@
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
+
+#include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -163,4 +165,44 @@ tv_diff_sec(const struct timeval *tv1, const struct timeval *tv2)
         return max(tv2->tv_sec - tv1->tv_sec, 1);
 
     return tv1->tv_sec - tv2->tv_sec;
+}
+
+#define NV_INITIALIZER(val)		{ #val, val }
+
+const struct nv nv_facility[FACILITY_LEN] = {
+	NV_INITIALIZER(LOG_DAEMON),
+	NV_INITIALIZER(LOG_KERN),
+	NV_INITIALIZER(LOG_LOCAL0),
+	NV_INITIALIZER(LOG_LOCAL1),
+	NV_INITIALIZER(LOG_LOCAL2),
+	NV_INITIALIZER(LOG_LOCAL3),
+	NV_INITIALIZER(LOG_LOCAL4),
+	NV_INITIALIZER(LOG_LOCAL5),
+	NV_INITIALIZER(LOG_LOCAL6),
+	NV_INITIALIZER(LOG_LOCAL7),
+	NV_INITIALIZER(LOG_USER),
+};
+
+const struct nv nv_level[LEVEL_LEN] = {
+	NV_INITIALIZER(LOG_EMERG),
+	NV_INITIALIZER(LOG_ALERT),
+	NV_INITIALIZER(LOG_CRIT),
+	NV_INITIALIZER(LOG_ERR),
+	NV_INITIALIZER(LOG_WARNING),
+	NV_INITIALIZER(LOG_NOTICE),
+	NV_INITIALIZER(LOG_INFO),
+	NV_INITIALIZER(LOG_DEBUG),
+};
+
+int
+nv_get_value(const struct nv *nv, size_t len, const char *name)
+{
+	int i;
+
+	for (i = 0; i < len; i++) {
+		if (strcmp(nv[i].name, name) == 0)
+			return nv[i].val;
+	}
+
+	return -1;
 }

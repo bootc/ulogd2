@@ -52,6 +52,20 @@
 #define pr_fn_debug(fmt, ...)
 #endif /* DEBUG */
 
+/* name-value handling */
+struct nv {
+	const char *name;
+	int val;
+};
+
+#define FACILITY_LEN	11
+#define LEVEL_LEN	8
+
+extern const struct nv nv_facility[];
+extern const struct nv nv_level[];
+
+int nv_get_value(const struct nv *, size_t, const char *);
+
 char *xstrncpy(char *, const char *, size_t);
 
 int set_sockbuf_len(int fd, int rcv_len, int snd_len);

@@ -273,8 +273,8 @@ enum {
 static const struct config_keyset astaro_kset = {
 	.num_ces = 3,
 	.ces = {
-		[FACILITY_CE] = CONFIG_KEY_STR("facility", 0),
-		[LEVEL_CE] = CONFIG_KEY_STR("level", 0),
+		[FACILITY_CE] = CONFIG_KEY_STR("facility", "LOG_KERN"),
+		[LEVEL_CE] = CONFIG_KEY_STR("level", "LOG_INFO"),
 		[BLACKHOLE_CE] = CONFIG_KEY_INT("blackhole", 0),
 	},
 };
@@ -520,66 +520,16 @@ astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 	return ULOGD_IRET_OK;
 }
 
-
-/* name-value pair */
-static struct nv {
-	char *name;
-	int val;
-} nv_facility[] = {
-	{ "LOG_DAEMON", LOG_DAEMON },
-	{ "LOG_KERN", LOG_KERN },
-	{ "LOG_LOCAL0", LOG_LOCAL0 },
-	{ "LOG_LOCAL1", LOG_LOCAL1 },
-	{ "LOG_LOCAL2", LOG_LOCAL2 },
-	{ "LOG_LOCAL3", LOG_LOCAL3 },
-	{ "LOG_LOCAL4", LOG_LOCAL4 },
-	{ "LOG_LOCAL5", LOG_LOCAL5 },
-	{ "LOG_LOCAL6", LOG_LOCAL6 },
-	{ "LOG_LOCAL7", LOG_LOCAL7 },
-	{ "LOG_USER", LOG_USER },
-	{ 0, }
-};
-static struct nv nv_level[] = {
-	{ "LOG_EMERG", LOG_EMERG },
-	{ "LOG_ALERT", LOG_ALERT },
-	{ "LOG_CRIT", LOG_CRIT },
-	{ "LOG_ERR", LOG_ERR },
-	{ "LOG_WARNING", LOG_WARNING },
-	{ "LOG_NOTICE", LOG_NOTICE },
-	{ "LOG_INFO", LOG_INFO },
-	{ "LOG_DEBUG", LOG_DEBUG },
-	{ 0, }
-};
-
-static int
-nv_get_value(struct nv *nv, const char *name, int def_val)
-{
-	if (*name == '\0')
-		return def_val;
-
-	for (; nv->name; nv++) {
-		if (strcmp(nv->name, name) == 0)
-			return nv->val;
-	}
-
-	return -1;
-};
-
 static int
 astaro_configure(struct ulogd_pluginstance *pi)
 {
 	struct astaro_priv *priv = upi_priv(pi);
 
-	priv->facility = nv_get_value(nv_facility, facility_ce(pi), LOG_KERN);
-	if (priv->facility < 0) {
-		upi_log(pi, ULOGD_FATAL, "unknown facility '%s'\n", facility_ce(pi));
-		return -EINVAL;
-	}
-
-	priv->level = nv_get_value(nv_level, level_ce(pi), LOG_NOTICE);
-	if (priv->level < 0) {
-		upi_log(pi, ULOGD_FATAL, "unknown level '%s'\n", level_ce(pi));
-		return -EINVAL;
+	priv->facility = nv_get_value(nv_facility, FACILITY_LEN, facility_ce(pi));
+	priv->level = nv_get_value(nv_level, LEVEL_LEN, level_ce(pi));
+	if (priv->facility < 0 || priv->level < 0) {
+		upi_log(pi, ULOGD_FATAL, "invalid syslog facility or level\n");
+		return ULOGD_IRET_ERR;
 	}
 
 	return ULOGD_IRET_OK;
