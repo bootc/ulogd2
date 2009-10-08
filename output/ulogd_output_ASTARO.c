@@ -27,17 +27,6 @@
 #include <netinet/ether.h>
 #include <arpa/inet.h>
 
-/* config accessors */
-#define CFG_FACILITY(pi)	((pi)->config_kset->ces[0].u.string)
-#define CFG_LEVEL(pi)		((pi)->config_kset->ces[1].u.string)
-/*
- * The 'blackhole' config switch is a short-term solution for HA setups
- * where we want a running ulogd which does just no loggging as long
- * as it is in slave mode.  Generally a generic mechanism for all output
- * plugins would be preferable.
- */
-#define CFG_BLACKHOLE(pi)	((pi)->config_kset->ces[2].u.value)
-
 /* packetfilter range */
 #define __PF_BASE		2000
 #define LOG_ID_LOG			(__PF_BASE + 0)
@@ -275,14 +264,31 @@ static struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
 	[InIcmpCode] = { NULL, NULL, LH_F_NOLOG },
 };
 
+enum {
+	FACILITY_CE = 0,
+	LEVEL_CE,
+	BLACKHOLE_CE,
+};
+
 static const struct config_keyset astaro_kset = {
 	.num_ces = 3,
 	.ces = {
-		CONFIG_KEY_STR("facility", 0),
-		CONFIG_KEY_STR("level", 0),
-		CONFIG_KEY_INT("blackhole", 0),
+		[FACILITY_CE] = CONFIG_KEY_STR("facility", 0),
+		[LEVEL_CE] = CONFIG_KEY_STR("level", 0),
+		[BLACKHOLE_CE] = CONFIG_KEY_INT("blackhole", 0),
 	},
 };
+
+#define facility_ce(pi)	ulogd_config_str(pi, FACILITY_CE)
+#define level_ce(pi)	ulogd_config_str(pi, LEVEL_CE)
+/*
+ * The 'blackhole' config switch is a short-term solution for HA setups
+ * where we want a running ulogd which does just no loggging as long
+ * as it is in slave mode.  Generally a generic mechanism for all output
+ * plugins would be preferable.
+ */
+#define blackhole_ce(pi)		ulogd_config_int(pi, BLACKHOLE_CE)
+
 
 struct astaro_priv {
 	int level;
@@ -495,7 +501,7 @@ astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 	char *pch = buf, *end = buf + sizeof(buf);
 	unsigned type;
 	
-	if (CFG_BLACKHOLE(pi))
+	if (blackhole_ce(pi))
 		return ULOGD_IRET_OK;
 
 	type = log_prefix2type(log_types, key_src_valid(&in[InOobPrefix]) ?
@@ -564,15 +570,15 @@ astaro_configure(struct ulogd_pluginstance *pi)
 {
 	struct astaro_priv *priv = upi_priv(pi);
 
-	priv->facility = nv_get_value(nv_facility, CFG_FACILITY(pi), LOG_KERN);
+	priv->facility = nv_get_value(nv_facility, facility_ce(pi), LOG_KERN);
 	if (priv->facility < 0) {
-		upi_log(pi, ULOGD_FATAL, "unknown facility '%s'\n", CFG_FACILITY(pi));
+		upi_log(pi, ULOGD_FATAL, "unknown facility '%s'\n", facility_ce(pi));
 		return -EINVAL;
 	}
 
-	priv->level = nv_get_value(nv_level, CFG_LEVEL(pi), LOG_NOTICE);
+	priv->level = nv_get_value(nv_level, level_ce(pi), LOG_NOTICE);
 	if (priv->level < 0) {
-		upi_log(pi, ULOGD_FATAL, "unknown level '%s'\n", CFG_LEVEL(pi));
+		upi_log(pi, ULOGD_FATAL, "unknown level '%s'\n", level_ce(pi));
 		return -EINVAL;
 	}
 
@@ -582,7 +588,7 @@ astaro_configure(struct ulogd_pluginstance *pi)
 static int
 astaro_fini(struct ulogd_pluginstance *pi)
 {
-	if (CFG_BLACKHOLE(pi))
+	if (blackhole_ce(pi))
 		return ULOGD_IRET_OK;
 
 	closelog();
@@ -595,7 +601,7 @@ astaro_start(struct ulogd_pluginstance *pi)
 {
 	int i;
 
-	if (CFG_BLACKHOLE(pi)) {
+	if (blackhole_ce(pi)) {
 		upi_log(pi, ULOGD_INFO, "running in blackhole mode\n");
 		return ULOGD_IRET_OK;
 	}
