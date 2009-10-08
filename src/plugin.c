@@ -153,7 +153,6 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 				if (ikey->flags & ULOGD_KEYF_INACTIVE)
 					continue;
 
-#if 0
 				if (ikey->u.source) {
 					ulogd_log(ULOGD_ERROR, "input key `%s' "
 						  "already has source\n",
@@ -161,7 +160,6 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 
 					return -EINVAL;
 				}
-#endif /* 0 */
 
 				okey = find_okey_in_stack(ikey->name, pi_cur, &pi_src);
 				if (okey == NULL) {
