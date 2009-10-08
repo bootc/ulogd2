@@ -139,7 +139,7 @@ enum InKeys {
 	InIcmpCode,
 };
 
-struct ulogd_key astaro_in_keys[] = {
+static struct ulogd_key astaro_in_keys[] = {
 	[InOobPrefix] = KEY(STRING, "oob.prefix"),
 	[InOobLogmark] = KEY(UINT32, "oob.logmark"),
 	[InOobSeqLocal] = KEY(UINT32, "oob.seq.local"),
@@ -212,7 +212,7 @@ lh_log_tos(const struct ulogd_pluginstance *pi, unsigned idx,
 }
 
 
-static struct log_handler log_handler[];
+static const struct log_handler log_handler[];
 
 static int
 lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
@@ -232,7 +232,7 @@ lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
 	return 0;
 }
 
-static struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
+static const struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
 	[InOobPrefix] = { NULL, NULL, LH_F_NOLOG },
 	[InOobLogmark] = { "fwrule", },
 	[InOobSeqLocal] = { "seq", },
