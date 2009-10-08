@@ -563,7 +563,7 @@ static struct ulogd_plugin pgsql_plugin = {
 	.configure = &pgsql_configure,
 	.start = &pgsql_start,
 	.stop = &pgsql_stop,
-	.interp = &ulogd_db_interp_batch,
+	.interp = &ulogd_db_interp,
 	.rev = ULOGD_PLUGIN_REVISION,
 };
 
