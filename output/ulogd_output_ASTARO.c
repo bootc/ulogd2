@@ -182,23 +182,19 @@ lh_log_mac(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
 	const struct ulogd_key *in = pi->input.keys;
-	static const char unknown[] = "00:00:00:00:00:00";
-	static char __src[3 * ETH_ALEN], __dst[3 * ETH_ALEN];
-	const char *src, *dst;
+	char hwaddr[3 * ETH_ALEN];
 
-	if (key_src_valid(&in[InOobIfiIn]))
-		dst = ifi_hwaddr2str((int)key_src_u32(&in[InOobIfiIn]), __dst,
-							 sizeof(__dst));
-	if (!dst)
-		dst = unknown;
+	if (key_src_valid(&in[InOobIfiIn])) {
+		if (ifi_hwaddr2str(key_src_u32(&in[InOobIfiIn]), hwaddr,
+						   sizeof(hwaddr)))
+		snprintf(buf, len, "dstmac=\"%s\"", hwaddr);
+	}
 
-	if (key_src_valid(&in[InOobIfiOut]))
-		src = ifi_hwaddr2str((int)key_src_u32(&in[InOobIfiOut]), __src,
-							 sizeof(__src));
-	if (!src)
-		src = unknown;
-		
-	return snprintf(buf, len, "dstmac=\"%s\" srcmac=\"%s\" ", src, dst);
+	if (key_src_valid(&in[InOobIfiOut])) {
+		if (ifi_hwaddr2str(key_src_u32(&in[InOobIfiOut]), hwaddr,
+						   sizeof(hwaddr)))
+		snprintf(buf, len, "srcmac=\"%s\"", hwaddr);
+	}
 
 	return 0;
 }
@@ -226,8 +222,10 @@ lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
 	char __ifname[IF_NAMESIZE], *ifname;
 	char *key_name = log_handler[idx].name ? log_handler[idx].name : "itf";
 
-	ifname = ifi_index2name((int)key_src_u32(&in[idx]), __ifname,
-							sizeof(__ifname));
+	if (!key_src_valid(&in[idx]))
+		return 0;
+
+	ifname = ifi_index2name(key_src_u32(&in[idx]), __ifname, sizeof(__ifname));
 
 	return snprintf(buf, len, "%s=\"%s\" ", key_name, ifname ? ifname
 					: "unknown");
