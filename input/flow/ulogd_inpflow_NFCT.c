@@ -186,20 +186,27 @@ static struct ulogd_key nfct_okeys[] = {
 	[O_FLOW_DURATION] = KEY(UINT32, "flow.duration"),
 };
 
+enum {
+	BUCKETS_CE = 0,
+	DISABLE_CE,
+	TIMEOUT_CE,
+	GCMAX_CE,
+};
+
 static const struct config_keyset nfct_kset = {
 	.num_ces = 4,
 	.ces = {
-		CONFIG_KEY_INT("hash_buckets", TCACHE_SIZE),
-		CONFIG_KEY("disable", INT, 0),
-		CONFIG_KEY_INT("timeout", TIMEOUT),
-		CONFIG_KEY_INT("gcmax", TCACHE_REQ_MAX),
+		[BUCKETS_CE] = CONFIG_KEY_INT("hash_buckets", TCACHE_SIZE),
+		[DISABLE_CE] = CONFIG_KEY("disable", INT, 0),
+		[TIMEOUT_CE] = CONFIG_KEY_INT("timeout", TIMEOUT),
+		[GCMAX_CE] = CONFIG_KEY_INT("gcmax", TCACHE_REQ_MAX),
 	},
 };
 
-#define buckets_ce(pi)	((pi)->config_kset->ces[0].u.value)
-#define disable_ce(pi)	((pi)->config_kset->ces[1].u.value)
-#define timeout_ce(pi)	((pi)->config_kset->ces[2].u.value)
-#define gcmax_ce(pi)	((pi)->config_kset->ces[3].u.value)
+#define buckets_ce(pi)	ulogd_config_int((pi), BUCKETS_CE)
+#define disable_ce(pi)	ulogd_config_int((pi), DISABLE_CE)
+#define timeout_ce(pi)	ulogd_config_int((pi), TIMEOUT_CE)
+#define gcmax_ce(pi)	ulogd_config_int((pi), GCMAX_CE)
 
 
 static void ct_dump_tuple(const struct ct_tuple *) __ulogd_unused;
@@ -967,13 +974,13 @@ nfct_configure(struct ulogd_pluginstance *pi)
     }
 
 	if (buckets_ce(pi) < TCACHE_MIN_SIZE) {
-		buckets_ce(pi) = TCACHE_MIN_SIZE;
+		ulogd_config_set_int(pi, BUCKETS_CE, TCACHE_MIN_SIZE);
 		upi_log(pi, ULOGD_NOTICE, "cache too small, set to %d\n",
 				TCACHE_MIN_SIZE);
 	}
 
 	if (timeout_ce(pi) < TIMEOUT) {
-		timeout_ce(pi) = TIMEOUT;
+		ulogd_config_set_int(pi, TIMEOUT_CE, TIMEOUT);
 		upi_log(pi, ULOGD_NOTICE, "timeout too small, set to %d\n",
 				TCACHE_MIN_SIZE);
 	}
