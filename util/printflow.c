@@ -43,8 +43,8 @@ struct ulogd_key printflow_keys[] = {
 };
 int printflow_keys_num = sizeof(printflow_keys)/sizeof(*printflow_keys);
 
-#define GET_VALUE(res, x)	(res[x].u.source->u.val)
-#define GET_FLAGS(res, x)	(res[x].u.source->flags)
+#define GET_VALUE(res, x)	(res[x].source->val)
+#define GET_FLAGS(res, x)	(res[x].source->flags)
 #define pp_is_valid(res, x)	(GET_FLAGS(res, x) & ULOGD_RETF_VALID)
 
 #define pp_print(buf_cur, label, res, x, type) \

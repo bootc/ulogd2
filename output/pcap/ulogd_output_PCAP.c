@@ -121,8 +121,8 @@ static struct ulogd_key pcap_keys[INTR_IDS] = {
 	{ .name = "oob.time.usec" },
 };
 
-#define GET_VALUE(res, x)	(res[x].u.source->u.val)
-#define GET_FLAGS(res, x)	(res[x].u.source->flags)
+#define GET_VALUE(res, x)	(res[x].source->val)
+#define GET_FLAGS(res, x)	(res[x].source->flags)
 
 static int interp_pcap(struct ulogd_pluginstance *upi, unsigned *flags)
 {

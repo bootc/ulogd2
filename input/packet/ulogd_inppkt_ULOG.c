@@ -61,7 +61,7 @@ static const struct config_keyset libulog_kset = {
 static struct ulogd_key output_keys[] = {
 	KEY_FLAGS(STRING, "raw.mac", ULOGD_RETF_FREE),
 	{
-		.u.val.type = ULOGD_RET_RAW,
+		.val.type = ULOGD_RET_RAW,
 		.flags = ULOGD_RETF_FREE,
 		.name = "raw.pkt",
 		.ipfix = {
@@ -70,7 +70,7 @@ static struct ulogd_key output_keys[] = {
 			},
 	},
 	{
-		.u.val.type = ULOGD_RET_UINT32,
+		.val.type = ULOGD_RET_UINT32,
 		.flags = ULOGD_RETF_NONE,
 		.name = "raw.pktlen",
 		.ipfix = { 
@@ -79,7 +79,7 @@ static struct ulogd_key output_keys[] = {
 		},
 	},
 	{
-		.u.val.type = ULOGD_RET_UINT32,
+		.val.type = ULOGD_RET_UINT32,
 		.flags = ULOGD_RETF_NONE,
 		.name = "raw.pktcount",
 		.ipfix = { 
@@ -88,11 +88,11 @@ static struct ulogd_key output_keys[] = {
 		},
 	},
 	{
-		.u.val.type = ULOGD_RET_STRING,
+		.val.type = ULOGD_RET_STRING,
 		.flags = ULOGD_RETF_NONE, 
 		.name = "oob.prefix", 
 	},
-	{ 	.u.val.type = ULOGD_RET_UINT32, 
+	{ 	.val.type = ULOGD_RET_UINT32, 
 		.flags = ULOGD_RETF_NONE, 
 		.name = "oob.time.sec", 
 		.ipfix = { 

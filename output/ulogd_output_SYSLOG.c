@@ -51,7 +51,7 @@ static int syslog_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 	struct syslog_instance *li = upi_priv(upi);
 	struct ulogd_key *res = upi->input.keys;
 
-	if (res[0].u.source->flags & ULOGD_RETF_VALID)
+	if (res[0].source->flags & ULOGD_RETF_VALID)
 		syslog(li->level | li->facility, "%s", key_str(&res[0]));
 
 	return 0;

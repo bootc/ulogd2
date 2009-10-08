@@ -237,7 +237,7 @@ build_template_for_bitmask(struct ulogd_pluginstance *upi,
 		struct ulogd_key *key = &upi->input.keys[i];
 		int length = ulogd_key_size(key);
 
-		if (!(key->u.source->flags & ULOGD_RETF_VALID))
+		if (!(key->source->flags & ULOGD_RETF_VALID))
 			continue;
 
 		if (length < 0 || length > 0xfffe) {
@@ -310,7 +310,7 @@ static int output_ipfix(struct ulogd_pluginstance *upi, unsigned *flags)
 	bitmask_clear(ii->valid_bitmask);
 
 	for (i = 0; i < upi->input.num_keys; i++) {
-		struct ulogd_key *key = upi->input.keys[i].u.source;
+		struct ulogd_key *key = upi->input.keys[i].source;
 
 		if (key->flags & ULOGD_RETF_VALID)
 			bitmask_set_bit(ii->valid_bitmask, i);

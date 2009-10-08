@@ -90,12 +90,11 @@ struct db_column;
 
 /* structure describing an input  / output parameter of a plugin */
 struct ulogd_key {
-	union {
-		struct ulogd_value val;
-		struct ulogd_key *source;
-	} u;
+	struct ulogd_key *source;
 
 	uint16_t flags;
+
+	struct ulogd_value val;
 
 	/*
 	 * Map to database column
@@ -127,13 +126,13 @@ struct ulogd_keyset {
 /* key initializers */
 #define KEY(t, n)						\
 	{									\
-		.u.val.type = ULOGD_RET_ ## t,	\
+		.val.type = ULOGD_RET_ ## t,	\
 		.name = (n),					\
 	}
 #define KEY_FLAGS(t, n, fl)				\
 	{									\
 		.flags = (fl),					\
-		.u.val.type = ULOGD_RET_ ## t,	\
+		.val.type = ULOGD_RET_ ## t,	\
 		.name = (n),					\
 	}
 #define IPFIX(v, f)								\
@@ -143,14 +142,14 @@ struct ulogd_keyset {
 	}
 #define KEY_IPFIX(t, n, v, f)				\
 	{										\
-		.u.val.type = ULOGD_RET_ ## t,		\
+		.val.type = ULOGD_RET_ ## t,		\
 		.name = (n),						\
 		.ipfix = IPFIX(v, f),				\
 	}
 #define KEY_IPFIX_FLAGS(t, n, v, f, fl)		\
 	{										\
 		.flags = (fl),						\
-		.u.val.type = ULOGD_RET_ ## t,		\
+		.val.type = ULOGD_RET_ ## t,		\
 		.name = (n),					\
 		.ipfix = IPFIX(v, f),			\
 	}
@@ -205,13 +204,13 @@ void key_reset(struct ulogd_key *key);
 static inline struct ulogd_key *
 key_src(const struct ulogd_key *key)
 {
-	return key->u.source;
+	return key->source;
 }
 
 static inline void
 key_set_src(struct ulogd_key *key, struct ulogd_key *src_key)
 {
-	key->u.source = src_key;
+	key->source = src_key;
 }
 
 static inline bool

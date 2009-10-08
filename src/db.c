@@ -700,7 +700,7 @@ ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 		if (!key)
 			memset(&row->value[i], 0, sizeof(struct ulogd_value));
 		else
-			memcpy(&row->value[i], &key->u.val, sizeof(struct ulogd_value));
+			memcpy(&row->value[i], &key->val, sizeof(struct ulogd_value));
 	}
 
 	/* reset key pointers */

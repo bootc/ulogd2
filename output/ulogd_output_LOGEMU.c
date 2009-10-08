@@ -78,12 +78,12 @@ static int _output_logemu(struct ulogd_pluginstance *upi, unsigned *flags)
 	struct logemu_instance *li = upi_priv(upi);
 	struct ulogd_key *res = upi->input.keys;
 
-	if (res[0].u.source->flags & ULOGD_RETF_VALID) {
+	if (res[0].source->flags & ULOGD_RETF_VALID) {
 		char *timestr;
 		char *tmp;
 		time_t now;
 
-		if (res[1].u.source && (res[1].u.source->flags & ULOGD_RETF_VALID))
+		if (res[1].source && (res[1].source->flags & ULOGD_RETF_VALID))
 			now = (time_t) key_src_u32(&res[1]);
 		else
 			now = time(NULL);

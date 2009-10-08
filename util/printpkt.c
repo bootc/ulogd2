@@ -1,3 +1,4 @@
+
 /* printpkt.c
  *
  * build something looking like a iptables LOG message
@@ -73,8 +74,8 @@ struct ulogd_key printpkt_keys[INTR_IDS] = {
 	{ .name = "ahesp.spi", },
 };
 
-#define GET_VALUE(res, x)	(res[x].u.source->u.val)
-#define GET_FLAGS(res, x)	(res[x].u.source->flags)
+#define GET_VALUE(res, x)	(res[x].source->val)
+#define GET_FLAGS(res, x)	(res[x].source->flags)
 #define pp_is_valid(res, x)	(GET_FLAGS(res, x) & ULOGD_RETF_VALID)
 
 int printpkt_print(struct ulogd_key *res, char *buf)

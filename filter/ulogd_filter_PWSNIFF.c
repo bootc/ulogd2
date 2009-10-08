@@ -127,7 +127,7 @@ static int interp_pwsniff(struct ulogd_pluginstance *pi, unsigned *flags)
 			return 0;
 		}
 		strncpy((char *)key_ptr(&ret[1]), (char *)pw_begp, pw_len);
-		*(ret[1].u.val.str + pw_len + 1) = '\0';
+		*(ret[1].val.str + pw_len + 1) = '\0';
 
 	}
 	return 0;

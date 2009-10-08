@@ -319,7 +319,7 @@ print_key(char *buf, size_t len, const struct ulogd_key *key,
 
 	strcpy(pch, name), pch += strlen(name);
 	strcpy(pch, "=\""), pch += sizeof("=\"") - 1;
-	pch += ulogd_value_to_ascii(&key_src(key)->u.val, pch, end - pch);
+	pch += ulogd_value_to_ascii(&key_src(key)->val, pch, end - pch);
 	strcpy(pch, "\" "), pch += sizeof("\" ") - 1;
 
 	return pch - buf;
