@@ -315,58 +315,15 @@ static int
 print_key(char *buf, size_t len, const struct ulogd_key *key,
 		  const char *name)
 {
-	char str[64], *pch = buf;
+	char *pch = buf, *end = buf + len;
 
-	key = key_src(key);
+	if (len < 0)
+		return 0;
 
-	switch (key_type(key)) {
-	case ULOGD_RET_STRING:
-		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ", name,
-						key_str(key));
-		break;
-		
-	case ULOGD_RET_UINT8:
-		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-						key_u8(key));
-		break;
-		
-	case ULOGD_RET_UINT16:
-		if (key_u16(key))
-			pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-							key_u16(key));
-		break;
-		
-	case ULOGD_RET_UINT32:
-		if (key_u32(key))
-			pch += snprintf(pch, avail(buf, pch, len), "%s=\"%u\" ", name,
-							key_u32(key));
-		break;
-		
-	case ULOGD_RET_IPADDR:
-	{
-		struct in_addr addr = (struct in_addr){ key_u32(key), };
-
-		inet_ntop(AF_INET, &addr, str, sizeof(str));
-		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ",
-						name, str);
-		break;
-	}
-		
-	case ULOGD_RET_IP6ADDR:
-	{
-		struct in6_addr addr;
-
-		key_in6(key, &addr);
-		inet_ntop(AF_INET6, &addr, str, sizeof(str));
-
-		pch += snprintf(pch, avail(buf, pch, len), "%s=\"%s\" ",
-						name, str);
-		break;
-	}
-
-	default:
-		break;
-	};
+	strcpy(pch, name), pch += strlen(name);
+	strcpy(pch, "=\""), pch += sizeof("=\"") - 1;
+	pch += ulogd_value_to_ascii(&key_src(key)->u.val, pch, end - pch);
+	strcpy(pch, "\" "), pch += sizeof("\" ") - 1;
 
 	return pch - buf;
 }
@@ -511,7 +468,8 @@ astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 					log_types[type].id, id_to_sub(log_types[type].id),
 					log_types[type].desc, log_types[type].action);
 
-	print_dyn_part(pi, type, pch, end - pch);
+	pch += print_dyn_part(pi, type, pch, end - pch);
+	*(pch + 1) = '\0';
 
 	syslog(priv->level | priv->facility, "%s\n", buf);
 

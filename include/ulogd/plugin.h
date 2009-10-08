@@ -83,7 +83,7 @@ struct ulogd_value {
 	};
 };
 
-void ulogd_value_to_ascii(const struct ulogd_value *, char *, size_t) __cold;
+int ulogd_value_to_ascii(const struct ulogd_value *, char *, size_t);
 
 
 struct db_column;

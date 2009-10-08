@@ -839,9 +839,11 @@ ulogd_upi_reset_cfg(struct ulogd_pluginstance *pi)
 }
 
 /* key API */
-void
+int
 ulogd_value_to_ascii(const struct ulogd_value *val, char *buf, size_t len)
 {
+	int nchars = 0;
+
 	switch (val->type) {
 	case ULOGD_RET_INT8:
 	case ULOGD_RET_INT16:
@@ -850,30 +852,35 @@ ulogd_value_to_ascii(const struct ulogd_value *val, char *buf, size_t len)
 	case ULOGD_RET_UINT16:
 	case ULOGD_RET_UINT32:
 	case ULOGD_RET_BOOL:
-		utoa(val->ui32, buf, len);
+		nchars = utoa(val->ui32, buf, len);
 		break;
 
 	case ULOGD_RET_INT64:
 	case ULOGD_RET_UINT64:
-		utoa(val->ui64, buf, len);
+		nchars = utoa(val->ui64, buf, len);
 		break;
 
 	case ULOGD_RET_STRING:
 		strncpy(buf, val->str, len - 1);
 		buf[len - 1] = '\0';
+		nchars = strlen(val->str);
 		break;
 
 	case ULOGD_RET_IPADDR:
 		inet_ntop(AF_INET, &val->ui32, buf, len);
+		nchars = strlen(buf);
 		break;
 
 	case ULOGD_RET_IP6ADDR:
 		inet_ntop(AF_INET6, &val->in6, buf, len);
+		nchars = strlen(buf);
 		break;
 
 	default:
 		break;
 	}
+
+	return nchars;
 }
 
 static void
