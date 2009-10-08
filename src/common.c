@@ -96,31 +96,29 @@ strntr(char *str, char from, char to)
 int
 utoa(unsigned v, char *str, size_t len)
 {
-	char *end = str + len;
-	int i;
+	char *pch = str;
+	int i, written;
 
 	do {
 		unsigned mod = v % 10;
 
 		v /= 10;
+		*pch++ = '0' + mod;
+	} while (v > 0 && pch < str + len - 1);
 
-		*str++ = '0' + mod;
-	} while (v > 0 && str < end - 1);
-
-	*str = '\0';
+	*pch = '\0';
+	written = pch - str;
 
 	/* characters are in reverse order, therefore swap */
-	end -= len;
+	len = pch - str;
+	for (i = 0, pch--; i < (len / 2); i++) {
+		char tmp = pch[-i];
 
-	len = str - end;
-	for (i = 0, str--; i < (len / 2); i++) {
-		char tmp = str[-i];
-
-		str[-i] = end[i];
-		end[i] = tmp;
+		pch[-i] = str[i];
+		str[i] = tmp;
 	}
 
-	return len - (end - str);
+	return written;
 }
 
 static inline void
