@@ -39,6 +39,7 @@ enum ulogd_ktype {
 	ULOGD_RET_IP6ADDR,
 	ULOGD_RET_STRING,
 	ULOGD_RET_RAW,
+	__ULOGD_RET_MAX = ULOGD_RET_RAW,
 };
 
 /* key flags */

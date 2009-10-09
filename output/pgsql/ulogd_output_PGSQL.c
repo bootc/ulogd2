@@ -409,7 +409,16 @@ __pgsql_commit_row(struct ulogd_pluginstance *pi, struct db_row *row)
 	for (i = 0; i < di->num_cols; i++) {
 		const struct ulogd_value *val = &row->value[i];
 
-		ulogd_value_to_ascii(val, priv->param_val[i], PARAM_LEN);
+		BUG_ON(row->value[i].type > __ULOGD_RET_MAX);
+		if (row->value[i].type != ULOGD_RET_NONE)
+			ulogd_value_to_ascii(val, priv->param_val[i], PARAM_LEN);
+		else {
+			/*
+			 * this may not be correct with string type columns, but may be 
+			 * easier to solve when using the binary encoding.
+			 */
+			strcpy(priv->param_val[i], "0");
+		}
 	}
 
 	priv->pgres = PQexecPrepared(priv->dbh, "insert",
