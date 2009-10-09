@@ -1201,18 +1201,14 @@ key_free(struct ulogd_key *key)
 void
 key_reset(struct ulogd_key *key)
 {
-	enum ulogd_ktype type;
-
 	if (!(key->flags & ULOGD_RETF_VALID))
 		return;
 
 	if (key->flags & ULOGD_RETF_FREE)
 		key_free(key);
 
-	type = key->val.type;
-	memset(&key->val, 0, sizeof(key->val));
-	key->val.type = type;
-
+	/* use in6, because this happens to be the largest type */
+	memset(&key->val.in6, 0, sizeof(key->val.in6));
 	key->flags &= ~ULOGD_RETF_VALID;
 }
 
