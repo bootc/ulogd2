@@ -101,7 +101,7 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 	struct ulogd_key *ikey;
 	int i = 0;
 
-	assert(stack->state == PsConfigured);
+	BUG_ON(stack->state != PsConfigured);
 
 	/* PASS 2: */
 	ulogd_log(ULOGD_DEBUG, "connecting input/output keys of stack:\n");
@@ -647,7 +647,7 @@ ulogd_upi_configure(struct ulogd_pluginstance *pi)
 {
 	int ret;
 
-	assert(pi->state == PsInit || pi->state == PsConfiguring);
+	BUG_ON(pi->state != PsInit && pi->state != PsConfiguring);
 
 	ulogd_log(ULOGD_DEBUG, "configuring '%s'\n", pi->id);
 
@@ -686,9 +686,8 @@ int
 ulogd_upi_start(struct ulogd_pluginstance *pi)
 {
 	int ret;
-
-	assert(pi->state == PsConfigured || pi->state == PsStarting);
-
+	
+	BUG_ON(pi->state != PsConfigured && pi->state != PsStarting);
 	ulogd_log(ULOGD_DEBUG, "starting '%s'\n", pi->id);
 
 	if (pi->plugin->start == NULL)
@@ -788,8 +787,6 @@ ulogd_upi_signal(struct ulogd_pluginstance *pi, int signo)
 int
 ulogd_upi_error(struct ulogd_pluginstance *pi, int err)
 {
-	assert(err != ULOGD_IRET_OK);
-
 	if (pi->state == PsStarted)
 		ulogd_upi_stop(pi);
 
@@ -826,8 +823,6 @@ int
 ulogd_upi_reset_cfg(struct ulogd_pluginstance *pi)
 {
 	size_t size;
-
-	assert(pi->plugin != NULL);
 
 	size = sizeof(struct config_keyset)
 		+ pi->plugin->config_kset->num_ces * sizeof(struct config_entry);
