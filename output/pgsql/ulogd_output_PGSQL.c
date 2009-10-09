@@ -256,11 +256,8 @@ err_again:
 	return ULOGD_IRET_AGAIN;
 }
 
-/**
+/*
  * Prepare the given statement
- *
- * $1,$2,... are the placeholders for the actual values which are
- * inserted.
  */
 static int
 pgsql_prepare(struct ulogd_pluginstance *pi)
