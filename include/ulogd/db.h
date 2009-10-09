@@ -40,6 +40,9 @@ struct db_row {
 
 struct db_column {
 	struct ulogd_key *key;
+
+	/* just handy for debugging, may be removed later */
+	int num;
 };
 
 #define DB_F_OPEN				0x0001

@@ -170,6 +170,8 @@ err_rollback:
 static int
 db_alloc_columns(struct db_instance *di, size_t cols)
 {
+	int i;
+
 	if (!di)
 		return -1;
 
@@ -178,6 +180,9 @@ db_alloc_columns(struct db_instance *di, size_t cols)
 		ulogd_log(ULOGD_FATAL, "%s: out of memory\n", __func__);
 		return -1;
 	}
+
+	for (i = 0; i < cols; i++)
+		di->col[i].num = i;
 
 	return 0;
 }
@@ -676,6 +681,10 @@ ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 	if (blackhole_ce(pi))
 		return ULOGD_IRET_OK;
 
+	/* reset key pointers */
+	for (i = 0; i < di->num_cols; i++)
+		di->col[i].key = NULL;
+
 	for (i = 0; i < pi->input.num_keys; i++) {
 		key = &in[i];
 
@@ -684,7 +693,6 @@ ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 
 		BUG_ON(!key->col);
 		BUG_ON(key->col->key);
-
 		key->col->key = key_src(key);
 	}
 
@@ -703,9 +711,6 @@ ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 		else
 			memcpy(&row->value[i], &key->val, sizeof(struct ulogd_value));
 	}
-
-	/* reset key pointers */
-	memset(di->col, 0, di->num_cols * sizeof(struct db_column));
 
 	if (db_row_add(pi, row) < 0)
 		return ULOGD_IRET_OK;
