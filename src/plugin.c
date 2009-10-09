@@ -1323,9 +1323,12 @@ ulogd_free_keyset(struct ulogd_keyset *set)
 {
 	int i;
 
+	if (!set || !set->num_keys)
+		return;
+
 	if (set->flags & KEYSET_F_ALLOC) {
 		for (i = 0; i < set->num_keys; i++)
-			free(&set->keys[i]);
+			free(set->keys[i].name);
 	}
 
 	free(set->keys);

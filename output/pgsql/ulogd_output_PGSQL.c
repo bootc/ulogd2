@@ -203,9 +203,6 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 		goto err_again;
 	}
 
-	if (upi->input.keys != NULL)
-		free(upi->input.keys);
-
 	tuples = upi->input.num_keys = PQntuples(priv->pgres);
 
 	/* ignore columns with leading underscore */

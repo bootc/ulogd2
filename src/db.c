@@ -641,14 +641,7 @@ ulogd_db_stop(struct ulogd_pluginstance *upi)
 	db_close(upi);
 	upi_log(upi, ULOGD_INFO, "database connection closed\n");
 
-	/* try to free our dynamically allocated input key array */
-	if (upi->input.keys) {
-		upi->input.num_keys = 0;
-
-		free(upi->input.keys);
-		upi->input.keys = NULL;
-	}
-
+	ulogd_free_keyset(&upi->input);
 	ulogd_unregister_timer(&di->timer);
 
 	return 0;

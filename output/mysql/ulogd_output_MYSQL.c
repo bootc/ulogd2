@@ -123,10 +123,6 @@ static int get_columns_mysql(struct ulogd_pluginstance *upi)
 	 * in case the core just calls ->configure() and then aborts (and thus
 	 * never free()s the memory we allocate here.  FIXME. */
 
-	/* Cleanup before reconnect */
-	if (upi->input.keys)
-		free(upi->input.keys);
-
 	upi->input.num_keys = mysql_num_fields(result);
 	ulogd_log(ULOGD_DEBUG, "%u fields in table\n", upi->input.num_keys);
 	upi->input.keys = malloc(sizeof(struct ulogd_key) * 
