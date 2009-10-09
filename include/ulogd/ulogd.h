@@ -62,8 +62,13 @@ void ulogd_log(enum ulogd_loglevel, const char *fmt, ...)
 
 void ulogd_bug(const char *, int) __noreturn __cold;
 
-#define BUG()				ulogd_bug(__FILE__, __LINE__);
+#ifdef NDEBUG
+#define BUG()			    do { } while (0)
+#define BUG_ON(expr)
+#else
+#define BUG()				ulogd_bug(__FILE__, __LINE__)
 #define BUG_ON(expr)		do { if (UNLIKELY(expr)) BUG(); } while (0)
+#endif /* NDEBUG */
 
 /***********************************************************************
  * file descriptor handling
