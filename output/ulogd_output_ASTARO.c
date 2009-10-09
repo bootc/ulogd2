@@ -466,7 +466,7 @@ astaro_output(struct ulogd_pluginstance *pi, unsigned *flags)
 					log_types[type].desc, log_types[type].action);
 
 	pch += print_dyn_part(pi, type, pch, end - pch);
-	*(pch + 1) = '\0';
+	*pch = '\0';
 
 	syslog(priv->level | priv->facility, "%s\n", buf);
 
