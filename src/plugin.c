@@ -98,6 +98,7 @@ static int
 stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 {
 	struct ulogd_pluginstance *pi_cur, *pi_src;
+	struct ulogd_key *ikey;
 	int i = 0;
 
 	assert(stack->state == PsConfigured);
@@ -146,29 +147,31 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 
 			for (j = 0; j < pi_cur->input.num_keys; j++) {
 				struct ulogd_key *okey;
-				struct ulogd_key *ikey = &pi_cur->input.keys[j];
+
+				ikey = &pi_cur->input.keys[j];
 
 				/* skip those marked as 'inactive' by
 				 * pl->configure() */
 				if (ikey->flags & ULOGD_KEYF_INACTIVE)
 					continue;
 
-				BUG_ON(ikey->source);
-
 				okey = find_okey_in_stack(ikey->name, pi_cur, &pi_src);
-				if (okey == NULL) {
-					if (ikey->flags & ULOGD_KEYF_OPTIONAL)
+				if (!okey) {
+					if (ikey->flags & ULOGD_KEYF_OPTIONAL) {
+						ikey->source = NULL;
 						continue;
+					}
 
 					ulogd_log(ULOGD_ERROR, "cannot find key '%s' in stack\n",
 							  ikey->name);
-					return -EINVAL;
+					goto err;
 				}
 
 				if (!key_type_eq(ikey, okey)) {
 					ulogd_log(ULOGD_FATAL, "type mismatch %s(%s) <-> %s(%s)\n",
 							  ikey->name, pi_cur->id,
 							  okey->name, pi_src->id);
+					goto err;
 				}
 
 				ulogd_log(ULOGD_DEBUG, "  %s(%s) -> %s(%s)\n",
@@ -179,6 +182,10 @@ stack_resolve_keys(const struct ulogd_pluginstance_stack *stack)
 	}
 
 	return 0;
+
+err:
+	ikey->source = NULL;
+	return -1;
 }
 
 /**
