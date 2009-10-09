@@ -90,35 +90,33 @@ struct db_column;
 
 /* structure describing an input  / output parameter of a plugin */
 struct ulogd_key {
-	struct ulogd_key *source;
-
-	uint16_t flags;
-
 	struct ulogd_value val;
+	struct ulogd_key *source;
+	unsigned flags;
 
 	/*
 	 * Map to database column
 	 */
 	struct db_column *col;
 
-	/* name of this key */
-	char name[ULOGD_MAX_KEYLEN+1];
+	char *name;
 
-	/* IETF IPFIX attribute ID */
-	struct {
+	struct {				/* IETF IPFIX attribute ID */
 		uint32_t	vendor;
 		uint16_t	field_id;
 	} ipfix;
 
-	/* length of the returned value (for variable-length types) */
-	uint32_t len;
+	uint32_t len;			/* for variable-length types */
 };
+
+#define KEYSET_F_ALLOC			0x0001
 
 struct ulogd_keyset {
 	/* possible input keys of this interpreter */
 	struct ulogd_key *keys;
 	/* number of input keys */
 	unsigned int num_keys;
+	unsigned int flags;
 	/* bitmask of possible types */
 	unsigned int type;
 };
@@ -226,7 +224,7 @@ key_src_valid(const struct ulogd_key *key)
 }
 
 int ulogd_key_size(const struct ulogd_key *key);
-struct ulogd_key *ulogd_alloc_keyset(int n);
+int ulogd_init_keyset(struct ulogd_keyset *, unsigned);
 void ulogd_free_keyset(struct ulogd_keyset *);
 void ulogd_dump_keyset(const struct ulogd_keyset *);
 struct ulogd_key *ulogd_key_find(const struct ulogd_keyset *,

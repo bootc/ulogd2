@@ -1194,11 +1194,17 @@ key_free(struct ulogd_key *key)
 void
 key_reset(struct ulogd_key *key)
 {
+	enum ulogd_ktype type;
+
 	if (!(key->flags & ULOGD_RETF_VALID))
 		return;
 
 	if (key->flags & ULOGD_RETF_FREE)
 		key_free(key);
+
+	type = key->val.type;
+	memset(&key->val, 0, sizeof(key->val));
+	key->val.type = type;
 
 	key->flags &= ~ULOGD_RETF_VALID;
 }
@@ -1273,26 +1279,21 @@ ulogd_key_size(const struct ulogd_key *key)
 	return ret;
 }
 
-/**
- * Allocate a keyset for use with ulogd_pluginstance.  The keys are
- * optionally setup with private data.
- *
- * @arg num_keys  Number of keys to use.
- * @arg priv_size Size of private area per key.
- * @return Newly allocated key space or %NULL.
- */
-struct ulogd_key *
-ulogd_alloc_keyset(int num_keys)
+int
+ulogd_init_keyset(struct ulogd_keyset *set, unsigned flags)
 {
-	struct ulogd_key *keys;
+	if (!set || set->num_keys <= 0)
+		return -1;
 
-	if (num_keys <= 0)
-		return NULL;
+	set->keys = calloc(set->num_keys, sizeof(struct ulogd_key));
+	if (!set->keys) {
+		ulogd_log(ULOGD_FATAL, "%s: %s\n", __func__, strerror(ENOMEM));
+		return -1;
+	}
 
-	if ((keys = calloc(num_keys, sizeof(struct ulogd_key))) == NULL)
-		return NULL;
+	set->flags = flags;
 
-	return keys;
+	return 0;
 }
 
 void
@@ -1313,6 +1314,13 @@ ulogd_dump_keyset(const struct ulogd_keyset *set)
 void
 ulogd_free_keyset(struct ulogd_keyset *set)
 {
+	int i;
+
+	if (set->flags & KEYSET_F_ALLOC) {
+		for (i = 0; i < set->num_keys; i++)
+			free(&set->keys[i]);
+	}
+
 	free(set->keys);
 	set->num_keys = 0;
 }

@@ -412,7 +412,8 @@ keymap_map_keys(const char *str, struct ulogd_keyset *set,
 		case 0:
 			if (tok != TOK_NAME)
 				goto err_inval;
-			xstrncpy(set->keys[keyno].name, keymap_lexbuf, ULOGD_MAX_KEYLEN);
+			BUG_ON(!(set->flags & KEYSET_F_ALLOC));
+			set->keys[keyno].name = strdup(keymap_lexbuf);
 			state++;
 			break;
 
@@ -515,7 +516,7 @@ ulogd_db_map_keys(struct ulogd_pluginstance *pi)
 		if ((set->num_keys = keymap_check(keymap, &di->num_cols)) < 0)
 			return -1;
 
-		if ((set->keys = ulogd_alloc_keyset(set->num_keys)) == NULL)
+		if (ulogd_init_keyset(set, KEYSET_F_ALLOC) < 0)
 			return -1;
 
 		if (db_alloc_columns(di, di->num_cols) < 0)

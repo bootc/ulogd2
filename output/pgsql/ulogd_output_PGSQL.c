@@ -224,19 +224,14 @@ pgsql_get_columns(struct ulogd_pluginstance *upi)
 	upi_log(upi, ULOGD_DEBUG, "using %d/%d columns of table\n",
 			upi->input.num_keys, tuples);
 
-	upi->input.keys = ulogd_alloc_keyset(upi->input.num_keys);
-	if (upi->input.keys == NULL) {
-		upi_log(upi, ULOGD_ERROR, "error allocating keyset: %m\n");
-
-		upi->input.num_keys = 0;
+	if (ulogd_init_keyset(&upi->input, KEYSET_F_ALLOC) < 0) {
 		PQclear(priv->pgres);
-
 		goto err_again;
 	}
 
 	in = upi->input.keys;
 	for (i = k = 0; i < upi->input.num_keys; i++) {
-		strncpy(in[k].name, PQgetvalue(priv->pgres, i, 0), ULOGD_MAX_KEYLEN);
+		in[k].name = strdup(PQgetvalue(priv->pgres, i, 0));
 
 		/* skip columns with leading underscore */
 		if (in[k].name[0] == '_') {
