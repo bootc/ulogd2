@@ -65,7 +65,7 @@ enum {
 static struct ulogd_key output_keys[] = {
 	[K_RAW_MAC] = KEY_IPFIX(RAW, "raw.mac", IETF, sourceMacAddress),
 	[K_RAW_PKT] = KEY_IPFIX(RAW,  "raw.pkt", NETFILTER, NF_rawpacket),
-	[K_RAW_PKTLEN] KEY_IPFIX(RAW, "raw.pktlen", NETFILTER,
+	[K_RAW_PKTLEN] KEY_IPFIX(UINT32, "raw.pktlen", NETFILTER,
 							 NF_rawpacket_length),
 	[K_RAW_PKTCNT] = KEY_IPFIX(UINT32, "raw.pktcount", IETF, packetDeltaCount),
 	[K_OOB_PREFIX] = KEY_IPFIX(STRING, "oob.prefix", NETFILTER, NF_prefix),
