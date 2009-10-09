@@ -548,7 +548,7 @@ ulogd_db_configure(struct ulogd_pluginstance *upi)
 	struct db_instance *di = upi_priv(upi);
 	int ret;
 
-	if (!!keymap_ce(upi) != !!insert_ce(upi)) {
+	if (!keymap_ce(upi) != !insert_ce(upi)) {
 		upi_log(upi, ULOGD_FATAL, "'keymap' requires 'insert'.\n");
 		return ULOGD_IRET_ERR;
 	}
