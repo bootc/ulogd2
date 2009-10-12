@@ -92,7 +92,7 @@ struct conntrack {
 	struct llist_head seq_link;
 	struct ct_tuple tuple;
 	struct nfnl_ct *nfnl_ct;
-	unsigned refcnt;
+	int refcnt;
 	struct timeval time[__TIME_MAX];
 	time_t t_req;
 	unsigned last_seq;
@@ -241,7 +241,7 @@ ct_get(struct conntrack *ct)
 static inline void
 ct_put(struct conntrack *ct)
 {
-	assert(num_conntrack > 0);
+	BUG_ON(!num_conntrack);
 
 	if (--ct->refcnt == 0) {
 		if (ct->nfnl_ct != NULL)
@@ -257,8 +257,6 @@ static void
 ct_update(struct conntrack *ct, const struct nfnl_ct *new_nfnl_ct)
 {
 	struct nfnl_ct *nfnl_ct = ct->nfnl_ct;
-
-	assert(nfnl_ct != NULL);
 
 	ct->time[UPDATE].tv_sec = t_now;
 
@@ -400,8 +398,8 @@ cache_add(struct cache *c, struct conntrack *ct)
 static int
 cache_del(struct cache *c, struct conntrack *ct)
 {
-    assert(c->c_cnt > 0);
-    assert(ct->refcnt > 0);
+	BUG_ON(!c->c_cnt);
+	BUG_ON(ct->refcnt <= 0);
 
     /* order of these two is important for debugging purposes */
     c->c_del(c, ct);
@@ -441,8 +439,7 @@ scache_add(struct cache *c, struct conntrack *ct)
 {
     ct_hash_t h;
 
-	assert(ct->last_seq != 0);	/* is seq# 0 possible */
-
+	BUG_ON(!ct->last_seq);
 	h = scache_hash(c, ct->last_seq);
 
     llist_add(&ct->seq_link, &c->c_head[h].link);
@@ -459,11 +456,10 @@ scache_del(struct cache *c, struct conntrack *ct)
 {
     ct_hash_t h;
 
-	assert(ct->last_seq != 0);
-
+	BUG_ON(!ct->last_seq);
 	h = scache_hash(c, ct->last_seq);
 
-    assert(c->c_head[h].cnt > 0);
+	BUG_ON(!c->c_head[h].cnt);
 
     pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
              c->c_head[h].cnt, c->c_cnt);
@@ -499,19 +495,17 @@ scache_cleanup(struct ulogd_pluginstance *pi)
 	struct conntrack *ct;
 	int del = 0;
 
-	if (c->c_cnt == 0)
+	if (!c->c_cnt)
         return 0;
 
     do {
         struct llist_head *curr, *tmp;
 
-        assert(c->c_curr_head < c->c_num_heads);
-
+		BUG_ON(c->c_curr_head >= c->c_num_heads);
         llist_for_each_prev_safe(curr, tmp, &c->c_head[c->c_curr_head].link) {
             ct = container_of(curr, struct conntrack, seq_link);
 
-            assert(ct->t_req != 0);
-
+			BUG_ON(!ct->t_req);
             if ((t_now - ct->t_req) < 5 SEC)
                 break;
 
@@ -560,8 +554,7 @@ tcache_del(struct cache *c, struct conntrack *ct)
 {
 	ct_hash_t h = tcache_hash(c, &ct->tuple);
 
-    assert(c->c_head[h].cnt > 0);
-
+	BUG_ON(!c->c_head[h].cnt);
     pr_debug("%s: ct=%p (h %u, %u/%u)\n", __func__, ct, h,
              c->c_head[h].cnt, c->c_cnt);
 
@@ -605,7 +598,7 @@ nfct_query(struct nl_handle *nlh, const struct nfnl_ct *nfnl_ct,
 	hdr->nlmsg_seq = nl_socket_use_seq(nlh);
 	hdr->nlmsg_flags |= NLM_F_REQUEST; /* no NLM_F_ACK */
 
-	if (seq != NULL)
+	if (seq)
 		*seq = hdr->nlmsg_seq;
 
 	ret = nl_send(nlh, msg);
@@ -642,11 +635,10 @@ tcache_cleanup(struct ulogd_pluginstance *pi)
 				break;
 			}
 
-			if (&ct->last_seq != 0) {
+			if (ct->last_seq) {
 				ct->t_req = t_now;
-
-				assert(scache_find(priv->scache, ct->last_seq) == NULL);
-
+				
+				BUG_ON(scache_find(priv->scache, ct->last_seq));
 				cache_add(priv->scache, ct);
 			}
 
@@ -1080,8 +1072,7 @@ nfct_start(struct ulogd_pluginstance *pi)
 	if (netlink_init(pi) < 0)
 		goto err;
 
-	assert(priv->nlh != NULL);
-
+	BUG_ON(!priv->nlh);
 	priv->ufd.fd = nl_socket_get_fd(priv->nlh);
 
 	if (ulogd_register_fd(&priv->ufd) < 0)
