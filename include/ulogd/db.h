@@ -38,7 +38,13 @@ struct db_row {
 	struct ulogd_value value[];
 };
 
-struct db_column {
+/*
+ * Map column to a particular ulogd key.
+ *
+ * This mapping is determined during each propagation because the mapping
+ * of ulogd keys to database columns is N:1.
+ */
+struct db_map {
 	struct ulogd_key *key;
 };
 
@@ -49,7 +55,10 @@ struct db_instance {
 
 	const struct db_driver *driver;
 
-	struct db_column *col;
+	/*
+	 * Map key to a database column
+	 */
+	struct db_map *map;
 	int num_cols;
 
 	/* batching */

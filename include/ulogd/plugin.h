@@ -87,7 +87,7 @@ struct ulogd_value {
 int ulogd_value_to_ascii(const struct ulogd_value *, char *, size_t);
 
 
-struct db_column;
+struct db_map;
 
 /* structure describing an input  / output parameter of a plugin */
 struct ulogd_key {
@@ -98,7 +98,7 @@ struct ulogd_key {
 	/*
 	 * Map to database column
 	 */
-	struct db_column *col;
+	struct db_map *map;
 
 	char *name;
 

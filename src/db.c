@@ -167,30 +167,6 @@ err_rollback:
 	return rows;
 }
 
-static int
-db_alloc_columns(struct db_instance *di, size_t cols)
-{
-	if (!di)
-		return -1;
-
-	di->col = calloc(cols, sizeof(struct db_column));
-	if (!di->col) {
-		ulogd_log(ULOGD_FATAL, "%s: out of memory\n", __func__);
-		return -1;
-	}
-
-	return 0;
-}
-
-static void
-db_free_columns(struct db_instance *di)
-{
-	if (di) {
-		free(di->col);
-		di->col = NULL;
-	}
-}
-
 /**
  * Periodic database timer, reponsible for committing database rows.
  *
@@ -292,6 +268,30 @@ check_driver(struct ulogd_pluginstance *pi)
 		return -1;
 
 	return 0;
+}
+
+static int
+db_alloc_keymap(struct db_instance *di, size_t cols)
+{
+	if (!di || !cols)
+		return -1;
+
+	di->map = calloc(cols, sizeof(struct db_map));
+	if (!di->map) {
+		ulogd_log(ULOGD_FATAL, "%s: out of memory\n", __func__);
+		return -1;
+	}
+
+	return 0;
+}
+
+static void
+db_free_keymap(struct db_instance *di)
+{
+	if (di) {
+		free(di->map);
+		di->map = NULL;
+	}
 }
 
 static int
@@ -428,7 +428,7 @@ keymap_map_keys(const char *str, struct ulogd_keyset *set,
 				goto err_inval;
 			BUG_ON(!set->keys[keyno].name);
 			col = atoi(keymap_lexbuf);
-			set->keys[keyno].col = &di->col[col];
+			set->keys[keyno].map = &di->map[col];
 			ulogd_log(ULOGD_DEBUG, "db: key%d ('%s') maps to col%d\n",
 					  keyno, set->keys[keyno].name, col);
 			keyno++;
@@ -519,7 +519,7 @@ ulogd_db_map_keys(struct ulogd_pluginstance *pi)
 		if (ulogd_init_keyset(set, KEYSET_F_ALLOC) < 0)
 			return -1;
 
-		if (db_alloc_columns(di, di->num_cols) < 0)
+		if (db_alloc_keymap(di, di->num_cols) < 0)
 			goto err_free;
 
 		if (keymap_map_keys(keymap, set, di) < 0)
@@ -532,7 +532,7 @@ ulogd_db_map_keys(struct ulogd_pluginstance *pi)
 	return 0;
 
 err_free:
-	db_free_columns(di);
+	db_free_keymap(di);
 	ulogd_free_keyset(set);
 	return -1;
 }
@@ -669,8 +669,7 @@ ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 	if (blackhole_ce(pi))
 		return ULOGD_IRET_OK;
 
-	/* reset key pointers */
-	memset(di->col, 0, di->num_cols * sizeof(di->col[0]));
+	memset(di->map, 0, di->num_cols * sizeof(di->map[0]));
 
 	for (i = 0; i < pi->input.num_keys; i++) {
 		key = &in[i];
@@ -678,9 +677,8 @@ ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 		if (!key_src_valid(key))
 			continue;
 
-		BUG_ON(!key->col);
-		BUG_ON(key->col->key);
-		key->col->key = key_src(key);
+		BUG_ON(!key->map);
+		key->map->key = key_src(key);
 	}
 
 	if ((row = db_row_new(pi)) == NULL)
@@ -691,7 +689,7 @@ ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 	 * everything else.
 	 */
 	for (i = 0; i < di->num_cols; i++) {
-		key = di->col[i].key;
+		key = di->map[i].key;
 
 		if (!key)
 			memset(&row->value[i], 0, sizeof(struct ulogd_value));
