@@ -691,10 +691,10 @@ ulogd_db_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 	for (i = 0; i < di->num_cols; i++) {
 		key = di->map[i].key;
 
-		if (!key)
-			memset(&row->value[i], 0, sizeof(struct ulogd_value));
-		else
+		if (key)
 			memcpy(&row->value[i], &key->val, sizeof(struct ulogd_value));
+		else
+			row->value[i].type = ULOGD_RET_NONE;
 	}
 
 	if (db_row_add(pi, row) < 0)

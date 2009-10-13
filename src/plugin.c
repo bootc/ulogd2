@@ -870,8 +870,12 @@ ulogd_value_to_ascii(const struct ulogd_value *val, char *buf, size_t len)
 		nchars = strlen(buf);
 		break;
 
-	default:
+	case ULOGD_RET_NONE:
+	case ULOGD_RET_RAW:			/* how to print? */
 		break;
+		
+	default:
+		BUG();
 	}
 
 	return nchars;
