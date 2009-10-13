@@ -136,6 +136,8 @@ enum InKeys {
 	InTcpFin,
 	InIcmpType,
 	InIcmpCode,
+	InIcmp6Type,
+	InIcmp6Code,
 };
 
 static struct ulogd_key astaro_in_keys[] = {
@@ -165,6 +167,8 @@ static struct ulogd_key astaro_in_keys[] = {
 	[InTcpFin] = KEY(BOOL, "tcp.fin"),
 	[InIcmpType] = KEY(UINT8, "icmp.type"),
 	[InIcmpCode] = KEY(UINT8, "icmp.code"),
+	[InIcmp6Type] = KEY(UINT8, "icmp6.type"),
+	[InIcmp6Code] = KEY(UINT8, "icmp6.code"),
 };
 
 static int
@@ -257,6 +261,8 @@ static const struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
 	[InTcpFin] = { NULL, NULL, LH_F_NOLOG },
 	[InIcmpType] = { NULL, NULL, LH_F_NOLOG },
 	[InIcmpCode] = { NULL, NULL, LH_F_NOLOG },
+	[InIcmp6Type] = { NULL, NULL, LH_F_NOLOG },
+	[InIcmp6Code] = { NULL, NULL, LH_F_NOLOG },
 };
 
 enum {
@@ -365,6 +371,18 @@ print_proto_icmp(const struct ulogd_pluginstance *pi, char *buf, size_t len)
 	return pch - buf;
 }
 
+static int
+print_proto_icmp6(const struct ulogd_pluginstance *pi, char *buf, size_t len)
+{
+	const struct ulogd_key *in = pi->input.keys;
+	char *pch = buf;
+
+	pch += print_key(pch, len, &in[InIcmp6Type], "type");
+	pch += print_key(pch, avail(buf, pch, len), &in[InIcmp6Code], "code");
+
+	return pch - buf;
+}
+
 /**
  * Print log data resulting from the netfilter TRACE target
  */
@@ -414,6 +432,8 @@ print_dyn_part(const struct ulogd_pluginstance *pi, unsigned type,
 		pch += print_proto_tcp(pi, pch, avail(buf, pch, max_len));
 	else if (key_src_u8(&in[InIpProto]) == IPPROTO_ICMP)
 		pch += print_proto_icmp(pi, pch, avail(buf, pch, max_len));
+	else if (key_src_u8(&in[InIpProto]) == IPPROTO_ICMPV6)
+		pch += print_proto_icmp6(pi, pch, avail(buf, pch, max_len));
 
 	if (__PF_BASE + type == LOG_ID_LOG) {
 		/* log Netfilter-internal messages without loss of information */
