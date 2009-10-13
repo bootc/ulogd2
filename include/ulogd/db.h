@@ -92,7 +92,7 @@ db_has_prepare(const struct db_instance *di)
  *				a commit is forced (or after timer elapsed).
  */
 #define DB_CES											   \
-		CONFIG_KEY("table", STRING, CONFIG_OPT_MANDATORY), \
+		CONFIG_KEY("table", STRING, 0),					   \
 		CONFIG_KEY("reconnect", INT, 0),				   \
 		CONFIG_KEY("ip_as_string", INT, 0),				   \
 		CONFIG_KEY("connect_timeout", INT, 0),			   \
