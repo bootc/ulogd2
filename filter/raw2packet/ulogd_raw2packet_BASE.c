@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <netinet/icmp6.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netinet/ip_icmp.h>
@@ -43,7 +44,7 @@
 #define NEXTHDR_TCP		IPPROTO_TCP
 #define NEXTHDR_UDP		IPPROTO_UDP
 #define NEXTHDR_ICMP	IPPROTO_ICMP
-#define NEXTHDR_ICMP6	58
+#define NEXTHDR_ICMP6	IPPROTO_ICMPV6
 #define NEXTHDR_NONE	59
 
 enum {
@@ -100,6 +101,8 @@ enum {
 	O_IcmpFragMtu,
 	O_IcmpCsum,
 	O_AhEspSpi,
+	O_Icmp6Type,
+	O_Icmp6Code,
 };
 
 static struct ulogd_key out_keys[] = {
@@ -147,6 +150,8 @@ static struct ulogd_key out_keys[] = {
 	[O_IcmpFragMtu] = KEY(UINT16, "icmp.fragmtu"),
 	[O_IcmpCsum] = KEY(UINT16, "icmp.csum"),
 	[O_AhEspSpi] = KEY(UINT32, "ahesp.spi"),
+	[O_Icmp6Type] = KEY(UINT8, "icmp6.type"),
+	[O_Icmp6Code] = KEY(UINT8, "icmp6.code"),
 };
 
 
@@ -229,6 +234,18 @@ icmp_interp(const struct ulogd_pluginstance *pi, const void *data)
 }
 
 static int
+icmp6_interp(const struct ulogd_pluginstance *pi, const void *data)
+{
+	struct ulogd_key *out = pi->output.keys;
+	const struct icmp6_hdr *icmp6h = data;
+
+	key_set_u8(&out[O_Icmp6Type], icmp6h->icmp6_type);
+	key_set_u8(&out[O_Icmp6Code], icmp6h->icmp6_code);
+
+	return 0;
+}
+
+static int
 ahesp_interp(const struct ulogd_pluginstance *pi, const void *data)
 {
 #if 0
@@ -263,9 +280,16 @@ l4_interp(struct ulogd_pluginstance *pi, int proto, const void *data)
 		ret = icmp_interp(pi, data);
 		break;
 
+	case IPPROTO_ICMPV6:
+		ret = icmp6_interp(pi, data);
+		break;
+
 	case IPPROTO_AH:
 	case IPPROTO_ESP:
 		ret = ahesp_interp(pi, data);
+		break;
+
+	default:
 		break;
 	}
 
