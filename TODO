@@ -1,5 +1,4 @@
-o ulogd_key: make key.name a (const char *)
-o db: support holes in SQL insert statement (pass NULL)
+o autoconf: check for logmark
 o PGSQL: use binary encoding
 o PGSQL: use truly async interface
 o NFCT: separate out cache handling into NFCTCACHE plugin
