@@ -177,8 +177,11 @@ nflog_handle_msg(struct nl_object *obj, void *arg)
 	key_set_u8(&out[K_OOB_FAMILY], nfnl_log_get_family(nflog_obj));
 	BUG_ON(!key_u8(&out[K_OOB_FAMILY]));
 
-	key_set_ptr(&out[K_RAW_MAC], (void*)nfnl_log_get_hwaddr(nflog_obj, &len));
-	key_set_u16(&out[K_RAW_MAC_LEN], len);
+	if (nfnl_log_get_hwaddr(nflog_obj, &len)) {
+		key_set_ptr(&out[K_RAW_MAC], (void *)nfnl_log_get_hwaddr(nflog_obj,
+																 &len));
+		key_set_u16(&out[K_RAW_MAC_LEN], len);
+	}
 
 	key_set_ptr(&out[K_RAW_PKT], (void*)nfnl_log_get_payload(nflog_obj, &len));
 	key_set_u32(&out[K_RAW_PKTLEN], len);
