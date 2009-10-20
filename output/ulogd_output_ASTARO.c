@@ -184,21 +184,32 @@ lh_log_mac(const struct ulogd_pluginstance *pi, unsigned idx,
 		   char *buf, size_t len)
 {
 	const struct ulogd_key *in = pi->input.keys;
-	char hwaddr[3 * ETH_ALEN];
+	unsigned char __src[ETH_ALEN], __dst[ETH_ALEN];
+	const unsigned char *src = NULL, *dst = NULL;
+	char *pch = buf, *end = buf + len;
 
-	if (key_src_valid(&in[InOobIfiIn])) {
-		if (ifi_hwaddr2str(key_src_u32(&in[InOobIfiIn]), hwaddr,
-						   sizeof(hwaddr)))
-		snprintf(buf, len, "dstmac=\"%s\"", hwaddr);
+	if (key_src_valid(&in[InRawMac])) {	/* incoming packet */
+		src = key_src_ptr(&in[InRawMac]);
+
+		if (key_src_valid(&in[InOobIfiIn])) {
+			ifi_get_hwaddr(key_src_u32(&in[InOobIfiIn]), __dst);
+			dst = __dst;
+		}
+	} else {					/* outgoing packet */
+		if (key_src_valid(&in[InOobIfiOut])) {
+			ifi_get_hwaddr(key_src_u32(&in[InOobIfiOut]), __src);
+			src = __src;
+		}
 	}
 
-	if (key_src_valid(&in[InOobIfiOut])) {
-		if (ifi_hwaddr2str(key_src_u32(&in[InOobIfiOut]), hwaddr,
-						   sizeof(hwaddr)))
-		snprintf(buf, len, "srcmac=\"%s\"", hwaddr);
-	}
+	if (src)
+		pch += snprintf(pch, end - pch, "srcmac=\"%s\" ",
+						ether_ntoa((struct ether_addr *)src));
+	if (dst)
+		pch += snprintf(pch, end - pch, "dstmac=\"%s\" ",
+						ether_ntoa((struct ether_addr *)dst));
 
-	return 0;
+	return pch - buf;
 }
 
 
