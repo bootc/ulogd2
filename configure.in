@@ -36,6 +36,21 @@ AC_CHECK_HEADER([netlink/netfilter/log.h],,
 AC_CHECK_HEADER([netlink/netfilter/ct.h],,
 		[AC_MSG_ERROR([libnl with ctnetlink support needed])])
 
+AC_MSG_CHECKING(whether libnl has logmark support)
+SAVED_LIBS="$LIBS"
+LIBS="-lnl"
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
+#include <netlink/utils.h>
+#include <netlink/msg.h>
+#include <netlink/netfilter/nfnl.h>
+#include <netlink/netfilter/log.h>
+main() {
+	nfnl_log_test_logmark((void *)0);
+	return 0;
+}
+]])],[AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_LIBNL_LOGMARK, 1, [Define to 1 if you have libnl with logmark support.])],[AC_MSG_RESULT(no)],)
+LIBS="$SAVED_LIBS"
 
 CT_CHECK_POSTGRES_DB()
 AM_CONDITIONAL(HAVE_PGSQL, test "x$PQLIBPATH" != "x")
