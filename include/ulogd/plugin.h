@@ -80,6 +80,7 @@ struct ulogd_value {
 		uint64_t ui64;
 		void *ptr;
 		char *str;
+		struct in_addr in;
 		struct in6_addr in6;
 	};
 };
@@ -165,6 +166,7 @@ void key_set_u64(struct ulogd_key *, uint64_t);
 void key_set_bool(struct ulogd_key *, bool);
 void key_set_ptr(struct ulogd_key *, void *);
 void key_set_str(struct ulogd_key *, char *);
+void key_set_in(struct ulogd_key *, const struct in_addr *);
 void key_set_in6(struct ulogd_key *, const struct in6_addr *);
 
 /* key accessors */
@@ -179,6 +181,7 @@ uint64_t key_u64(const struct ulogd_key *);
 bool key_bool(const struct ulogd_key *);
 void *key_ptr(const struct ulogd_key *);
 char *key_str(const struct ulogd_key *);
+void key_in(const struct ulogd_key *, struct in_addr *);
 void key_in6(const struct ulogd_key *, struct in6_addr *);
 
 /* src key accessors */
@@ -193,6 +196,7 @@ uint64_t key_src_u64(const struct ulogd_key *);
 bool key_src_bool(const struct ulogd_key *);
 void *key_src_ptr(const struct ulogd_key *);
 char *key_src_str(const struct ulogd_key *);
+void key_src_in(const struct ulogd_key *, struct in_addr *);
 void key_src_in6(const struct ulogd_key *, struct in6_addr *);
 
 enum ulogd_ktype key_type(const struct ulogd_key *);

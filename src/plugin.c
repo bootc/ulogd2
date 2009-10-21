@@ -861,7 +861,7 @@ ulogd_value_to_ascii(const struct ulogd_value *val, char *buf, size_t len)
 		break;
 
 	case ULOGD_RET_IPADDR:
-		inet_ntop(AF_INET, &val->ui32, buf, len);
+		inet_ntop(AF_INET, &val->in, buf, len);
 		nchars = strlen(buf);
 		break;
 
@@ -995,6 +995,15 @@ key_set_str(struct ulogd_key *key, char *str)
 }
 
 void
+key_set_in(struct ulogd_key *key, const struct in_addr *addr)
+{
+	__check_set(key, ULOGD_RET_IPADDR);
+
+	memcpy(&key->val.in, addr, sizeof(struct in_addr));
+	key->flags |= ULOGD_RETF_VALID;
+}
+
+void
 key_set_in6(struct ulogd_key *key, const struct in6_addr *addr)
 {
 	__check_set(key, ULOGD_RET_IP6ADDR);
@@ -1109,10 +1118,16 @@ key_str(const struct ulogd_key *key)
 }
 
 void
+key_in(const struct ulogd_key *key, struct in_addr *addr)
+{
+	__check_get(key, ULOGD_RET_IPADDR);
+	memcpy(addr, &key->val.in, sizeof(*addr));
+}
+
+void
 key_in6(const struct ulogd_key *key, struct in6_addr *addr)
 {
 	__check_get(key, ULOGD_RET_IP6ADDR);
-
 	memcpy(addr, &key->val.in6, sizeof(*addr));
 }
 
@@ -1179,6 +1194,12 @@ char *
 key_src_str(const struct ulogd_key *key)
 {
 	return key_str(key_src(key));
+}
+
+void
+key_src_in(const struct ulogd_key *key, struct in_addr *addr)
+{
+	return key_in(key_src(key), addr);
 }
 
 void

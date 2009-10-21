@@ -90,27 +90,31 @@ nacct_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 	struct nacct_priv *priv = upi_priv(pi);
 	struct ulogd_key *in = pi->input.keys;
 	static char buf[80];
+	struct in_addr saddr, daddr;
 	int len;
+
+	key_src_in(&in[InIpSAddr], &saddr);
+	key_src_in(&in[InIpDAddr], &daddr);
 
 	/* try to be as close to nacct as possible.  Instead of nacct's
 	   'timestamp' value use 'flow.end.sec' */
 	if (key_src_u8(&in[InIpProto]) == IPPROTO_ICMP) {
 		len = sprintf(buf, "%u\t%u\t%s\t%u\t%s\t%u\t%u\t%u\n",
-				key_src_u32(&in[InFlowEndSec]),
-				key_src_u8(&in[InIpProto]),
-				inet_ntoa((struct in_addr){ key_src_u32(&in[InIpSAddr]) }),
-				key_src_u8(&in[InIcmpType]),
-				inet_ntoa((struct in_addr){ key_src_u32(&in[InIpDAddr]) }),
-				key_src_u8(&in[InIcmpCode]),
-				key_src_u32(&in[InRawInPktCnt]),
-				key_src_u32(&in[InRawInPktLen]));
+					  key_src_u32(&in[InFlowEndSec]),
+					  key_src_u8(&in[InIpProto]),
+					  inet_ntoa(saddr),
+					  key_src_u8(&in[InIcmpType]),
+					  inet_ntoa(daddr),
+					  key_src_u8(&in[InIcmpCode]),
+					  key_src_u32(&in[InRawInPktCnt]),
+					  key_src_u32(&in[InRawInPktLen]));
 	} else {
 		len = sprintf(buf, "%u\t%u\t%s\t%u\t%s\t%u\t%u\t%u\n",
 					  key_src_u32(&in[InFlowEndSec]),
 					  key_src_u8(&in[InIpProto]),
-					  inet_ntoa((struct in_addr){ key_src_u32(&in[InIpSAddr]) }),
+					  inet_ntoa(saddr),
 					  key_src_u16(&in[InL4SPort]),
-					  inet_ntoa((struct in_addr){ key_src_u32(&in[InIpDAddr]) }),
+					  inet_ntoa(daddr),
 					  key_src_u16(&in[InL4DPort]),
 					  key_src_u32(&in[InRawInPktCnt]),
 					  key_src_u32(&in[InRawInPktLen]));

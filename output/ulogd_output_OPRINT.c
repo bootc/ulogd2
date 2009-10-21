@@ -135,8 +135,9 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 			
 		case ULOGD_RET_IPADDR:
 		{
-			struct in_addr addr = (struct in_addr){ key_u32(key), };
-			
+			struct in_addr addr;
+
+			key_in(key, &addr);
 			inet_ntop(AF_INET, &addr, opi->buf, OPR_BUF_LEN);
 			fprintf(opi->of, "%s=%s\n", key->name, opi->buf);
 			break;

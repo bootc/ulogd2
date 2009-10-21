@@ -668,8 +668,8 @@ propagate_ct(struct ulogd_pluginstance *pi, struct conntrack *ct)
 	ct->time[STOP].tv_sec = t_now;
 
 	if (ct->tuple.family == AF_INET) {
-		key_set_u32(&out[O_IP_SADDR], ct->tuple.src.in.s_addr);
-		key_set_u32(&out[O_IP_DADDR], ct->tuple.dst.in.s_addr);
+		key_set_in(&out[O_IP_SADDR], &ct->tuple.src.in);
+		key_set_in(&out[O_IP_DADDR], &ct->tuple.dst.in);
 	} else if (ct->tuple.family == AF_INET6) {
 		key_set_in6(&out[O_IP6_SADDR], &ct->tuple.src.in6);
 		key_set_in6(&out[O_IP6_DADDR], &ct->tuple.dst.in6);
