@@ -242,7 +242,6 @@ lh_log_itf(const struct ulogd_pluginstance *pi, unsigned idx,
 
 	return snprintf(buf, len, "%s=\"%s\" ", key_name, ifname ? ifname
 					: "unknown");
-	return 0;
 }
 
 static const struct log_handler log_handler[ARRAY_SIZE(astaro_in_keys)] = {
