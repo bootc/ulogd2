@@ -303,8 +303,8 @@ ip_interp(struct ulogd_pluginstance *pi)
 	struct ulogd_key *out = pi->output.keys;
 	const struct iphdr *iph = key_src_ptr(&in[I_RawPkt]);
 
-	key_set_u32(&out[O_IpSAddr], ntohl(iph->saddr));
-	key_set_u32(&out[O_IpDAddr], ntohl(iph->daddr));
+	key_set_in(&out[O_IpSAddr], (const struct in_addr *)&iph->saddr);
+	key_set_in(&out[O_IpDAddr], (const struct in_addr *)&iph->daddr);
 	key_set_u8(&out[O_IpProto], iph->protocol);
 	key_set_u8(&out[O_IpTos], iph->tos);
 	key_set_u8(&out[O_IpTtl], iph->ttl);
