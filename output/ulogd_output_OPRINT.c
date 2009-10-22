@@ -100,67 +100,8 @@ opr_interp(struct ulogd_pluginstance *upi, unsigned *flags)
 		if (!key || !key_valid(key))
 			continue;
 
-		switch (key_type(key)) {
-		case ULOGD_RET_STRING:
-			fprintf(opi->of, "%s=%s\n", key->name, key_str(key));
-			break;
-
-		case ULOGD_RET_BOOL:
-			fprintf(opi->of, "%s=%d\n", key->name, key_bool(key));
-			break;
-
-		case ULOGD_RET_INT8:
-			fprintf(opi->of, "%s=%d\n", key->name, key_i8(key));
-			break;
-
-		case ULOGD_RET_INT16:
-			fprintf(opi->of, "%s=%d\n", key->name, key_i16(key));
-			break;
-
-		case ULOGD_RET_INT32:
-			fprintf(opi->of, "%s=%d\n", key->name, key_i32(key));
-			break;
-
-		case ULOGD_RET_UINT8:
-			fprintf(opi->of, "%s=%u\n", key->name, key_u8(key));
-			break;
-			
-		case ULOGD_RET_UINT16:
-			fprintf(opi->of, "%s=%u\n", key->name, key_u16(key));
-			break;
-			
-		case ULOGD_RET_UINT32:
-			fprintf(opi->of, "%s=%u\n", key->name, key_u32(key));
-			break;
-			
-		case ULOGD_RET_IPADDR:
-		{
-			struct in_addr addr;
-
-			key_in(key, &addr);
-			inet_ntop(AF_INET, &addr, opi->buf, OPR_BUF_LEN);
-			fprintf(opi->of, "%s=%s\n", key->name, opi->buf);
-			break;
-		}
-		
-		case ULOGD_RET_IP6ADDR:
-		{
-			struct in6_addr addr;
-
-			key_in6(key, &addr);
-			inet_ntop(AF_INET6, &addr, opi->buf, OPR_BUF_LEN);
-			fprintf(opi->of, "%s=%s\n", key->name, opi->buf);
-			break;
-		}
-		
-		case ULOGD_RET_NONE:
-			BUG();
-			break;
-			
-		case ULOGD_RET_RAW:
-		default:
-			break;
-		}
+		ulogd_value_to_ascii(&key->val, opi->buf, OPR_BUF_LEN);
+		fprintf(opi->of, "%s=%s\n", key->name, opi->buf);
 	}
 
 	if (upi->config_kset->ces[1].u.value)
