@@ -23,6 +23,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include "ipfix.h"
+
 
 enum {
 	HOST_CE = 0,
@@ -43,7 +45,10 @@ static const struct config_keyset ipfix_kset = {
 #define port_ce(pi)		ulogd_config_int(pi, PORT_CE);
 #define proto_ce(pi)	ulogd_config_str(pi, PROTO_CE);
 
+
 struct ipfix_priv {
+	int fd;
+	struct ipfix_templ_hdr *templ;
 };
 
 static int
