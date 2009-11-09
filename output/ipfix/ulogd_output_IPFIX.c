@@ -65,11 +65,61 @@ struct ipfix_priv {
 	struct sockaddr_in sa;
 };
 
+enum {
+	InIpSaddr = 0,
+	InIpDaddr,
+	/* InOobIfiIn, */
+	/* InOobIfiOut, */
+	InRawInPktCount,
+	InRawInPktLen,
+	InRawOutPktCount,
+	InRawOutPktLen,
+	InFlowStartSec,
+	InFlowStartUsec,
+	InFlowEndSec,
+	InFlowEndUsec,
+	InL4SPort,
+	InL4DPort,
+	InIpProto,
+};
+
+static struct ulogd_key ipfix_in_keys[] = {
+	[InIpSaddr] = KEY(IPADDR, "ip.saddr"),
+	[InIpDaddr] = KEY(IPADDR, "ip.daddr"),
+	/* [InOobIfiIn] = KEY(UINT32, "oob.ifindex_in"), */
+	/* [InOobIfiOut] = KEY(UINT32, "oob.ifindex_out"), */
+	[InRawInPktCount] = KEY(UINT64, "raw.in.pktcount"),
+	[InRawInPktLen] = KEY(UINT64, "raw.in.pktlen"),
+	[InRawOutPktCount] = KEY(UINT64, "raw.out.pktcount"),
+	[InRawOutPktLen] = KEY(UINT64, "raw.out.pktlen"),
+	[InFlowStartSec] = KEY(UINT32, "flow.start.sec"),
+	[InFlowStartUsec] = KEY(UINT32, "flow.start.usec"),
+	[InFlowEndSec] = KEY(UINT32, "flow.end.sec"),
+	[InFlowEndUsec] = KEY(UINT32, "flow.end.usec"),
+	[InL4SPort] = KEY(UINT16, "l4.sport"),
+	[InL4DPort] = KEY(UINT16, "l4.dport"),
+	[InIpProto] = KEY(UINT8, "ip.protocol"),
+};
+
 static int
 tcp_ufd_cb(int fd, unsigned what, void *arg)
 {
 	struct ulogd_pluginstance *pi = arg;
 	struct ipfix_priv *priv = upi_priv(pi);
+	char buf[16];
+	ssize_t nread;
+
+	if (what & ULOGD_FD_READ) {
+		nread = read(priv->ufd.fd, buf, sizeof(buf));
+		if (!nread) {
+			upi_log(pi, ULOGD_INFO, "connection reset by peer\n");
+			ulogd_unregister_fd(&priv->ufd);
+		} else
+			upi_log(pi, ULOGD_INFO, "unexpected data (%d bytes)\n", nread);
+	}
+
+	/* FIXME plugin is not restarted */
+	ulogd_upi_set_state(pi, PsConfigured);
 
 	return 0;
 }
@@ -103,7 +153,7 @@ ipfix_configure(struct ulogd_pluginstance *pi)
 
 	ulogd_init_fd(&priv->ufd, -1, ULOGD_FD_READ, tcp_ufd_cb, pi);
 
-	return ulogd_wildcard_inputkeys(pi);
+	return ULOGD_IRET_OK;
 }
 
 static int
@@ -161,12 +211,16 @@ ipfix_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
 
+
+
 	return 0;
 }
 
 static struct ulogd_plugin ipfix_plugin = { 
 	.name = "IPFIX",
 	.input = {
+		.keys = ipfix_in_keys,
+		.num_keys = ARRAY_SIZE(ipfix_in_keys),
 		.type = ULOGD_DTYPE_PACKET | ULOGD_DTYPE_FLOW, 
 	},
 	.output = {
