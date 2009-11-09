@@ -160,7 +160,7 @@ static int
 load_plugin(const char *file)
 {
 	if (dlopen(file, RTLD_NOW) == NULL) {
-		ulogd_log(ULOGD_ERROR, "%s: %s\n", file, dlerror());
+		ulogd_log(ULOGD_ERROR, "%s\n", dlerror());
 		return -1;
 	}
 
