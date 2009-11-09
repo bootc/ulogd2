@@ -21,13 +21,19 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 
 #include "ipfix.h"
 
+#define DEFAULT_MTU			512 /* RFC 5101, 10.3.3 */
+#define DEFAULT_PORT		4739 /* RFC 5101, 10.3.4 */
+#define DEFAULT_SPORT		4740
+
 
 enum {
-	HOST_CE = 0,
+	OID_CE = 0,
+	HOST_CE,
 	PORT_CE,
 	PROTO_CE,
 };
@@ -35,36 +41,111 @@ enum {
 static const struct config_keyset ipfix_kset = {
 	.num_ces = 3,
 	.ces = {
+		[OID_CE] = CONFIG_KEY_INT("oid", 0),
 		[HOST_CE] = CONFIG_KEY_STR("host", ""),
-		[PORT_CE] = CONFIG_KEY_INT("port", 4739 ),
-		[PROTO_CE] = CONFIG_KEY_STR("proto", "udp"),
+		[PORT_CE] = CONFIG_KEY_INT("port", DEFAULT_PORT ),
+		[PROTO_CE] = CONFIG_KEY_STR("proto", "tcp"),
 	},
 };
 
-#define host_ce(pi)		ulogd_config_str(pi, HOST_CE);
-#define port_ce(pi)		ulogd_config_int(pi, PORT_CE);
-#define proto_ce(pi)	ulogd_config_str(pi, PROTO_CE);
+#define oid_ce(pi)		ulogd_config_int(pi, OID_CE)
+#define host_ce(pi)		ulogd_config_str(pi, HOST_CE)
+#define port_ce(pi)		ulogd_config_int(pi, PORT_CE)
+#define proto_ce(pi)	ulogd_config_str(pi, PROTO_CE)
 
+
+struct ipfix_templ {
+	struct ipfix_templ *next;
+};
 
 struct ipfix_priv {
-	int fd;
-	struct ipfix_templ_hdr *templ;
+	struct ulogd_fd ufd;
+	uint32_t seqno;
+	struct ipfix_templ *templates;
+	struct sockaddr_in sa;
 };
+
+static int
+tcp_ufd_cb(int fd, unsigned what, void *arg)
+{
+	struct ulogd_pluginstance *pi = arg;
+	struct ipfix_priv *priv = upi_priv(pi);
+
+	return 0;
+}
 
 static int
 ipfix_configure(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
+	int ret;
+
+	if (!oid_ce(pi)) {
+		upi_log(pi, ULOGD_FATAL, "invalid Observation ID\n");
+		return ULOGD_IRET_ERR;
+	}
+	if (!host_ce(pi)) {
+		upi_log(pi, ULOGD_FATAL, "no destination host specified\n");
+		return ULOGD_IRET_ERR;
+	}
+
+	memset(&priv->sa, 0, sizeof(priv->sa));
+	priv->sa.sin_family = AF_INET;
+	priv->sa.sin_port = htons(port_ce(pi));
+	ret = inet_pton(AF_INET, host_ce(pi), &priv->sa.sin_addr);
+	if (ret < 0) {
+		upi_log(pi, ULOGD_FATAL, "inet_pton: %m\n");
+		return ULOGD_IRET_ERR;
+	} else if (!ret) {
+		upi_log(pi, ULOGD_FATAL, "host: invalid address\n");
+		return ULOGD_IRET_ERR;
+	}
+
+	ulogd_init_fd(&priv->ufd, -1, ULOGD_FD_READ, tcp_ufd_cb, pi);
 
 	return ulogd_wildcard_inputkeys(pi);
+}
+
+static int
+tcp_connect(struct ulogd_pluginstance *pi)
+{
+	struct ipfix_priv *priv = upi_priv(pi);
+	char addr[16];
+
+	if ((priv->ufd.fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		upi_log(pi, ULOGD_FATAL, "socket: %m\n");
+		return ULOGD_IRET_ERR;
+	}
+
+	if (connect(priv->ufd.fd, &priv->sa, sizeof(priv->sa)) < 0) {
+		upi_log(pi, ULOGD_ERROR, "connect: %m\n");
+		return ULOGD_IRET_AGAIN;
+	}
+
+	if (ulogd_register_fd(&priv->ufd) < 0)
+		goto err_close;
+
+	upi_log(pi, ULOGD_INFO, "connected to %s:%d\n",
+			inet_ntop(AF_INET, &priv->sa.sin_addr, addr, sizeof(addr)),
+			port_ce(pi));
+
+	return ULOGD_IRET_OK;
+
+err_close:
+	close(priv->ufd.fd);
+	return ULOGD_IRET_ERR;
 }
 
 static int
 ipfix_start(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
+	int ret;
 
-	return 0;
+	if ((ret = tcp_connect(pi)) < 0)
+		return ret;
+
+	return ULOGD_IRET_OK;
 }
 
 static int
@@ -91,13 +172,13 @@ static struct ulogd_plugin ipfix_plugin = {
 	.output = {
 		.type = ULOGD_DTYPE_SINK,
 	},
-	.config_kset 	= &ipfix_kset,
-	.priv_size 	= sizeof(struct ipfix_priv),
-	.configure	= ipfix_configure,
-	.start	 	= ipfix_start,
-	.stop	 	= ipfix_stop,
-	.interp 	= ipfix_interp,
-	.rev		= ULOGD_PLUGIN_REVISION,
+	.config_kset = &ipfix_kset,
+	.priv_size = sizeof(struct ipfix_priv),
+	.configure = ipfix_configure,
+	.start = ipfix_start,
+	.stop = ipfix_stop,
+	.interp = ipfix_interp,
+	.rev = ULOGD_PLUGIN_REVISION,
 };
 
 void __upi_ctor init(void);
