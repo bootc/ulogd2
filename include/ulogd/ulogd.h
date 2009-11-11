@@ -26,6 +26,7 @@
 #define __fmt_printf(idx, first) \
 						__attribute__((format (printf,(idx),(first))))
 
+#define __packed		__attribute__((packed))
 #define __noreturn		__attribute__((noreturn))
 #define __cold			__attribute__((cold))
 

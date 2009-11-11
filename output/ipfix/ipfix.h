@@ -36,4 +36,35 @@ struct ipfix_set_hdr {
 	uint8_t data[];
 };
 
+/* Vineyard IPFIX-like protocol */
+struct vy_ipfix_hdr {
+#define VY_IPFIX_VERSION		'A'
+	uint16_t version;
+	uint8_t cnt;				/* RecordCount */
+	uint32_t dev_id;
+	uint32_t uptime;			/* milliseconds */
+	uint32_t unix_secs;
+	uint32_t unix_nsecs;
+	uint8_t data[];
+} __packed;
+
+struct vy_ipfix_data {
+	struct sockaddr_in saddr;
+	struct sockaddr_in daddr;
+	uint16_t ifi_in;
+	uint16_t ifi_out;
+	uint32_t packets;
+	uint32_t bytes;
+	uint32_t start;				/* milliseconds */
+	uint32_t end;				/* milliseconds */
+	uint16_t sport;
+	uint16_t dport;
+	uint8_t l4_proto;
+	uint8_t dscp;
+	uint32_t appsig;
+	uint32_t retrans_rate;
+	uint32_t rtt;
+	uint8_t policy;				/* discard, shape, ... */
+} __packed;
+
 #endif /* IPFIX_H */
