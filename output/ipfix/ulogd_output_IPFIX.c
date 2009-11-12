@@ -311,9 +311,6 @@ send_msgs(struct ulogd_pluginstance *pi)
 	struct ipfix_priv *priv = upi_priv(pi);
 	struct llist_head *curr, *tmp;
 
-	if (llist_empty(&priv->list))
-		return 0;
-
 	llist_for_each_prev_safe(curr, tmp, &priv->list) {
 		struct ipfix_msg *msg = llist_entry(curr, struct ipfix_msg, link);
 		int ret;
