@@ -37,15 +37,17 @@ enum {
 	HOST_CE,
 	PORT_CE,
 	PROTO_CE,
+	MTU_CE,
 };
 
 static const struct config_keyset ipfix_kset = {
-	.num_ces = 4,
+	.num_ces = 5,
 	.ces = {
 		[OID_CE] = CONFIG_KEY_INT("oid", 0),
 		[HOST_CE] = CONFIG_KEY_STR("host", ""),
 		[PORT_CE] = CONFIG_KEY_INT("port", DEFAULT_PORT ),
 		[PROTO_CE] = CONFIG_KEY_STR("proto", "tcp"),
+		[MTU_CE] = CONFIG_KEY_INT("mtu", DEFAULT_MTU),
 	},
 };
 
@@ -53,6 +55,7 @@ static const struct config_keyset ipfix_kset = {
 #define host_ce(pi)		ulogd_config_str(pi, HOST_CE)
 #define port_ce(pi)		ulogd_config_int(pi, PORT_CE)
 #define proto_ce(pi)	ulogd_config_str(pi, PROTO_CE)
+#define mtu_ce(pi)		ulogd_config_int(pi, MTU_CE)
 
 
 struct ipfix_templ {
@@ -67,10 +70,8 @@ struct ipfix_flow {
 struct ipfix_priv {
 	struct ulogd_fd ufd;
 	uint32_t seqno;
-	struct ipfix_hdr *hdr;
-	char *end;
-	int num_flows;
-	int set_len;
+	struct ipfix_msg *msg;		/* current message */
+	struct llist_head list;
 	struct ipfix_templ *templates;
 	int proto;
 	struct ulogd_timer timer;
@@ -80,8 +81,6 @@ struct ipfix_priv {
 enum {
 	InIpSaddr = 0,
 	InIpDaddr,
-	/* InOobIfiIn, */
-	/* InOobIfiOut, */
 	InRawInPktCount,
 	InRawInPktLen,
 	InRawOutPktCount,
@@ -99,8 +98,6 @@ enum {
 static struct ulogd_key ipfix_in_keys[] = {
 	[InIpSaddr] = KEY(IPADDR, "ip.saddr"),
 	[InIpDaddr] = KEY(IPADDR, "ip.daddr"),
-	/* [InOobIfiIn] = KEY(UINT32, "oob.ifindex_in"), */
-	/* [InOobIfiOut] = KEY(UINT32, "oob.ifindex_out"), */
 	[InRawInPktCount] = KEY(UINT64, "raw.in.pktcount"),
 	[InRawInPktLen] = KEY(UINT64, "raw.in.pktlen"),
 	[InRawOutPktCount] = KEY(UINT64, "raw.out.pktcount"),
@@ -149,6 +146,7 @@ static int
 ipfix_configure(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
+	char addr[16];
 	int ret;
 
 	if (!oid_ce(pi)) {
@@ -176,9 +174,15 @@ ipfix_configure(struct ulogd_pluginstance *pi)
 		return ULOGD_IRET_ERR;
 	}
 
+	INIT_LLIST_HEAD(&priv->list);
+
 	ulogd_init_fd(&priv->ufd, -1, ULOGD_FD_READ, ipfix_ufd_cb, pi);
 	ulogd_init_timer(&priv->timer, 1 SEC, ipfix_timer_cb, pi,
 					 TIMER_F_PERIODIC);
+
+	upi_log(pi, ULOGD_INFO, "using IPFIX Collector at %s:%d (MTU %d)\n",
+			inet_ntop(AF_INET, &priv->sa.sin_addr, addr, sizeof(addr)),
+			port_ce(pi), mtu_ce(pi));
 
 	return ULOGD_IRET_OK;
 }
@@ -229,9 +233,7 @@ static int
 ipfix_start(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
-	struct ipfix_hdr *hdr;
 	struct ipfix_set_hdr *shdr;
-	struct vy_ipfix_data *data;
 	char addr[16];
 	int ret;
 
@@ -258,17 +260,12 @@ ipfix_start(struct ulogd_pluginstance *pi)
 
 	ulogd_register_timer(&priv->timer);
 
-	if ((hdr = priv->hdr = malloc(VY_IPFIX_PKT_LEN)) == NULL) {
+	if ((priv->msg = ipfix_msg_alloc(mtu_ce(pi), oid_ce(pi))) == NULL) {
 		upi_log(pi, ULOGD_ERROR, "out of memory\n");
 		return -1;
 	}
 
-	memset(hdr, 0, IPFIX_HDRLEN + IPFIX_SET_HDRLEN);
-	shdr = (struct ipfix_set_hdr *)hdr->data;
-	data = (struct vy_ipfix_data *)shdr->data;
-	hdr->version = htons(IPFIX_VERSION);
-	hdr->oid = htonl(oid_ce(pi));
-	shdr->id = htons(VY_IPFIX_SID);
+	ipfix_msg_add_set(priv->msg, VY_IPFIX_SID);
 
 	return ULOGD_IRET_OK;
 }
@@ -281,9 +278,63 @@ ipfix_stop(struct ulogd_pluginstance *pi)
 	close(priv->ufd.fd);
 	priv->ufd.fd = -1;
 
-	free(priv->hdr);
+	ipfix_msg_free(priv->msg);
+	priv->msg = NULL;
 
 	return 0;
+}
+
+/* do some polishing and enqueue it */
+static int
+enqueue_msg(struct ipfix_priv *priv, struct ipfix_msg *msg)
+{
+	struct ipfix_hdr *hdr = ipfix_msg_data(priv->msg);
+
+	hdr->time = htonl(time(NULL));
+	hdr->seqno = htonl(priv->seqno += msg->nrecs);
+	if (msg->last_set) {
+		msg->last_set->id = htons(msg->last_set->id);
+		msg->last_set->len = htons(msg->last_set->len);
+		msg->last_set = NULL;
+	}
+	hdr->len = htons(ipfix_msg_len(msg));
+
+	llist_add(&priv->msg->link, &priv->list);
+	priv->msg = NULL;
+
+	return 0;
+}
+
+static int
+send_msgs(struct ulogd_pluginstance *pi)
+{
+	struct ipfix_priv *priv = upi_priv(pi);
+	struct llist_head *curr, *tmp;
+
+	if (llist_empty(&priv->list))
+		return 0;
+
+	llist_for_each_prev_safe(curr, tmp, &priv->list) {
+		struct ipfix_msg *msg = llist_entry(curr, struct ipfix_msg, link);
+		int ret;
+
+		ret = send(priv->ufd.fd, ipfix_msg_data(msg), ipfix_msg_len(msg), 0);
+		if (ret < 0) {
+			upi_log(pi, ULOGD_ERROR, "send: %m\n");
+			return ULOGD_IRET_ERR;
+		}
+
+		/* TODO handle short send() for other protocols */
+		if (ret < ipfix_msg_len(msg)) {
+			upi_log(pi, ULOGD_ERROR, "short send: %d < %d\n",
+					ret, ipfix_msg_len(msg));
+			return ULOGD_IRET_ERR;
+		}
+
+		llist_del(curr);
+	}
+	
+	return ULOGD_IRET_OK;
 }
 
 static int
@@ -291,22 +342,33 @@ ipfix_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
 	struct ulogd_key *in = pi->input.keys;
-	struct ipfix_hdr *hdr = priv->hdr;
-	struct ipfix_set_hdr *shdr;
+	struct ipfix_msg *msg = priv->msg;
 	struct vy_ipfix_data *data;
 	int ret;
 
-	BUG_ON(priv->num_flows < 0 || priv->num_flows >= 2);
-	BUG_ON(!hdr);
-	shdr = (struct ipfix_set_hdr *)hdr->data;
-	data = (struct vy_ipfix_data *)shdr->data + priv->num_flows;
-
+	BUG_ON(!msg);
 	if (!key_src_valid(&in[InIpSaddr]))
 		return ULOGD_IRET_OK;
 
+again:
+	data = ipfix_msg_add_data(priv->msg, sizeof(struct vy_ipfix_data));
+	if (!data) {
+		enqueue_msg(priv, msg);
+
+		priv->msg = ipfix_msg_alloc(mtu_ce(pi), oid_ce(pi));
+		if (!priv->msg) {
+			/* just drop this flow */
+			upi_log(pi, ULOGD_ERROR, "out of memory, dropping flow\n");
+			return ULOGD_IRET_OK;
+		}
+		ipfix_msg_add_set(priv->msg, VY_IPFIX_SID);
+		/* can't loop because we know the next will succeed */
+		goto again;
+	}
+
 	key_src_in(&in[InIpSaddr], &data->saddr.sin_addr);
 	key_src_in(&in[InIpDaddr], &data->daddr.sin_addr);
-	data->ifi_in = data->ifi_out = htons(1);
+	data->ifi_in = data->ifi_out = 0;
 
 	data->packets = htonl((uint32_t)(key_src_u64(&in[InRawInPktCount])
 									 + key_src_u64(&in[InRawOutPktCount])));
@@ -327,23 +389,12 @@ ipfix_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 		data->aid = 0;
 	data->l4_proto = key_src_u8(&in[InIpProto]);
 	data->dscp = 0;
-	
-	priv->set_len += ipfix_rec_len(htons(VY_IPFIX_SID));
+	data->__padding = 0;
 
-	if (++priv->num_flows >= 2) {
-		hdr->time = htonl(time(NULL));
-		hdr->seqno = htonl(++priv->seqno);
-		shdr->len = htons(priv->set_len);
-		hdr->len = htons(IPFIX_HDRLEN + htons(shdr->len));
+	if ((ret = send_msgs(pi)) < 0)
+		return ret;
 
-		ret = send(priv->ufd.fd, priv->hdr, IPFIX_HDRLEN + priv->set_len, 0);
-
-		priv->num_flows = 0;
-		priv->set_len = 0;
-		shdr->len = 0;
-	}
-
-	return 0;
+	return ULOGD_IRET_OK;
 }
 
 static struct ulogd_plugin ipfix_plugin = { 

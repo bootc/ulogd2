@@ -40,6 +40,15 @@ struct ipfix_set_hdr {
 
 #define IPFIX_SET_HDRLEN		sizeof(struct ipfix_set_hdr)
 
+struct ipfix_msg {
+	struct llist_head link;
+	uint8_t *tail;
+	uint8_t *end;
+	unsigned nrecs;
+	struct ipfix_set_hdr *last_set;
+	uint8_t data[];
+};
+
 struct vy_ipfix_data {
 	struct sockaddr_in saddr;
 	struct sockaddr_in daddr;
@@ -67,6 +76,12 @@ struct vy_ipfix_data {
 size_t ipfix_rec_len(uint16_t);
 
 /* message handling */
-size_t ipfix_msg_len(const struct ipfix_hdr *);
+struct ipfix_msg *ipfix_msg_alloc(size_t, uint32_t);
+void ipfix_msg_free(struct ipfix_msg *);
+struct ipfix_hdr *ipfix_msg_hdr(const struct ipfix_msg *);
+size_t ipfix_msg_len(const struct ipfix_msg *);
+void *ipfix_msg_data(struct ipfix_msg *);
+struct ipfix_set_hdr *ipfix_msg_add_set(struct ipfix_msg *, uint16_t);
+void *ipfix_msg_add_data(struct ipfix_msg *, size_t);
 
 #endif /* IPFIX_H */
