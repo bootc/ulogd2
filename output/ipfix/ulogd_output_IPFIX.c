@@ -19,6 +19,7 @@
 #include <ulogd/common.h>
 #include <ulogd/plugin.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -66,9 +67,10 @@ struct ipfix_flow {
 struct ipfix_priv {
 	struct ulogd_fd ufd;
 	uint32_t seqno;
-	struct vy_ipfix_hdr *hdr;
+	struct ipfix_hdr *hdr;
 	char *end;
 	int num_flows;
+	int set_len;
 	struct ipfix_templ *templates;
 	int proto;
 	struct ulogd_timer timer;
@@ -91,6 +93,7 @@ enum {
 	InL4SPort,
 	InL4DPort,
 	InIpProto,
+	InCtMark,
 };
 
 static struct ulogd_key ipfix_in_keys[] = {
@@ -109,6 +112,7 @@ static struct ulogd_key ipfix_in_keys[] = {
 	[InL4SPort] = KEY(UINT16, "l4.sport"),
 	[InL4DPort] = KEY(UINT16, "l4.dport"),
 	[InIpProto] = KEY(UINT8, "ip.protocol"),
+	[InCtMark] = KEY(UINT32, "ct.mark"),
 };
 
 static int
@@ -168,7 +172,7 @@ ipfix_configure(struct ulogd_pluginstance *pi)
 		upi_log(pi, ULOGD_FATAL, "inet_pton: %m\n");
 		return ULOGD_IRET_ERR;
 	} else if (!ret) {
-		upi_log(pi, ULOGD_FATAL, "host: invalid address\n");
+		upi_log(pi, ULOGD_FATAL, "host: invalid address '%s'\n", host_ce(pi));
 		return ULOGD_IRET_ERR;
 	}
 
@@ -225,7 +229,9 @@ static int
 ipfix_start(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
-	struct vy_ipfix_hdr *hdr = priv->hdr;
+	struct ipfix_hdr *hdr;
+	struct ipfix_set_hdr *shdr;
+	struct vy_ipfix_data *data;
 	char addr[16];
 	int ret;
 
@@ -252,16 +258,17 @@ ipfix_start(struct ulogd_pluginstance *pi)
 
 	ulogd_register_timer(&priv->timer);
 
-	hdr = priv->hdr = malloc(sizeof(struct vy_ipfix_hdr)
-					   + 2 * sizeof(struct vy_ipfix_data));
-	if (!priv->hdr) {
+	if ((hdr = priv->hdr = malloc(VY_IPFIX_PKT_LEN)) == NULL) {
 		upi_log(pi, ULOGD_ERROR, "out of memory\n");
 		return -1;
 	}
 
-	hdr->version = VY_IPFIX_VERSION;
-	hdr->cnt = 2;
-	hdr->dev_id = 42;
+	memset(hdr, 0, IPFIX_HDRLEN + IPFIX_SET_HDRLEN);
+	shdr = (struct ipfix_set_hdr *)hdr->data;
+	data = (struct vy_ipfix_data *)shdr->data;
+	hdr->version = htons(IPFIX_VERSION);
+	hdr->oid = htonl(oid_ce(pi));
+	shdr->id = htons(VY_IPFIX_SID);
 
 	return ULOGD_IRET_OK;
 }
@@ -284,38 +291,56 @@ ipfix_interp(struct ulogd_pluginstance *pi, unsigned *flags)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
 	struct ulogd_key *in = pi->input.keys;
-	struct vy_ipfix_hdr *hdr = priv->hdr;
+	struct ipfix_hdr *hdr = priv->hdr;
+	struct ipfix_set_hdr *shdr;
 	struct vy_ipfix_data *data;
 	int ret;
 
 	BUG_ON(priv->num_flows < 0 || priv->num_flows >= 2);
-	data = ((struct vy_ipfix_data *)hdr->data) + priv->num_flows;
+	BUG_ON(!hdr);
+	shdr = (struct ipfix_set_hdr *)hdr->data;
+	data = (struct vy_ipfix_data *)shdr->data + priv->num_flows;
 
 	if (!key_src_valid(&in[InIpSaddr]))
 		return ULOGD_IRET_OK;
 
 	key_src_in(&in[InIpSaddr], &data->saddr.sin_addr);
 	key_src_in(&in[InIpDaddr], &data->daddr.sin_addr);
-	data->ifi_in = data->ifi_out = 0U;
-	data->packets = (uint32_t)(key_src_u64(&in[InRawInPktCount])
-							   + key_src_u64(&in[InRawOutPktCount]));
-	data->bytes = (uint32_t)(key_src_u64(&in[InRawInPktLen])
-							 + key_src_u64(&in[InRawOutPktLen]));
-	data->start = key_src_u32(&in[InFlowStartSec])
-		+ key_src_u32(&in[InFlowStartUsec]) / 1000;
-	data->end = key_src_u32(&in[InFlowEndSec])
-		+ key_src_u32(&in[InFlowEndUsec]) / 1000;
+	data->ifi_in = data->ifi_out = htons(1);
+
+	data->packets = htonl((uint32_t)(key_src_u64(&in[InRawInPktCount])
+									 + key_src_u64(&in[InRawOutPktCount])));
+	data->bytes = htonl((uint32_t)(key_src_u64(&in[InRawInPktLen])
+								   + key_src_u64(&in[InRawOutPktLen])));
+
+	data->start = htonl(key_src_u32(&in[InFlowStartSec]));
+	data->end = htonl(key_src_u32(&in[InFlowEndSec]));
+
 	if (key_src_valid(&in[InL4SPort])) {
-		data->sport = key_src_u16(&in[InL4SPort]);
-		data->dport = key_src_u16(&in[InL4DPort]);
+		data->sport = htons(key_src_u16(&in[InL4SPort]));
+		data->dport = htons(key_src_u16(&in[InL4DPort]));
 	}
+
+	if (key_src_valid(&in[InCtMark]))
+		data->aid = htonl(key_u32(&in[InCtMark]));
+	else
+		data->aid = 0;
 	data->l4_proto = key_src_u8(&in[InIpProto]);
 	data->dscp = 0;
+	
+	priv->set_len += ipfix_rec_len(htons(VY_IPFIX_SID));
 
 	if (++priv->num_flows >= 2) {
-		ret = send(priv->ufd.fd, priv->hdr, sizeof(struct vy_ipfix_hdr)
-				   + 2 * sizeof(struct vy_ipfix_data), 0);
+		hdr->time = htonl(time(NULL));
+		hdr->seqno = htonl(++priv->seqno);
+		shdr->len = htons(priv->set_len);
+		hdr->len = htons(IPFIX_HDRLEN + htons(shdr->len));
+
+		ret = send(priv->ufd.fd, priv->hdr, IPFIX_HDRLEN + priv->set_len, 0);
+
 		priv->num_flows = 0;
+		priv->set_len = 0;
+		shdr->len = 0;
 	}
 
 	return 0;
