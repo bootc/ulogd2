@@ -407,7 +407,7 @@ again:
 	}
 
 	if (key_src_valid(&in[InCtMark]))
-		data->aid = htonl(key_u32(&in[InCtMark]));
+		data->aid = htonl(key_src_u32(&in[InCtMark]));
 	else
 		data->aid = 0;
 	data->l4_proto = key_src_u8(&in[InIpProto]);
