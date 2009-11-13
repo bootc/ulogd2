@@ -50,8 +50,8 @@ struct ipfix_msg {
 };
 
 struct vy_ipfix_data {
-	struct sockaddr_in saddr;
-	struct sockaddr_in daddr;
+	struct in_addr saddr;
+	struct in_addr daddr;
 	uint16_t ifi_in;
 	uint16_t ifi_out;
 	uint32_t packets;
@@ -83,5 +83,6 @@ size_t ipfix_msg_len(const struct ipfix_msg *);
 void *ipfix_msg_data(struct ipfix_msg *);
 struct ipfix_set_hdr *ipfix_msg_add_set(struct ipfix_msg *, uint16_t);
 void *ipfix_msg_add_data(struct ipfix_msg *, size_t);
+int ipfix_dump_msg(const struct ipfix_msg *);
 
 #endif /* IPFIX_H */

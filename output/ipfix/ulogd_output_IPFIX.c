@@ -233,7 +233,6 @@ static int
 ipfix_start(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
-	struct ipfix_set_hdr *shdr;
 	char addr[16];
 	int ret;
 
@@ -359,12 +358,12 @@ again:
 			return ULOGD_IRET_OK;
 		}
 		ipfix_msg_add_set(priv->msg, VY_IPFIX_SID);
-		/* can't loop because we know the next will succeed */
+		/* can't loop because the next will definitely succeed */
 		goto again;
 	}
 
-	key_src_in(&in[InIpSaddr], &data->saddr.sin_addr);
-	key_src_in(&in[InIpDaddr], &data->daddr.sin_addr);
+	key_src_in(&in[InIpSaddr], &data->saddr);
+	key_src_in(&in[InIpDaddr], &data->daddr);
 	data->ifi_in = data->ifi_out = 0;
 
 	data->packets = htonl((uint32_t)(key_src_u64(&in[InRawInPktCount])

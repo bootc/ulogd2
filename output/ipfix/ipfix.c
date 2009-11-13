@@ -75,7 +75,7 @@ ipfix_msg_add_set(struct ipfix_msg *msg, uint16_t sid)
 
 	shdr = (struct ipfix_set_hdr *)msg->tail;
 	shdr->id = sid;				/* leave host byte-order */
-	shdr->len = 0;
+	shdr->len = IPFIX_SET_HDRLEN;
 	msg->tail += IPFIX_SET_HDRLEN;
 	msg->last_set = shdr;
 	return shdr;
@@ -107,6 +107,23 @@ ipfix_msg_add_data(struct ipfix_msg *msg, size_t len)
 	msg->last_set->len += len;
 
 	return data;
+}
+
+/* check and dump message */
+int
+ipfix_dump_msg(const struct ipfix_msg *msg)
+{
+	const struct ipfix_hdr *hdr = ipfix_msg_hdr(msg);
+	const struct ipfix_set_hdr *shdr = (struct ipfix_set_hdr *)hdr->data;
+
+	BUG_ON(ntohs(hdr->len) < IPFIX_HDRLEN);
+	BUG_ON(ipfix_msg_len(msg) != IPFIX_HDRLEN + ntohs(shdr->len));
+
+	ulogd_log(ULOGD_DEBUG, "msg: ver=%#x len=%#x t=%#x seq=%#x oid=%d\n",
+			  ntohs(hdr->version), ntohs(hdr->len), htonl(hdr->time),
+			  ntohl(hdr->seqno), ntohl(hdr->oid));
+
+	return 0;
 }
 
 /* template management */
