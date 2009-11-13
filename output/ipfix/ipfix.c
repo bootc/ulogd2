@@ -39,6 +39,10 @@ ipfix_msg_free(struct ipfix_msg *msg)
 	if (!msg)
 		return;
 
+	if (msg->nrecs > 0)
+		ulogd_log(ULOGD_DEBUG, "%s: %d flows have been lost\n", __func__,
+			msg->nrecs);
+
 	free(msg);
 }
 

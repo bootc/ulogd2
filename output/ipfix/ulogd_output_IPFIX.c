@@ -144,13 +144,13 @@ done:
 }
 
 /* do some polishing and enqueue it */
-static int
+static void
 enqueue_msg(struct ipfix_priv *priv, struct ipfix_msg *msg)
 {
 	struct ipfix_hdr *hdr = ipfix_msg_data(msg);
 
 	if (!msg)
-		return 0;
+		return;
 
 	hdr->time = htonl(time(NULL));
 	hdr->seqno = htonl(priv->seqno += msg->nrecs);
@@ -162,10 +162,11 @@ enqueue_msg(struct ipfix_priv *priv, struct ipfix_msg *msg)
 	hdr->len = htons(ipfix_msg_len(msg));
 
 	llist_add(&msg->link, &priv->list);
-
-	return 0;
 }
 
+/**
+ * @return %ULOGD_IRET_OK or error value
+ */
 static int
 send_msgs(struct ulogd_pluginstance *pi)
 {
@@ -197,6 +198,8 @@ send_msgs(struct ulogd_pluginstance *pi)
 					ret, ipfix_msg_len(msg));
 
 		llist_del(curr);
+		msg->nrecs = 0;
+		ipfix_msg_free(msg);
 	}
 
 done:
@@ -324,6 +327,8 @@ ipfix_start(struct ulogd_pluginstance *pi)
 	default:
 		break;
 	}
+
+	priv->seqno = 0;
 
 	upi_log(pi, ULOGD_INFO, "connected to %s:%d\n",
 			inet_ntop(AF_INET, &priv->sa.sin_addr, addr, sizeof(addr)),
