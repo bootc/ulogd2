@@ -121,12 +121,17 @@ ipfix_ufd_cb(int fd, unsigned what, void *arg)
 	ssize_t nread;
 
 	if (what & ULOGD_FD_READ) {
-		nread = read(priv->ufd.fd, buf, sizeof(buf));
+		nread = recv(priv->ufd.fd, buf, sizeof(buf), MSG_DONTWAIT);
 		if (nread < 0) {
-			upi_log(pi, ULOGD_ERROR, "read: %m\n");
+			int err = ULOGD_IRET_ERR;
+		
+			upi_log(pi, ULOGD_ERROR, "recv: %m\n");
+			if (errno == EWOULDBLOCK || errno == EINTR)
+				goto done;
+			else if (errno == ECONNREFUSED)
+				err = ULOGD_IRET_AGAIN;
 
-			/* FIXME plugin is not restarted */
-			ulogd_upi_set_state(pi, PsConfigured);
+			ulogd_upi_error(pi, err);
 		} else if (!nread) {
 			upi_log(pi, ULOGD_INFO, "connection reset by peer\n");
 			ulogd_unregister_fd(&priv->ufd);
@@ -134,6 +139,7 @@ ipfix_ufd_cb(int fd, unsigned what, void *arg)
 			upi_log(pi, ULOGD_INFO, "unexpected data (%d bytes)\n", nread);
 	}
 
+done:
 	return 0;
 }
 
@@ -165,6 +171,7 @@ send_msgs(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
 	struct llist_head *curr, *tmp;
+	int ret = ULOGD_IRET_OK;
 
 	llist_for_each_prev_safe(curr, tmp, &priv->list) {
 		struct ipfix_msg *msg = llist_entry(curr, struct ipfix_msg, link);
@@ -173,20 +180,27 @@ send_msgs(struct ulogd_pluginstance *pi)
 		ret = send(priv->ufd.fd, ipfix_msg_data(msg), ipfix_msg_len(msg), 0);
 		if (ret < 0) {
 			upi_log(pi, ULOGD_ERROR, "send: %m\n");
-			return ULOGD_IRET_ERR;
+
+			if (errno == EAGAIN || errno == EINTR)
+				goto done;
+			else if (errno == ECONNREFUSED)
+				ret = ULOGD_IRET_AGAIN;
+			else
+				ret = ULOGD_IRET_ERR;
+
+			goto done;
 		}
 
 		/* TODO handle short send() for other protocols */
-		if (ret < ipfix_msg_len(msg)) {
+		if (ret < ipfix_msg_len(msg))
 			upi_log(pi, ULOGD_ERROR, "short send: %d < %d\n",
 					ret, ipfix_msg_len(msg));
-			return ULOGD_IRET_ERR;
-		}
 
 		llist_del(curr);
 	}
-	
-	return ULOGD_IRET_OK;
+
+done:
+	return ret;
 }
 
 static void
@@ -328,8 +342,11 @@ ipfix_stop(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = upi_priv(pi);
 
+	ulogd_unregister_fd(&priv->ufd);
 	close(priv->ufd.fd);
 	priv->ufd.fd = -1;
+
+	ulogd_unregister_timer(&priv->timer);
 
 	ipfix_msg_free(priv->msg);
 	priv->msg = NULL;

@@ -807,7 +807,6 @@ ulogd_upi_set_state(struct ulogd_pluginstance *pi, enum UpiState state)
 		return;
 
 	sstate = pi->state = state;
-
 	llist_for_each_entry_reverse(curr, &stack->list, list) {
 		if (curr->state < sstate)
 			sstate = curr->state;
