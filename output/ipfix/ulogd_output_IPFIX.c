@@ -184,7 +184,7 @@ send_msgs(struct ulogd_pluginstance *pi)
 
 			if (errno == EAGAIN || errno == EINTR)
 				goto done;
-			else if (errno == ECONNREFUSED)
+			else if (errno == ECONNREFUSED || errno == EPERM)
 				ret = ULOGD_IRET_AGAIN;
 			else
 				ret = ULOGD_IRET_ERR;
