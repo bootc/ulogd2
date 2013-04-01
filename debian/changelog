@@ -1,0 +1,25 @@
+ulogd2 (2.0.2-1) UNRELEASED; urgency=low
+
+  * New upstream version.
+
+ -- Chris Boot <bootc@bootc.net>  Mon, 01 Apr 2013 11:18:24 +0100
+
+ulogd2 (2.0.0-3) wheezy-bootc; urgency=low
+
+  * Put all created logfiled in /var/log/ulog/ by default so that they can be
+    rotated using the bundled logrotate script.
+
+ -- Chris Boot <bootc@bootc.net>  Sat, 07 Jul 2012 23:55:24 +0100
+
+ulogd2 (2.0.0-2) wheezy-bootc; urgency=low
+
+  * Fix logrotate script.
+  * Fix default ulogd.conf by enabling the NFLOG LOGEMU rule by default.
+
+ -- Chris Boot <bootc@bootc.net>  Sat, 07 Jul 2012 23:36:07 +0100
+
+ulogd2 (2.0.0-1) wheezy-bootc; urgency=low
+
+  * Initial release.
+
+ -- Chris Boot <bootc@bootc.net>  Wed, 04 Jul 2012 10:16:46 +0100

@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+# -*- mode: makefile; coding: utf-8 -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+PACKAGE	= $(firstword $(shell dh_listpackages))
+TMP	= $(CURDIR)/debian/$(PACKAGE)
+
+%:
+	dh $@ --with autoreconf,autotools-dev
+
+override_dh_auto_configure:
+	dh_auto_configure -- --with-pgsql --with-mysql --with-dbi
+
+override_dh_auto_build:
+	dh_auto_build
+	( cd doc && sgml2txt ulogd.sgml && sgml2html -s 0 ulogd.sgml )
+
+override_dh_auto_clean:
+	dh_auto_clean
+	$(MAKE) -C doc clean
+	rm -f ulogd.conf
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 600 $(TMP)/etc/ulogd.conf
+
+override_dh_installdocs:
+	dh_installdocs --link-doc=ulogd2
+
+override_dh_strip:
+	dh_strip --dbg-package=ulogd2-dbg
+
+.PHONY: override_dh_auto_configure override_dh_auto_build \
+	override_dh_auto_clean override_dh_fixperms override_dh_installdocs \
+	override_dh_strip

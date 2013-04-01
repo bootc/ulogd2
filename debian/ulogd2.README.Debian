@@ -1,0 +1,8 @@
+Support for logging into MySQL, PostgreSQL and SQLite 3 databases is available
+from separate packages called ulogd2-mysql, ulogd2-pgsql and ulogd2-sqlite3 
+respectively.
+
+You can also log packets in pcap file format, using package ulogd2-pcap.
+
+Don't forget to adapt your /etc/ulogd.conf to those modules. Example 
+configuration is included.

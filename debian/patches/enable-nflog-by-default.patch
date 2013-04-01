@@ -1,0 +1,38 @@
+Description: <short summary of the patch>
+ TODO: Put a short summary on the line above and replace this paragraph
+ with a longer explanation of this change. Complete the meta-information
+ with other relevant fields (see below for details). To make it easier, the
+ information below has been extracted from the changelog. Adjust it or drop
+ it.
+ .
+ ulogd2 (2.0.0-2) wheezy-bootc; urgency=low
+ .
+   * Fix logrotate script.
+Author: Chris Boot <bootc@bootc.net>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+Index: ulogd2/ulogd.conf.in
+===================================================================
+--- ulogd2.orig/ulogd.conf.in	2013-04-01 12:00:44.781476506 +0100
++++ ulogd2/ulogd.conf.in	2013-04-01 12:02:36.908069963 +0100
+@@ -51,7 +51,7 @@
+ plugin="@pkglibdir@/ulogd_output_GRAPHITE.so"
+ 
+ # this is a stack for logging packet send by system via LOGEMU
+-#stack=log1:NFLOG,base1:BASE,ifi1:IFINDEX,ip2str1:IP2STR,print1:PRINTPKT,emu1:LOGEMU
++stack=log1:NFLOG,base1:BASE,ifi1:IFINDEX,ip2str1:IP2STR,print1:PRINTPKT,emu1:LOGEMU
+ 
+ # this is a stack for packet-based logging via LOGEMU
+ #stack=log2:NFLOG,base1:BASE,ifi1:IFINDEX,ip2str1:IP2STR,print1:PRINTPKT,emu1:LOGEMU

@@ -1,0 +1,4 @@
+usr/lib/ulogd
+usr/sbin
+etc
+var/log/ulog

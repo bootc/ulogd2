@@ -1,0 +1,10 @@
+#! /bin/sh
+set -e
+
+#DEBHELPER#
+
+if [ "$1" = "purge" ]; then
+	if [ -d /var/log/ulog ]; then
+		rm -rf /var/log/ulog
+	fi
+fi

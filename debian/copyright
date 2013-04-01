@@ -1,0 +1,13 @@
+This package was debianized by Chris Boot <bootc@bootc.net> on
+Wed, 04 Jul 2012 10:16:46 +0100.
+
+Current maintainer: Chris Boot <bootc@bootc.net>
+
+It was downloaded from git://git.netfilter.org/ulogd2
+
+Upstream Author: Harald Welte <laforge@gnumonks.org>
+
+Copyright: Copyright (C) 2000-2005 Harald Welte
+
+Licensed under the GNU General Public License version 2. Have a look at
+/usr/share/common-licenses/GPL-2
