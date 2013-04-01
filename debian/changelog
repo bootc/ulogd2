@@ -1,4 +1,11 @@
-ulogd2 (2.0.2-1) UNRELEASED; urgency=low
+ulogd2 (2.0.2-2) wheezy-bootc; urgency=low
+
+  * Packaging cleanups.
+  * Include ulogd_output_GRAPHITE.so plugin.
+
+ -- Chris Boot <bootc@bootc.net>  Mon, 01 Apr 2013 14:16:02 +0100
+
+ulogd2 (2.0.2-1) wheezy-bootc; urgency=low
 
   * New upstream version.
 
