@@ -5,6 +5,7 @@ debian/tmp/usr/lib/*/ulogd/ulogd_filter_*.so
 debian/tmp/usr/lib/*/ulogd/ulogd_inpflow_*.so
 debian/tmp/usr/lib/*/ulogd/ulogd_inppkt_*.so
 debian/tmp/usr/lib/*/ulogd/ulogd_output_GPRINT.so
+debian/tmp/usr/lib/*/ulogd/ulogd_output_GRAPHITE.so
 debian/tmp/usr/lib/*/ulogd/ulogd_output_LOGEMU.so
 debian/tmp/usr/lib/*/ulogd/ulogd_output_NACCT.so
 debian/tmp/usr/lib/*/ulogd/ulogd_output_OPRINT.so
