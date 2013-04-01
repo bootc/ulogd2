@@ -29,6 +29,9 @@ override_dh_fixperms:
 	dh_fixperms
 	chmod 600 $(TMP)/etc/ulogd.conf
 
+override_dh_install:
+	dh_install -X.la --fail-missing
+
 override_dh_installdocs:
 	dh_installdocs --link-doc=ulogd2
 
@@ -36,5 +39,5 @@ override_dh_strip:
 	dh_strip --dbg-package=ulogd2-dbg
 
 .PHONY: override_dh_auto_configure override_dh_auto_build \
-	override_dh_auto_clean override_dh_fixperms override_dh_installdocs \
-	override_dh_strip
+	override_dh_auto_clean override_dh_fixperms override_dh_install \
+       	override_dh_installdocs override_dh_strip
