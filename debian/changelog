@@ -1,3 +1,16 @@
+ulogd2 (2.0.2-3) wheezy-bootc; urgency=low
+
+  * Set architecture to linux-any.
+  * Add Pre-Depends: ${misc:Pre-Depends} to be ready for multi-arch.
+  * Remove extraneous empty dirs (and remove empty *.dirs files)
+  * Improve package descriptions
+  * Enable verbose build
+  * Clean up build-aux/ dir
+  * Register with doc-base
+  * Override a few lintian checks
+
+ -- Chris Boot <bootc@bootc.net>  Wed, 24 Apr 2013 11:14:43 +0100
+
 ulogd2 (2.0.2-2) wheezy-bootc; urgency=low
 
   * Packaging cleanups.

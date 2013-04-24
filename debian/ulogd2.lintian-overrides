@@ -1,0 +1,12 @@
+
+# False positives; the files *are* compiled and linked with hardening flags.
+ulogd2 binary: hardening-no-fortify-functions usr/lib/*/ulogd/ulogd_filter_PWSNIFF.so
+ulogd2 binary: hardening-no-fortify-functions usr/lib/*/ulogd/ulogd_inppkt_NFLOG.so
+ulogd2 binary: hardening-no-fortify-functions usr/lib/*/ulogd/ulogd_inppkt_UNIXSOCK.so
+
+# Config file may contain plaintext passwords, e.g. for MySQL.
+ulogd2 binary: non-standard-file-perm etc/ulogd.conf 0600 != 0644                   
+
+# There is no upstream changelog shipped with the package
+ulogd2 binary: no-upstream-changelog
+

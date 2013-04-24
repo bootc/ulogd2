@@ -1,0 +1,14 @@
+Document: ulogd2-manual
+Title: ULOGD 2.x - the Netfilter Userspace Logging Daemon
+Author: Harald Welte, Eric Leblond
+Abstract: This manual explains how to install and configure ulogd-2.x, the
+ second generation Netfilter Userspace logging daemon.
+Section: System/Security
+
+Format: Text
+Files: /usr/share/doc/ulogd2/ulogd.txt.gz
+
+Format: HTML
+Index: /usr/share/doc/ulogd2/ulogd.html
+Files: /usr/share/doc/ulogd2/ulogd.html
+

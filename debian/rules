@@ -17,13 +17,14 @@ override_dh_auto_configure:
 	dh_auto_configure -- --with-pgsql --with-mysql --with-dbi
 
 override_dh_auto_build:
-	dh_auto_build
+	dh_auto_build -- V=1
 	( cd doc && sgml2txt ulogd.sgml && sgml2html -s 0 ulogd.sgml )
 
 override_dh_auto_clean:
 	dh_auto_clean
 	$(MAKE) -C doc clean
 	rm -f ulogd.conf
+	rm -rf build-aux/
 
 override_dh_fixperms:
 	dh_fixperms
