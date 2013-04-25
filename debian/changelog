@@ -1,3 +1,9 @@
+ulogd2 (2.0.2-4) unstable; urgency=low
+
+  * Rebuild for unstable.
+
+ -- Chris Boot <bootc@bootc.net>  Thu, 25 Apr 2013 18:52:28 +0100
+
 ulogd2 (2.0.2-3) wheezy-bootc; urgency=low
 
   * Set architecture to linux-any.
