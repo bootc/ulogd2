@@ -5,6 +5,7 @@ ulogd2 (2.0.2-5) UNRELEASED; urgency=low
   * Add upstream ARCHITECTURE, AUTHORS, README, TODO files to docs
   * Make debian/copyright machine-readable
   * Clean up patch comments including following Patch Tagging Guidelines
+  * Fix W: ulogd2: old-fsf-address-in-copyright-file
 
  -- Chris Boot <bootc@bootc.net>  Sat, 27 Apr 2013 14:39:00 +0100
 
