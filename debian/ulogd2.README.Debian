@@ -1,6 +1,27 @@
+README for Debian ulogd2 package
+================================
+
+Sample configuration
+--------------------
+The default configuration in /etc/ulogd.conf is set up to consume log entries
+using NFLOG and send them to /var/log/ulog/syslogemu.log with syslog emulation.
+A copy of the standard configuration is included in
+/usr/share/doc/ulogd2/examples/ulogd.conf.gz for reference purposes.
+
+Upgrading from ulogd 1.x
+------------------------
+Please note that the ulogd2 package does not consume logs from the kernel using
+the ULOG target by default. If you are using the ULOG target, you will need to
+edit /etc/ulogd.conf to enable this. Alternatively, consider changing your
+firewall to log using the NFLOG target instead, which offers numerous advantages
+including being available for use with IPv6.
+
+Additional logging targets
+--------------------------
 Support for logging into MySQL, PostgreSQL and SQLite 3 databases is available
 from separate packages called ulogd2-mysql, ulogd2-pgsql and ulogd2-sqlite3 
-respectively.
+respectively. There is also support for logging to SQL databases using the DBI
+abstraction layer available in ulogd2-dbi.
 
 You can also log packets in pcap file format, using package ulogd2-pcap.
 
