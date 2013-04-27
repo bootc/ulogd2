@@ -1,3 +1,9 @@
+ulogd2 (2.0.2-5) UNRELEASED; urgency=low
+
+  * Add Replaces: ulogd to control file.
+
+ -- Chris Boot <bootc@bootc.net>  Sat, 27 Apr 2013 14:39:00 +0100
+
 ulogd2 (2.0.2-4) unstable; urgency=low
 
   * Rebuild for unstable.
