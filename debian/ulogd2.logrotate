@@ -1,4 +1,4 @@
-/var/log/ulog/*.log {
+/var/log/ulog/*.log /var/log/ulog/*.pcap {
     missingok
     compress
     sharedscripts
