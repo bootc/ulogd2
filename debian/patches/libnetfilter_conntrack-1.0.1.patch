@@ -1,6 +1,10 @@
 Description: Relax dependency on libnetfilter_conntrack 1.0.2
-
-Debian wheezy does not carry libnetfilter_conntrack >= 1.0.2, only 1.0.1
+ Debian wheezy does not carry libnetfilter_conntrack >= 1.0.2, only 1.0.1.
+ This should probably be removed once libnetfilter-conntrack-dev (>= 1.0.2-1)
+ is uploaded to sid.
+Forwarded: not-needed
+Author: Chris Boot <bootc@bootc.net>
+Last-Update: 2013-04-27
 
 --- ulogd2-2.0.2.orig/configure.ac
 +++ ulogd2-2.0.2/configure.ac
