@@ -1,0 +1,5 @@
+ulogd2 (2.0.2-1) UNRELEASED; urgency=low
+
+  * Initial release (Closes: #nnnn)
+
+ -- Chris Boot <bootc@bootc.net>  Sat, 27 Apr 2013 14:39:00 +0100

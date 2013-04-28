@@ -1,0 +1,9 @@
+/var/log/ulog/*.log /var/log/ulog/*.pcap {
+    missingok
+    compress
+    sharedscripts
+    create 640 root adm
+    postrotate
+	/etc/init.d/ulogd2 reload
+    endscript
+}

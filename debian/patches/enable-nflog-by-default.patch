@@ -1,0 +1,20 @@
+Description: Enable NFLOG => LOGEMU stack by default
+ The simplest and likely most common usage scenario is to log packets to a
+ logfile using NFLOG, bypassing the kernel ringbuffer. Enable this by default.
+Forwarded: not-needed
+Author: Chris Boot <bootc@bootc.net>
+Last-Update: 2013-04-27
+
+Index: ulogd2/ulogd.conf.in
+===================================================================
+--- ulogd2.orig/ulogd.conf.in	2013-04-01 12:00:44.781476506 +0100
++++ ulogd2/ulogd.conf.in	2013-04-01 12:02:36.908069963 +0100
+@@ -51,7 +51,7 @@
+ plugin="@pkglibdir@/ulogd_output_GRAPHITE.so"
+ 
+ # this is a stack for logging packet send by system via LOGEMU
+-#stack=log1:NFLOG,base1:BASE,ifi1:IFINDEX,ip2str1:IP2STR,print1:PRINTPKT,emu1:LOGEMU
++stack=log1:NFLOG,base1:BASE,ifi1:IFINDEX,ip2str1:IP2STR,print1:PRINTPKT,emu1:LOGEMU
+ 
+ # this is a stack for packet-based logging via LOGEMU
+ #stack=log2:NFLOG,base1:BASE,ifi1:IFINDEX,ip2str1:IP2STR,print1:PRINTPKT,emu1:LOGEMU

@@ -1,0 +1,59 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          ulogd2
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Starts ulogd2
+# Description:       Starts the netfilter userspace log daemon
+### END INIT INFO
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/sbin/ulogd
+NAME=ulogd
+DESC="netfilter userspace log daemon"
+
+. /lib/lsb/init-functions
+
+test -f $DAEMON || exit 0
+
+set -e
+
+case "$1" in
+  start)
+	echo -n "Starting $DESC: "
+	start-stop-daemon --quiet --start --exec $DAEMON -- -d
+	echo "$NAME."
+	;;
+  stop)
+	echo -n "Stopping $DESC: "
+	start-stop-daemon --quiet --oknodo --stop --exec $DAEMON
+	echo "$NAME."
+	;;
+  reload|force-reload)
+	start-stop-daemon --quiet --stop --oknodo --signal HUP --exec $DAEMON
+	;;
+  restart)
+	#
+	#	If the "reload" option is implemented, move the "force-reload"
+	#	option to the "reload" entry above. If not, "force-reload" is
+	#	just the same as "restart".
+	#
+	echo -n "Restarting $DESC: "
+	start-stop-daemon --quiet --oknodo --stop --exec $DAEMON
+	sleep 1
+	start-stop-daemon --quiet --start --exec $DAEMON -- -d > /dev/null 2>&1
+	echo "$NAME."
+	;;
+  status)
+	status_of_proc $DAEMON $NAME
+	;;
+  *)
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|force-reload|status}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

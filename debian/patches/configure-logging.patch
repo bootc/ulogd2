@@ -1,0 +1,22 @@
+Description: Tweak log destination and loglevel in ulogd.conf.in
+ Send logging for ulogd itself to syslog rather than to file (not for iptables
+ logging), and explicitly set loglevel to info.
+Forwarded: not-needed
+Author: Chris Boot <bootc@bootc.net>
+Last-Update: 2013-04-27
+
+--- ulogd2-2.0.2.orig/ulogd.conf.in
++++ ulogd2-2.0.2/ulogd.conf.in
+@@ -8,10 +8,10 @@
+ 
+ 
+ # logfile for status messages
+-logfile="/var/log/ulogd.log"
++logfile="syslog"
+ 
+ # loglevel: debug(1), info(3), notice(5), error(7) or fatal(8) (default 5)
+-# loglevel=1
++loglevel=3
+ 
+ ######################################################################
+ # PLUGIN OPTIONS
