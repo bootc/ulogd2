@@ -3,9 +3,22 @@ Upstream-Name: ulogd
 Source: http://git.netfilter.org/ulogd2/
 
 Files: *
-Copyright: 2000-2006 Harald Welte <laforge@gnumonks.org>
+Copyright: 1996 Bob Jenkins (bob_jenkins@burtleburtle.net)
+           1999 Andrea Arcangeli <andrea@suse.de>
+           2000-2006 Harald Welte <laforge@gnumonks.org>
+           2000-2010 Pierre Chifflier <chifflier@inl.fr>
+           2001 Alex Janssen <alex@ynfonatic.de>
+           2001-2002 Florent AIDE <faide@alphacent.com>
+           2002 David Woodhouse <dwmw2@infradead.org>
+           2003 David S. Miller <davem@redhat.com>
+           2005 Ben La Monica <ben.lamonica@gmail.com>
+           2005 Sven Schuster <schuster.sven@gmx.de>
+           2005,2012 Jozsef Kadlecsik <kadlec@blackhole.kfki.hu>
+           2006 Philip Craig <philipc@snapgear.com>
+           2008-2010 INL
            2008-2012 Pablo Neira Ayuso <pablo@netfilter.org>
            2008-2013 Eric Leblond <eric@regit.org>
+           2012 Intra2net AG <http://www.intra2net.com>
 License: GPL-2
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License version 2
