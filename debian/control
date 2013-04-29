@@ -2,11 +2,11 @@ Source: ulogd2
 Section: net
 Priority: optional
 Maintainer: Chris Boot <bootc@bootc.net>
-Build-Depends: debhelper (>= 9), autotools-dev, pkg-config, libnfnetlink-dev, libmnl-dev,
- libnetfilter-acct-dev, libnetfilter-conntrack-dev, libnetfilter-log-dev,
- libmysqlclient-dev, libpq-dev, libsqlite3-dev, libdbi-dev, libpcap-dev,
- dpkg-dev (>= 1.16.0), linuxdoc-tools, groff, dh-autoreconf
-Standards-Version: 3.9.3
+Build-Depends: debhelper (>= 9), autotools-dev, pkg-config, libnfnetlink-dev,
+ libmnl-dev, libnetfilter-acct-dev, libnetfilter-conntrack-dev,
+ libnetfilter-log-dev, libmysqlclient-dev, libpq-dev, libsqlite3-dev,
+ libdbi-dev, libpcap-dev, linuxdoc-tools, groff, dh-autoreconf
+Standards-Version: 3.9.4
 Homepage: http://www.netfilter.org/projects/ulogd/
 Vcs-Browser: https://github.com/bootc/ulogd2
 Vcs-Git: git://github.com/bootc/ulogd2.git
@@ -14,7 +14,7 @@ Vcs-Git: git://github.com/bootc/ulogd2.git
 Package: ulogd2
 Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
-Depends: ${shlibs:Depends}, debconf | debconf-2.0, lsb-base (>= 3.2-13), ${misc:Depends}
+Depends: ${shlibs:Depends}, lsb-base, ${misc:Depends}
 Suggests: ulogd2-mysql, ulogd2-pgsql, ulogd2-pcap, ulogd2-sqlite3
 Conflicts: ulogd
 Replaces: ulogd

@@ -1,3 +1,2 @@
 version=3
-opts=pasv ftp://ftp.netfilter.org/pub/ulogd/ulogd-(.*)\.tar\.bz2 \
- debian uupdate
+opts=pasv ftp://ftp.netfilter.org/pub/ulogd/ulogd-(.*)\.tar\.bz2 debian
