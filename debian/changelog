@@ -1,3 +1,10 @@
+ulogd2 (2.0.2-4~really1~20130429) wheezy-bootc; urgency=low
+
+  * Rebuild for wheezy-bootc.
+  * Based on version uploaded to unstable on 2013-04-29 (git 42b0268)
+
+ -- Chris Boot <bootc@bootc.net>  Tue, 30 Apr 2013 20:01:43 +0100
+
 ulogd2 (2.0.2-1) unstable; urgency=low
 
   * Initial release (Closes: #502305)
