@@ -1,3 +1,9 @@
+ulogd2 (2.0.2-2) UNRELEASED; urgency=low
+
+  * Add ulogd2-dbi to Suggests.
+
+ -- Chris Boot <bootc@bootc.net>  Fri, 10 May 2013 14:21:50 +0100
+
 ulogd2 (2.0.2-1) unstable; urgency=low
 
   * Initial release (Closes: #502305)

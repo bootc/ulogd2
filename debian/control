@@ -15,7 +15,7 @@ Package: ulogd2
 Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, lsb-base, ${misc:Depends}
-Suggests: ulogd2-mysql, ulogd2-pgsql, ulogd2-pcap, ulogd2-sqlite3
+Suggests: ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql, ulogd2-pcap, ulogd2-sqlite3
 Conflicts: ulogd
 Replaces: ulogd
 Description: Netfilter Userspace Logging Daemon
