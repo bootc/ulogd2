@@ -7,6 +7,9 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
+# Activate full hardening build flags
+export DEB_BUILD_MAINT_OPTIONS := hardening=+pie,+bindnow
+
 PACKAGE	= $(firstword $(shell dh_listpackages))
 TMP	= $(CURDIR)/debian/$(PACKAGE)
 
