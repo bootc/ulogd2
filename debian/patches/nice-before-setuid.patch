@@ -5,7 +5,6 @@ privileges, which fails. This patch moves the nice(-1) call to just before
 the code that gives up the required privileges.
 
 Author: Chris Boot <bootc@bootc.net>
-Origin: vendor
 Forwarded: no
 Last-Update: 2013-05-11
 

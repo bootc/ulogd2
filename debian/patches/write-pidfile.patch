@@ -5,7 +5,6 @@ process ID. This is very useful to the init script and to ensure there is only
 one running instance. This patch implements this functionality.
 
 Author: Chris Boot <bootc@bootc.net>
-Origin: vendor
 Forwarded: no
 Last-Update: 2013-05-11
 
