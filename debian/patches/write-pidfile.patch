@@ -9,9 +9,19 @@ Origin: vendor
 Forwarded: no
 Last-Update: 2013-05-11
 
---- a/src/ulogd.c
-+++ b/src/ulogd.c
-@@ -55,12 +55,14 @@
+Index: ulogd2/src/ulogd.c
+===================================================================
+--- ulogd2.orig/src/ulogd.c	2013-05-11 12:40:12.649522568 +0100
++++ ulogd2/src/ulogd.c	2013-05-11 12:42:28.244927264 +0100
+@@ -4,6 +4,7 @@
+  *
+  * (C) 2000-2005 by Harald Welte <laforge@gnumonks.org>
+  * (C) 2013 by Eric Leblond <eric@regit.org>
++ * (C) 2013 Chris Boot <bootc@bootc.net>
+  *
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License version 2 
+@@ -55,12 +56,14 @@
  #include <signal.h>
  #include <dlfcn.h>
  #include <sys/types.h>
@@ -26,7 +36,7 @@ Last-Update: 2013-05-11
  #include <ulogd/conffile.h>
  #include <ulogd/ulogd.h>
  #ifdef DEBUG
-@@ -78,6 +80,7 @@
+@@ -78,6 +81,7 @@
  static FILE *logfile = NULL;		/* logfile pointer */
  static char *ulogd_logfile = NULL;
  static const char *ulogd_configfile = ULOGD_CONFIGFILE;
@@ -34,7 +44,7 @@ Last-Update: 2013-05-11
  static FILE syslog_dummy;
  
  static int info_mode = 0;
-@@ -94,6 +97,7 @@
+@@ -94,6 +98,7 @@
  static int load_plugin(const char *file);
  static int create_stack(const char *file);
  static int logfile_open(const char *name);
@@ -42,7 +52,7 @@ Last-Update: 2013-05-11
  
  static struct config_keyset ulogd_kset = {
  	.num_ces = 4,
-@@ -457,6 +461,8 @@
+@@ -457,6 +462,8 @@
  
  static void warn_and_exit(int daemonize)
  {
@@ -51,7 +61,7 @@ Last-Update: 2013-05-11
  	if (!daemonize) {
  		if (logfile && !verbose) {
  			fprintf(stderr, "Fatal error, check logfile \"%s\""
-@@ -1002,6 +1008,62 @@
+@@ -1002,6 +1009,62 @@
  	return 1;
  }
  
@@ -114,7 +124,7 @@ Last-Update: 2013-05-11
  static void deliver_signal_pluginstances(int signal)
  {
  	struct ulogd_pluginstance_stack *stack;
-@@ -1080,6 +1142,8 @@
+@@ -1080,6 +1143,8 @@
  
  	config_stop();
  
@@ -123,7 +133,7 @@ Last-Update: 2013-05-11
  	exit(0);
  }
  
-@@ -1121,6 +1185,7 @@
+@@ -1121,6 +1186,7 @@
  	printf("\t-v --verbose\tOutput info on standard output\n");
  	printf("\t-l --loglevel\tSet log level\n");
  	printf("\t-c --configfile\tUse alternative Configfile\n");
@@ -131,7 +141,7 @@ Last-Update: 2013-05-11
  	printf("\t-u --uid\tChange UID/GID\n");
  	printf("\t-i --info\tDisplay infos about plugin\n");
  }
-@@ -1134,6 +1199,7 @@
+@@ -1134,6 +1200,7 @@
  	{ "info", 1, NULL, 'i' },
  	{ "verbose", 0, NULL, 'v' },
  	{ "loglevel", 1, NULL, 'l' },
@@ -139,7 +149,7 @@ Last-Update: 2013-05-11
  	{NULL, 0, NULL, 0}
  };
  
-@@ -1150,7 +1216,7 @@
+@@ -1150,7 +1217,7 @@
  
  	ulogd_logfile = strdup(ULOGD_LOGFILE_DEFAULT);
  
@@ -148,7 +158,7 @@ Last-Update: 2013-05-11
  		switch (argch) {
  		default:
  		case '?':
-@@ -1179,6 +1245,9 @@
+@@ -1179,6 +1246,9 @@
  		case 'c':
  			ulogd_configfile = optarg;
  			break;
@@ -158,7 +168,7 @@ Last-Update: 2013-05-11
  		case 'u':
  			change_uid = 1;
  			user = strdup(optarg);
-@@ -1280,6 +1349,9 @@
+@@ -1280,6 +1350,9 @@
  		setsid();
  	}
  
