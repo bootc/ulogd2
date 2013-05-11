@@ -14,7 +14,7 @@ Vcs-Git: git://github.com/bootc/ulogd2.git
 Package: ulogd2
 Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
-Depends: ${shlibs:Depends}, lsb-base, ${misc:Depends}
+Depends: ${shlibs:Depends}, lsb-base, ${misc:Depends}, adduser
 Suggests: ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql, ulogd2-pcap, ulogd2-sqlite3
 Conflicts: ulogd
 Replaces: ulogd
