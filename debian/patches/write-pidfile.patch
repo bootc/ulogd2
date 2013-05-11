@@ -5,7 +5,7 @@ process ID. This is very useful to the init script and to ensure there is only
 one running instance. This patch implements this functionality.
 
 Author: Chris Boot <bootc@bootc.net>
-Forwarded: no
+Forwarded: http://marc.info/?l=netfilter-devel&m=136829225026720&w=2
 Last-Update: 2013-05-11
 
 Index: ulogd2/src/ulogd.c
