@@ -1,9 +1,9 @@
 ulogd2 (2.0.2-4~really2~20130518) wheezy-bootc; urgency=low
 
   * Rebuild for wheezy-bootc.
-  * Based on work-in-progress version, not yet uploaded (git eb5580b)
+  * Based on work-in-progress version, not yet uploaded (git d41df70)
 
- -- Chris Boot <bootc@bootc.net>  Sat, 18 May 2013 23:22:25 +0100
+ -- Chris Boot <bootc@bootc.net>  Sat, 18 May 2013 23:33:20 +0100
 
 ulogd2 (2.0.2-2) unstable; urgency=low
 
