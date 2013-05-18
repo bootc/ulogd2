@@ -2,8 +2,8 @@
     missingok
     compress
     sharedscripts
-    create 640 root adm
+    create 640 ulog adm
     postrotate
-	/etc/init.d/ulogd2 reload
+	invoke-rc.d ulogd2 reload > /dev/null
     endscript
 }

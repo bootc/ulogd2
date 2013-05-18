@@ -1,3 +1,24 @@
+ulogd2 (2.0.2-4~really2~20130518) wheezy-bootc; urgency=low
+
+  * Rebuild for wheezy-bootc.
+  * Based on work-in-progress version, not yet uploaded (git eb5580b)
+
+ -- Chris Boot <bootc@bootc.net>  Sat, 18 May 2013 23:22:25 +0100
+
+ulogd2 (2.0.2-2) unstable; urgency=low
+
+  * Add ulogd2-dbi to Suggests.
+  * Activate full hardening build flags (pie + bindnow).
+  * Create ulog user; make daemon drop root after exec.
+  * Fix daemon failing to renice when run as non-root.
+  * Add PID file capability to daemon.
+  * Rewrite init script based on current skeleton; use PID file.
+  * Remove libnetfilter_conntrack-1.0.1.patch and libnfnetlink-1.0.0.patch:
+    - The requisite versions are in unstable
+    - Add versioned build-depends for those packages instead
+
+ -- Chris Boot <bootc@bootc.net>  Sat, 18 May 2013 23:21:18 +0100
+
 ulogd2 (2.0.2-4~really1~20130429) wheezy-bootc; urgency=low
 
   * Rebuild for wheezy-bootc.
