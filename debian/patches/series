@@ -1,7 +1,5 @@
 configure-logging.patch
 enable-nflog-by-default.patch
 put-logfiles-in-var-log-ulog.patch
-libnfnetlink-1.0.0.patch
-libnetfilter_conntrack-1.0.1.patch
 nice-before-setuid.patch
 write-pidfile.patch
