@@ -1,3 +1,9 @@
+ulogd2 (2.0.2-4~really2~20130523+1) wheezy-bootc; urgency=low
+
+  * Update to work-in-progress git f123f1d.
+
+ -- Chris Boot <bootc@bootc.net>  Thu, 23 May 2013 21:46:43 +0100
+
 ulogd2 (2.0.2-4~really2~20130523) wheezy-bootc; urgency=low
 
   * Update to work-in-progress git c75adef.
