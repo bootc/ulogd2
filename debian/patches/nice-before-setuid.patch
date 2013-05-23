@@ -5,8 +5,8 @@ privileges, which fails. This patch moves the nice(-1) call to just before
 the code that gives up the required privileges.
 
 Author: Chris Boot <bootc@bootc.net>
-Forwarded: http://marc.info/?l=netfilter-devel&m=136829224726718&w=2
-Last-Update: 2013-05-11
+Forwarded: http://git.netfilter.org/ulogd2/commit/?id=401c446ce73dfee19afb668a2761f335bcb91877
+Last-Update: 2013-05-21
 
 --- ulogd2-2.0.2.orig/src/ulogd.c
 +++ ulogd2-2.0.2/src/ulogd.c
