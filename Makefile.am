@@ -1,7 +1,7 @@
 
 ACLOCAL_AMFLAGS  = -I m4
 
-man_MANS = ulogd.8
+man_MANS = ulogd.8 ulogd.conf.5
 
 EXTRA_DIST = $(man_MANS) ulogd.logrotate ulogd.spec ulogd.conf.in doc
 
