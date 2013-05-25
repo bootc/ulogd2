@@ -1,14 +1,19 @@
 ulogd2 (2.0.2-2) UNRELEASED; urgency=low
 
-  * Add ulogd2-dbi to Suggests.
+  * Add ulogd2-dbi to Suggests, improve package descriptions.
   * Activate full hardening build flags (pie + bindnow).
-  * Create ulog user; make daemon drop root after exec.
-  * Fix daemon failing to renice when run as non-root.
-  * Add PID file capability to daemon.
-  * Rewrite init script based on current skeleton; use PID file.
+  * Create ulog user; drop root privileges when starting daemon.
+  * Add nice-before-setuid.patch (applied upstream):
+    - Fixes daemon failing to renice when run as non-root.
+  * Add write-pidfile.patch (applied upstream):
+    - Add PID file capability to daemon.
+  * Add improve-pid-file-handling.patch (from upstream):
+    - Improves PID file handling added in the earlier patch.
+  * Rewrite init script using current best practices:
+    - Uses PID files; based on /etc/init.d/skeleton; uses LSB exit codes.
   * Remove libnetfilter_conntrack-1.0.1.patch and libnfnetlink-1.0.0.patch:
-    - The requisite versions are in unstable
-    - Add versioned build-depends for those packages instead
+    - The requisite versions are in unstable.
+    - Add versioned build-depends for those packages instead.
 
  -- Chris Boot <bootc@bootc.net>  Fri, 10 May 2013 14:21:50 +0100
 

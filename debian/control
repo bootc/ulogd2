@@ -27,9 +27,9 @@ Description: Netfilter Userspace Logging Daemon
  a variety of SQL database formats, XML files, pcap files, syslog, and many
  other formats.
  .
- DBI, MySQL, PostgreSQL and SQLite 3 support is in separate packages, called 
- ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql and ulogd2-sqlite3 respectively. pcap
- file support is in package called ulogd2-pcap.
+ Support for DBI, MySQL, PostgreSQL and SQLite 3 are in separate packages called
+ ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql and ulogd2-sqlite3 respectively. Support
+ for writing to pcap files is in the ulogd2-pcap package.
 
 Package: ulogd2-dbi
 Architecture: linux-any
