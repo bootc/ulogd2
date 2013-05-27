@@ -45,7 +45,7 @@ keys.
 .PP
 .B Filter Plugins
 interpret and/or filter data that was received from an Input Plugin or another
-filter plugin. A good example is parsing a raw packet to extract IPv4 or TCP
+Filter Plugin. A good example is parsing a raw packet to extract IPv4 or TCP
 header information.
 .PP
 .B Output Plugins
@@ -105,19 +105,17 @@ not automatically enable it (e.g. loading the MySQL plugin doesn't connect to a
 database without further configuration).
 .TP
 \fBstack\fR=\fISTACK\fR
-Define a
-.BR "Plugin Stack" .
-The definition is a comma-separated list of
+Define a Plugin Stack. The definition is a comma-separated list of
 .IR NAME : PLUGIN
-pairs. The first tuple in the list must point to an input plugin, the final
-tuple must point to an output plugin, and any tuples in between must point to
-filter plugins. The names in the tuples are used to reference particular
+pairs. The first tuple in the list must point to an Input Plugin, the final
+tuple must point to an Output Plugin, and any tuples in between must point to
+Filter Plugins. The names in the tuples are used to reference particular
 instances of a plugin, and are also used for configuring each instance in
 individual sections of the configuration file.
 .SS "NFLOG INPUT PLUGIN"
-The ulogd_inppkt_NFLOG plugin is an input plugin that collects packets from the
-kernel NFLOG iptables target using a netlink socket. This target can be used in
-place of the LOG target to bypass the kernel log ring buffer, which is much less
+The \fBNFLOG\fR plugin is an Input Plugin that collects packets from the kernel
+NFLOG iptables target using a netlink socket. This target can be used in place
+of the LOG target to bypass the kernel log ring buffer, which is much less
 efficient than using netlink and can drown out other useful kernel log messages.
 The NFLOG target is a more modern replacement for the ULOG target. The plugin
 can be configured with the following directives:
@@ -144,9 +142,9 @@ can be configured with the following directives:
 .TP
 \fBnetlink_qtimeout\fR=\fIINTEGER\fR (default: 0)
 .SS "ULOG INPUT PLUGIN"
-The ulogd_inppkt_ULOG plugin is an input plugin that collects packets from the
-kernel ULOG iptables target using a netlink socket. This target can be used in
-place of the LOG target to bypass the kernel log ring buffer, which is much less
+The \fBULOG\fR plugin is an Input Plugin that collects packets from the kernel
+ULOG iptables target using a netlink socket. This target can be used in place of
+the LOG target to bypass the kernel log ring buffer, which is much less
 efficient than using netlink and can drown out other useful kernel log messages.
 The ULOG target is still available, but has been replaced by the NFLOG target
 in kernels >= 2.6.14. The plugin can be configured with the following
@@ -160,9 +158,9 @@ directives:
 .TP
 \fBnumeric_label\fR=\fIINTEGER\fR (default: 0)
 .SS "UNIXSOCK INPUT PLUGIN"
-The ulogd_inppkt_UNIXSOCK plugin is an input plugin that collects packets from a
-UNIX socket. This can be used to inject packets into ulogd from userspace; a
-sample PERL script that uses this functionality (pcap2ulog) is included in
+The \fBUNIXSOCK\fR plugin is an Input Plugin that collects packets from a UNIX
+socket. This can be used to inject packets into ulogd from userspace; a sample
+PERL script that uses this functionality (pcap2ulog) is included in
 /usr/share/doc/ulogd2/examples/pcap2ulog.gz.
 .TP
 \fBsocket_path\fR=\fISTRING\fR (default: "/var/run/ulogd/ulogd2.sock")
@@ -171,11 +169,55 @@ sample PERL script that uses this functionality (pcap2ulog) is included in
 .TP
 \fBperms\fR=\fIINTEGER\fR (default: 384; octal 0600)
 .TP
-\fBowner\fR=\fISTRING\fR (default: -1; unset)
+\fBowner\fR=\fISTRING\fR (default: unset)
 .TP
-\fBgroup\fR=\fISTRING\fR (default: -1; unset)
+\fBgroup\fR=\fISTRING\fR (default: unset)
 .SS "NFACCT INPUT PLUGIN"
+The \fBNFACCT\fR plugin is an Input Plugin that collects accounting data using
+nfacct. Accounting objects are added using the
+.BR nfacct (8)
+utility and accounting is accumulated using the iptables \fBnfacct\fR module's
+\-\-nfacct\-name option. This is available in Linux kernels >= 3.3.
+.TP
+\fBpollinterval\fR=\fIINTEGER\fR (default: 0)
+.TP
+\fBzerocounter\fR=\fIINTEGER\fR (default: 1)
+.TP
+\fBtimestamp\fR=\fIINTEGER\fR (default: 0)
 .SS "NFCT INPUT PLUGIN"
+The \fBNFCT\fR plugin is an Input Plugin that collects per-flow accounting data
+by listening to netfilter conntrack events. Note that you must use
+.BR sysctl (8)
+to set \fBnet.netfilter.nf_conntrack_acct\fR = 1 to include packet and byte
+counts in the accounting data.
+.TP
+\fBpollinterval\fR=\fIINTEGER\fR (default: 0)
+.TP
+\fBhash_enable\fR=\fIINTEGER\fR (default: 1)
+.TP
+\fBhash_buckets\fR=\fIINTEGER\fR (default: 8192)
+.TP
+\fBhash_max_entries\fR=\fIINTEGER\fR (default: 32768)
+.TP
+\fBevent_mask\fR=\fIINTEGER\fR (default: 5; NEW(1) | DESTROY(4))
+.TP
+\fBnetlink_socket_buffer_size\fR=\fIINTEGER\fR (default: 0)
+.TP
+\fBnetlink_socket_buffer_maxsize\fR=\fIINTEGER\fR (default: 0)
+.TP
+\fBnetlink_resync_timeout\fR=\fIINTEGER\fR (default: 60)
+.TP
+\fBreliable\fR=\fIINTEGER\fR (default: 0)
+.TP
+\fBaccept_src_filter\fR=\fISTRING\fR (default: unset)
+Comma-separated list of IPv4 or IPv6 addresses or networks.
+.TP
+\fBaccept_dst_filter\fR=\fISTRING\fR (default: unset)
+Comma-separated list of IPv4 or IPv6 addresses or networks.
+.TP
+\fBaccept_proto_filter\fR=\fISTRING\fR (default: unset)
+Comma-separated list of protocol names as listed in
+.BR protocols (5).
 .SS "BASE FILTER PLUGIN"
 .SS "HWHDR FILTER PLUGIN"
 .SS "IFINDEX FILTER PLUGIN"
