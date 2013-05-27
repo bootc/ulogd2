@@ -14,6 +14,8 @@ ulogd2 (2.0.2-2) UNRELEASED; urgency=low
   * Remove libnetfilter_conntrack-1.0.1.patch and libnfnetlink-1.0.0.patch:
     - The requisite versions are in unstable.
     - Add versioned build-depends for those packages instead.
+  * Include /usr/share/doc/ulogd2/examples/pcap2ulog.gz from upstream git file
+    contrib/pcap2ulog (not included in upstream tarball).
 
  -- Chris Boot <bootc@bootc.net>  Fri, 10 May 2013 14:21:50 +0100
 
