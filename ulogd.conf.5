@@ -105,17 +105,17 @@ place of the LOG target to bypass the kernel log ring buffer, which is much less
 efficient than using netlink and can drown out other useful kernel log messages.
 The NFLOG target is a more modern replacement for the ULOG target. The plugin
 can be configured with the following directives:
-.IP bufsize=<integer>
-.IP group=<integer>
-.IP unbind=<integer>
-.IP bind=<integer>
-.IP seq_local=<integer>
-.IP seq_global=<integer>
-.IP numeric_label=<integer>
-.IP netlink_socket_buffer_size=<integer>
-.IP netlink_socket_buffer_maxsize=<integer>
-.IP netlink_qthreshold=<integer>
-.IP netlink_qtimeout=<integer>
+.IP "bufsize=<integer> default:150000"
+.IP "group=<integer> default:0"
+.IP "unbind=<integer> default:1"
+.IP "bind=<integer> default:0"
+.IP "seq_local=<integer> default:0"
+.IP "seq_global=<integer> default:0"
+.IP "numeric_label=<integer> default:0"
+.IP "netlink_socket_buffer_size=<integer> default:0"
+.IP "netlink_socket_buffer_maxsize=<integer> default:0"
+.IP "netlink_qthreshold=<integer> default:0"
+.IP "netlink_qtimeout=<integer> default:0"
 
 .SH "ULOG INPUT PLUGIN"
 The ulogd_inppkt_ULOG plugin is an input plugin that collects packets from the
@@ -134,7 +134,7 @@ directives:
 The ulogd_inppkt_UNIXSOCK plugin is an input plugin that collects packets from a
 UNIX socket. This can be used to inject packets into ulogd from userspace; a
 sample PERL script that uses this functionality (pcap2ulog) is included in
-/usr/share/doc/ulogd2/examples/
+/usr/share/doc/ulogd2/examples/pcap2ulog.gz.
 .IP socket_path=<string>
 .IP bufsize=<integer>
 .IP perms=<integer>
