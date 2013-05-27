@@ -17,8 +17,10 @@
 .\" for manpage-specific macros, see man(7)
 .SH NAME
 ulogd.conf \- netfilter/iptables logging daemon configuration filea
+
 .SH SYNOPSIS
 .B /etc/ulogd.conf
+
 .SH DESCRIPTION
 .I ulogd.conf
 is the configuration file for
@@ -28,6 +30,7 @@ The file broadly follows the
 file format: it is divided into a number of sections containing
 .BR key = value
 pairs.
+
 .SH "PLUGINS AND STACKS"
 ulogd consists of a small core and a number of plugins. All the real power lies
 in the plugins and the configured interactions between them. There are three
@@ -54,6 +57,7 @@ is a series of plugins, starting with an Input Plugin, optionally
 one or more Filter Plugins, followed by one Output Plugin at the end. Any number
 of stacks may be configured to process one or more sources of input in a wide
 variety of ways.
+
 .SH "[GLOBAL] SECTION"
 The
 .B [global]
@@ -93,6 +97,7 @@ to an output plugin, and any tuples in between must point to filter plugins. The
 names in the tuples are used to name particular instances of a plugin, and are
 also used for configuring each instance in individual sections of the
 configuration file.
+
 .SH "NFLOG INPUT PLUGIN"
 The ulogd_inppkt_NFLOG plugin is an input plugin that collects packets from the
 kernel NFLOG iptables target using a netlink socket. This target can be used in
@@ -111,8 +116,9 @@ can be configured with the following directives:
 .IP netlink_socket_buffer_maxsize=<integer>
 .IP netlink_qthreshold=<integer>
 .IP netlink_qtimeout=<integer>
+
 .SH "ULOG INPUT PLUGIN"
-The ulogd_inppkt_ULOG plugin is an input plugin that collectes packets from the
+The ulogd_inppkt_ULOG plugin is an input plugin that collects packets from the
 kernel ULOG iptables target using a netlink socket. This target can be used in
 place of the LOG target to bypass the kernel log ring buffer, which is much less
 efficient than using netlink and can drown out other useful kernel log messages.
@@ -123,30 +129,63 @@ directives:
 .IP nlgroup=<integer>
 .IP rmem=<integer>
 .IP numeric_label=<integer>
+
 .SH "UNIXSOCK INPUT PLUGIN"
+The ulogd_inppkt_UNIXSOCK plugin is an input plugin that collects packets from a
+UNIX socket. This can be used to inject packets into ulogd from userspace; a
+sample PERL script that uses this functionality (pcap2ulog) is included in
+/usr/share/doc/ulogd2/examples/
+.IP socket_path=<string>
+.IP bufsize=<integer>
+.IP perms=<integer>
+.IP owner=<string>
+.IP group=<string>
+
 .SH "NFACCT INPUT PLUGIN"
+
 .SH "NFCT INPUT PLUGIN"
+
 .SH "BASE FILTER PLUGIN"
+
 .SH "HWHDR FILTER PLUGIN"
+
 .SH "IFINDEX FILTER PLUGIN"
+
 .SH "IP2BIN FILTER PLUGIN"
+
 .SH "IP2HBIN FILTER PLUGIN"
+
 .SH "IP2STR FILTER PLUGIN"
+
 .SH "MARK FILTER PLUGIN"
+
 .SH "PRINTFLOW FILTER PLUGIN"
+
 .SH "PRINTPKT FILTER PLUGIN"
+
 .SH "PWSNIFF FILTER PLUGIN"
+
 .SH "GPRINT OUTPUT PLUGIN"
+
 .SH "GRAPHITE OUTPUT PLUGIN"
+
 .SH "LOGEMU OUTPUT PLUGIN"
+
 .SH "NACCT OUTPUT PLUGIN"
+
 .SH "OPRINT OUTPUT PLUGIN"
+
 .SH "SYSLOG OUTPUT PLUGIN"
+
 .SH "XML OUTPUT PLUGIN"
+
+.SH EXAMPLES
+
 .SH FILES
 .I /etc/ulogd.conf
 .br
 .I /usr/sbin/ulogd
+
 .SH SEE ALSO
 .BR ulogd (8)
 .br
@@ -162,6 +201,7 @@ and
 .nf 
 .br
 .I /usr/share/doc/ulogd-pgsql
+
 .SH AUTHOR
 This manual page was written by Chris Boot <bootc@bootc.net>, for the Debian
 GNU/Linux system (but may be used by others).
