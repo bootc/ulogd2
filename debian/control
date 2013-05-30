@@ -22,10 +22,9 @@ Replaces: ulogd
 Description: Netfilter Userspace Logging Daemon
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
- targets), can log connection startup/teardown using NFCT, or gather detailed
- connection accounting using NFACCT. Output can be sent to plain text log files,
- a variety of SQL database formats, XML files, pcap files, syslog, and many
- other formats.
+ targets), can gather per-connection accounting using NFCT, or gather per-rule
+ accounting using NFACCT. Output can be sent to plain text log files, a variety
+ of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
  Support for DBI, MySQL, PostgreSQL and SQLite 3 are in separate packages called
  ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql and ulogd2-sqlite3 respectively. Support
@@ -38,10 +37,9 @@ Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: DBI extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
- targets), can log connection startup/teardown using NFCT, or gather detailed
- connection accounting using NFACCT. Output can be sent to plain text log files,
- a variety of SQL database formats, XML files, pcap files, syslog, and many
- other formats.
+ targets), can gather per-connection accounting using NFCT, or gather per-rule
+ accounting using NFACCT. Output can be sent to plain text log files, a variety
+ of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
  This module adds DBI support to ulogd. If you install this package, you can
  send netfilter logs or accounting data to an SQL database via the DBI database
@@ -54,10 +52,9 @@ Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: MySQL extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
- targets), can log connection startup/teardown using NFCT, or gather detailed
- connection accounting using NFACCT. Output can be sent to plain text log files,
- a variety of SQL database formats, XML files, pcap files, syslog, and many
- other formats.
+ targets), can gather per-connection accounting using NFCT, or gather per-rule
+ accounting using NFACCT. Output can be sent to plain text log files, a variety
+ of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
  This module adds MySQL support to ulogd. If you install this package, you can
  send netfilter logs or accounting data to a MySQL database.
@@ -70,10 +67,9 @@ Suggests: tcpdump, wireshark, tshark
 Description: pcap extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
- targets), can log connection startup/teardown using NFCT, or gather detailed
- connection accounting using NFACCT. Output can be sent to plain text log files,
- a variety of SQL database formats, XML files, pcap files, syslog, and many
- other formats.
+ targets), can gather per-connection accounting using NFCT, or gather per-rule
+ accounting using NFACCT. Output can be sent to plain text log files, a variety
+ of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
  This module add pcap file support to ulogd. If you install this package, you
  can use ulogd to dump packets to a file for later analysis using tools such
@@ -86,10 +82,9 @@ Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: PostgreSQL extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
- targets), can log connection startup/teardown using NFCT, or gather detailed
- connection accounting using NFACCT. Output can be sent to plain text log files,
- a variety of SQL database formats, XML files, pcap files, syslog, and many
- other formats.
+ targets), can gather per-connection accounting using NFCT, or gather per-rule
+ accounting using NFACCT. Output can be sent to plain text log files, a variety
+ of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
  This module adds PostgreSQL support to ulogd. If you install this package, you
  can send netfilter logs or accounting data to a PostgreSQL database.
@@ -101,10 +96,9 @@ Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: SQLite 3 extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
- targets), can log connection startup/teardown using NFCT, or gather detailed
- connection accounting using NFACCT. Output can be sent to plain text log files,
- a variety of SQL database formats, XML files, pcap files, syslog, and many
- other formats.
+ targets), can gather per-connection accounting using NFCT, or gather per-rule
+ accounting using NFACCT. Output can be sent to plain text log files, a variety
+ of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
  This module adds SQLite 3 support to ulogd. If you install this package, you
  can send netfilter logs or accounting data to an SQLite 3 database.
@@ -117,10 +111,9 @@ Depends: ulogd2 (= ${binary:Version}), ${misc:Depends}
 Description: Netfilter Userspace Logging Daemon (debug symbols)
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
- targets), can log connection startup/teardown using NFCT, or gather detailed
- connection accounting using NFACCT. Output can be sent to plain text log files,
- a variety of SQL database formats, XML files, pcap files, syslog, and many
- other formats.
+ targets), can gather per-connection accounting using NFCT, or gather per-rule
+ accounting using NFACCT. Output can be sent to plain text log files, a variety
+ of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
  This package provides debugging symbols for ulogd and its plugins.
 
