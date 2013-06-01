@@ -220,7 +220,17 @@ Comma-separated list of protocol names as listed in
 .BR protocols (5),
 .RI "e.g. " tcp ", " udp .
 .SS "BASE FILTER PLUGIN"
+The \fBBASE\fR plugin is a Filter Plugin that parses raw packet data and returns
+a number of fields describing the headers in the packet. This plugin is required
+if you want to inspect or log fields such as port numbers and IP addresses
+contained within packets.
+.P
+This plugin has no configuration.
 .SS "HWHDR FILTER PLUGIN"
+The \fBHWHDR\fR plugin is a Filter Plugin that converts binary Ethernet MAC
+addresses to textual format.
+.P
+This plugin has no configuration.
 .SS "IFINDEX FILTER PLUGIN"
 .SS "IP2BIN FILTER PLUGIN"
 .SS "IP2HBIN FILTER PLUGIN"
