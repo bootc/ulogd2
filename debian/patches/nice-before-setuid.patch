@@ -4,7 +4,7 @@ The daemon code currently tries to nice(-1) just after having given up root
 privileges, which fails. This patch moves the nice(-1) call to just before
 the code that gives up the required privileges.
 
-Author: Chris Boot <bootc@bootc.net>
+Author: Chris Boot <debian@bootc.net>
 Forwarded: http://git.netfilter.org/ulogd2/commit/?id=401c446ce73dfee19afb668a2761f335bcb91877
 Reviewed-by: Eric Leblond <eric@regit.org>
 Last-Update: 2013-05-21

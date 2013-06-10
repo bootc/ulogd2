@@ -2,7 +2,7 @@ Description: Enable NFLOG => LOGEMU stack by default
  The simplest and likely most common usage scenario is to log packets to a
  logfile using NFLOG, bypassing the kernel ringbuffer. Enable this by default.
 Forwarded: not-needed
-Author: Chris Boot <bootc@bootc.net>
+Author: Chris Boot <debian@bootc.net>
 Last-Update: 2013-04-27
 
 Index: ulogd2/ulogd.conf.in
