@@ -1,2 +1,2 @@
-debian/examples/pcap2ulog
+debian/examples/*
 ulogd.conf
