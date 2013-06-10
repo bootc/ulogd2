@@ -1,7 +1,7 @@
 Source: ulogd2
 Section: net
 Priority: optional
-Maintainer: Chris Boot <bootc@bootc.net>
+Maintainer: Chris Boot <debian@bootc.net>
 Build-Depends: debhelper (>= 9), autotools-dev, pkg-config,
  libnfnetlink-dev (>= 1.0.1), libmnl-dev, libnetfilter-acct-dev,
  libnetfilter-conntrack-dev (>= 1.0.2), libnetfilter-log-dev,
