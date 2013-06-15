@@ -1,0 +1,14 @@
+ulogd2 (2.0.2-3) UNRELEASED; urgency=low
+
+  The ulogd packages containing ulogd-1.x are being replaced by the ulogd2
+  packages, containing ulogd-2.x. The configuration file for ulogd is not
+  compatible between versions 1.x and 2.x. Please take the time to review
+  /etc/ulogd.conf to ensure the file is upgraded to the new format and
+  re-incorporate any local changes you may require.
+  .
+  Please note that the default /etc/ulogd.conf for ulogd2 does NOT enable the
+  deprecated ULOG logging target. If you are upgrading from ulogd-1.x, you will
+  need to either migrate your iptables ruleset to use NFLOG target instead, or
+  enable the ULOG stack in ulogd.conf.
+
+ -- Chris Boot <debian@bootc.net>  Sat, 15 Jun 2013 22:03:14 +0100

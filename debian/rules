@@ -36,6 +36,7 @@ override_dh_install:
 	dh_install -X.la --fail-missing
 
 override_dh_installdocs:
+	mkdir -p $(CURDIR)/debian/ulogd/usr/share/doc/ulogd
 	dh_installdocs --link-doc=$(PACKAGE)
 
 override_dh_strip:

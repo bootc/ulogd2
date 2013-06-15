@@ -17,8 +17,8 @@ Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, lsb-base, ${misc:Depends}, adduser
 Suggests: ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql, ulogd2-pcap, ulogd2-sqlite3
-Conflicts: ulogd
-Replaces: ulogd
+Breaks: ulogd (<< 2.0.2-3~)
+Replaces: ulogd (<< 2.0.2-3~)
 Description: Netfilter Userspace Logging Daemon
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
@@ -49,6 +49,8 @@ Package: ulogd2-mysql
 Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Breaks: ulogd-mysql (<< 2.0.2-3~)
+Replaces: ulogd-mysql (<< 2.0.2-3~)
 Description: MySQL extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
@@ -64,6 +66,8 @@ Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Suggests: tcpdump, wireshark, tshark
+Breaks: ulogd-pcap (<< 2.0.2-3~)
+Replaces: ulogd-pcap (<< 2.0.2-3~)
 Description: pcap extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
@@ -79,6 +83,8 @@ Package: ulogd2-pgsql
 Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Breaks: ulogd-pgsql (<< 2.0.2-3~)
+Replaces: ulogd-pgsql (<< 2.0.2-3~)
 Description: PostgreSQL extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
@@ -93,6 +99,8 @@ Package: ulogd2-sqlite3
 Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Breaks: ulogd-sqlite3 (<< 2.0.2-3~)
+Replaces: ulogd-sqlite3 (<< 2.0.2-3~)
 Description: SQLite 3 extension to ulogd
  ulogd is an advanced netfilter logging daemon. It can act as a replacement for
  syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
@@ -116,4 +124,39 @@ Description: Netfilter Userspace Logging Daemon (debug symbols)
  of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
  This package provides debugging symbols for ulogd and its plugins.
+
+Package: ulogd
+Architecture: linux-any
+Depends: ulogd2, ${misc:Depends}
+Section: oldlibs
+Description: transitional dummy package for ulogd2
+ This is a transitional dummy package. It can safely be removed.
+
+Package: ulogd-mysql
+Architecture: linux-any
+Depends: ulogd2-mysql, ${misc:Depends}
+Section: oldlibs
+Description: transitional dummy package for ulogd2-mysql
+ This is a transitional dummy package. It can safely be removed.
+
+Package: ulogd-pgsql
+Architecture: linux-any
+Depends: ulogd2-pgsql, ${misc:Depends}
+Section: oldlibs
+Description: transitional dummy package for ulogd2-pgsql
+ This is a transitional dummy package. It can safely be removed.
+
+Package: ulogd-pcap
+Architecture: linux-any
+Depends: ulogd2-pcap, ${misc:Depends}
+Section: oldlibs
+Description: transitional dummy package for ulogd2-pcap
+ This is a transitional dummy package. It can safely be removed.
+
+Package: ulogd-sqlite3
+Architecture: linux-any
+Depends: ulogd2-sqlite3, ${misc:Depends}
+Section: oldlibs
+Description: transitional dummy package for ulogd2-sqlite3
+ This is a transitional dummy package. It can safely be removed.
 
