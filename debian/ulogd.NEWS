@@ -1,4 +1,4 @@
-ulogd2 (2.0.2-3) UNRELEASED; urgency=low
+ulogd2 (2.0.2-3) unstable; urgency=low
 
   The ulogd packages containing ulogd-1.x are being replaced by the ulogd2
   packages, containing ulogd-2.x. The configuration file for ulogd is not

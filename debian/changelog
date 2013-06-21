@@ -1,10 +1,10 @@
-ulogd2 (2.0.2-3) UNRELEASED; urgency=low
+ulogd2 (2.0.2-3) unstable; urgency=low
 
-  * Set up transition from ulogd to ulogd2. (Closes: #395302)
+  * Set up transition from ulogd to ulogd2. (Closes: #395302, #699767)
   * Update debian/ulogd2.examples to use a wildcard for debian/examples/*
   * Complete changing my email address in the package source.
 
- -- Chris Boot <debian@bootc.net>  Fri, 31 May 2013 22:25:43 +0100
+ -- Chris Boot <debian@bootc.net>  Fri, 21 Jun 2013 19:56:29 +0100
 
 ulogd2 (2.0.2-2) unstable; urgency=low
 
