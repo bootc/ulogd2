@@ -36,7 +36,13 @@ override_dh_install:
 	dh_install -X.la --fail-missing
 
 override_dh_installdocs:
-	mkdir -p $(CURDIR)/debian/ulogd/usr/share/doc/ulogd
+	# The ulogd transitional packages need their /usr/share/doc directories
+	# handling specially in order to pick up the correct NEWS file.
+	dh_installdocs -pulogd
+	dh_installdocs -pulogd-mysql --link-doc=ulogd
+	dh_installdocs -pulogd-pgsql --link-doc=ulogd
+	dh_installdocs -pulogd-pcap --link-doc=ulogd
+	dh_installdocs -pulogd-sqlite3 --link-doc=ulogd
 	dh_installdocs --link-doc=$(PACKAGE)
 
 override_dh_strip:
