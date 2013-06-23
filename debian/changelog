@@ -1,3 +1,9 @@
+ulogd2 (2.0.2-4~really3~20130623) wheezy-bootc; urgency=low
+
+  * Update to git 0214bff as submitted for uploading to unstable as 2.0.2-3.
+
+ -- Chris Boot <debian@bootc.net>  Sun, 23 Jun 2013 21:08:10 +0100
+
 ulogd2 (2.0.2-4~really2~20130523+1) wheezy-bootc; urgency=low
 
   * Update to work-in-progress git f123f1d.
