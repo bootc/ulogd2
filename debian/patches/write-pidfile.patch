@@ -4,8 +4,9 @@ The deamon currently does not have the ability to write a PID file to track its
 process ID. This is very useful to an init script and to ensure there is only
 one running instance. This patch implements this functionality.
 
-Author: Chris Boot <bootc@bootc.net>
+Author: Chris Boot <debian@bootc.net>
 Forwarded: http://git.netfilter.org/ulogd2/commit/?id=e04f1ce916965464318f882376eef04a8b6759f2
+Reviewed-by: Eric Leblond <eric@regit.org>
 Last-Update: 2013-05-21
 
 --- a/src/ulogd.c

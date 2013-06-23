@@ -24,19 +24,38 @@ ulogd2 (2.0.2-4~really2~20130518) wheezy-bootc; urgency=low
 
  -- Chris Boot <bootc@bootc.net>  Sat, 18 May 2013 23:33:20 +0100
 
+ulogd2 (2.0.2-3) unstable; urgency=low
+
+  * Set up transition from ulogd to ulogd2. (Closes: #395302, #699767)
+  * Update debian/ulogd2.examples to use a wildcard for debian/examples/*
+  * Complete changing my email address in the package source.
+
+ -- Chris Boot <debian@bootc.net>  Fri, 21 Jun 2013 19:56:29 +0100
+
 ulogd2 (2.0.2-2) unstable; urgency=low
 
-  * Add ulogd2-dbi to Suggests.
+  [ Chris Boot ]
+  * Add ulogd2-dbi to Suggests, improve package descriptions.
   * Activate full hardening build flags (pie + bindnow).
-  * Create ulog user; make daemon drop root after exec.
-  * Fix daemon failing to renice when run as non-root.
-  * Add PID file capability to daemon.
-  * Rewrite init script based on current skeleton; use PID file.
+  * Create ulog user; drop root privileges when starting daemon.
+  * Add nice-before-setuid.patch (applied upstream):
+    - Fixes daemon failing to renice when run as non-root.
+  * Add write-pidfile.patch (applied upstream):
+    - Add PID file capability to daemon.
+  * Add improve-pid-file-handling.patch (from upstream):
+    - Improves PID file handling added in the earlier patch.
+  * Rewrite init script using current best practices:
+    - Uses PID files; based on /etc/init.d/skeleton; uses LSB exit codes.
   * Remove libnetfilter_conntrack-1.0.1.patch and libnfnetlink-1.0.0.patch:
-    - The requisite versions are in unstable
-    - Add versioned build-depends for those packages instead
+    - The requisite versions are in unstable.
+    - Add versioned build-depends for those packages instead.
+  * Include /usr/share/doc/ulogd2/examples/pcap2ulog.gz from upstream git file
+    contrib/pcap2ulog (not included in upstream tarball).
 
- -- Chris Boot <bootc@bootc.net>  Sat, 18 May 2013 23:21:18 +0100
+  [ Jonathan Wiltshire ]
+  * Update maintainer address
+
+ -- Chris Boot <debian@bootc.net>  Thu, 30 May 2013 20:09:51 +0100
 
 ulogd2 (2.0.2-4~really1~20130429) wheezy-bootc; urgency=low
 

@@ -8,6 +8,7 @@ result in a ulogd exit.
 
 Author: Eric Leblond <eric@regit.org>
 Origin: upstream, http://git.netfilter.org/ulogd2/commit/?id=81e6325d5a1edc1f4558081ce69ebd92b746f4f2
+Reviewed-by: Chris Boot <debian@bootc.net>
 Last-Update: 2013-05-21
 
 ---
