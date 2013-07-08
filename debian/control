@@ -129,6 +129,7 @@ Package: ulogd
 Architecture: linux-any
 Depends: ulogd2, ${misc:Depends}
 Section: oldlibs
+Priority: extra
 Description: transitional dummy package for ulogd2
  This is a transitional dummy package. It can safely be removed.
 
@@ -136,6 +137,7 @@ Package: ulogd-mysql
 Architecture: linux-any
 Depends: ulogd2-mysql, ${misc:Depends}
 Section: oldlibs
+Priority: extra
 Description: transitional dummy package for ulogd2-mysql
  This is a transitional dummy package. It can safely be removed.
 
@@ -143,6 +145,7 @@ Package: ulogd-pgsql
 Architecture: linux-any
 Depends: ulogd2-pgsql, ${misc:Depends}
 Section: oldlibs
+Priority: extra
 Description: transitional dummy package for ulogd2-pgsql
  This is a transitional dummy package. It can safely be removed.
 
@@ -150,6 +153,7 @@ Package: ulogd-pcap
 Architecture: linux-any
 Depends: ulogd2-pcap, ${misc:Depends}
 Section: oldlibs
+Priority: extra
 Description: transitional dummy package for ulogd2-pcap
  This is a transitional dummy package. It can safely be removed.
 
@@ -157,6 +161,7 @@ Package: ulogd-sqlite3
 Architecture: linux-any
 Depends: ulogd2-sqlite3, ${misc:Depends}
 Section: oldlibs
+Priority: extra
 Description: transitional dummy package for ulogd2-sqlite3
  This is a transitional dummy package. It can safely be removed.
 
