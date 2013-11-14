@@ -1,0 +1,37 @@
+Description: Correct ulogd(8) paths to /usr/share/doc/ulogd2
+
+The paths in the ulogd(8) man page assume the package is called 'ulogd' and not
+'ulogd2'. This patch updates the paths.
+
+Author: Chris Boot <debian@bootc.net>
+Bug-Ubuntu: https://launchpad.net/bugs/1232104
+Forwarded: not-needed
+Last-Update: 2013-11-14
+
+--- ulogd2-2.0.2.orig/ulogd.8
++++ ulogd2-2.0.2/ulogd.8
+@@ -62,21 +62,19 @@ display infos about plugin
+ record the ulogd process ID to the given file name
+ .SH FILES
+ .I /etc/ulogd.conf
+-.br
+-.I /var/log/ulogd.log
+ .SH SEE ALSO
+ There is more documentation about the daemon and the database plugins
+ (including examples) in the directories
+ .nf 
+ .br 
+-.I /usr/share/doc/ulogd 
++.I /usr/share/doc/ulogd2
+ .br 
+ .fi
+-.I /usr/share/doc/ulogd-mysql
++.I /usr/share/doc/ulogd2-mysql
+ and
+ .nf 
+ .br
+-.I /usr/share/doc/ulogd-pgsql
++.I /usr/share/doc/ulogd2-pgsql
+ .SH AUTHOR
+ This manual page was written by Joerg Wendland <joergland@debian.org>,
+ for the Debian GNU/Linux system (but may be used by others).

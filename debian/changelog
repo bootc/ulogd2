@@ -1,7 +1,8 @@
 ulogd2 (2.0.2-4) UNRELEASED; urgency=low
 
-  * Change priority of transitional packages to extra
-  * Change Vcs-{Browser,Git} to Alioth
+  * Change priority of transitional packages to extra.
+  * Change Vcs-{Browser,Git} to Alioth.
+  * Update paths to docs in ulogd(8). (LP: #1232104)
 
  -- Chris Boot <debian@bootc.net>  Tue, 27 Aug 2013 15:53:20 +0100
 
