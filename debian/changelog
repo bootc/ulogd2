@@ -11,6 +11,7 @@ ulogd2 (2.0.2-4) UNRELEASED; urgency=low
     of ulogd. (Closes: #729055)
     - Add nflog-close-handle-after-unbind.patch.
   * Add systemd unit and upstart job files.
+  * Update Standards-Version to 3.9.5 (no changes required).
 
  -- Chris Boot <debian@bootc.net>  Tue, 27 Aug 2013 15:53:20 +0100
 
