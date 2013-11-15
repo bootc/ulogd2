@@ -7,6 +7,9 @@ ulogd2 (2.0.2-4) UNRELEASED; urgency=low
     - Forcibly disable the init script in postinst.
     - Remove the script safely using rm_conffile.
     - Make the ulog2 init script provide ulogd.
+  * Fix assertion failure in libnfnetlink caused by running multiple instances
+    of ulogd. (Closes: #729055)
+    - Add nflog-close-handle-after-unbind.patch.
 
  -- Chris Boot <debian@bootc.net>  Tue, 27 Aug 2013 15:53:20 +0100
 

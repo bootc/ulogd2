@@ -1,0 +1,29 @@
+Description: ulogd_inppkt_NFLOG: close nflog handle after unbinding
+
+The nflog handle is closed, and then nflog_unbind_pf() is called on it, which
+triggers an assertion failure within libnfnetlink. This patch simply moves
+the nflog_close() just after the nflog_unbind_pf() calls.
+
+Author: Chris Boot <debian@bootc.net>
+Bug: https://bugzilla.netfilter.org/show_bug.cgi?id=871
+Bug-Debian: http://bugs.debian.org/729055
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1250520
+Forwarded: https://bugzilla.netfilter.org/attachment.cgi?id=425
+Last-Update: 2013-11-15
+
+--- ulogd2-2.0.2.orig/input/packet/ulogd_inppkt_NFLOG.c
++++ ulogd2-2.0.2/input/packet/ulogd_inppkt_NFLOG.c
+@@ -618,12 +618,12 @@ static int start(struct ulogd_pluginstan
+ 	return 0;
+ 
+ out_bind:
+-	nflog_close(ui->nful_h);
+ 	if (group_ce(upi->config_kset).u.value == 0) {
+ 		nflog_unbind_pf(ui->nful_h, AF_INET);
+ 		nflog_unbind_pf(ui->nful_h, AF_INET6);
+ 		nflog_unbind_pf(ui->nful_h, AF_BRIDGE);
+ 	}
++	nflog_close(ui->nful_h);
+ out_handle:
+ 	free(ui->nfulog_buf);
+ out_buf:

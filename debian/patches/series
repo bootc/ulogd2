@@ -5,3 +5,4 @@ nice-before-setuid.patch
 write-pidfile.patch
 improve-pid-file-handling.patch
 ulogd8-ulogd2.patch
+nflog-close-handle-after-unbind.patch
