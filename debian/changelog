@@ -10,7 +10,7 @@ ulogd2 (2.0.2-4) UNRELEASED; urgency=low
   * Fix assertion failure in libnfnetlink caused by running multiple instances
     of ulogd. (Closes: #729055)
     - Add nflog-close-handle-after-unbind.patch.
-  * Add a systemd unit file.
+  * Add systemd unit and upstart job files.
 
  -- Chris Boot <debian@bootc.net>  Tue, 27 Aug 2013 15:53:20 +0100
 
