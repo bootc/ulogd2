@@ -3,6 +3,7 @@ set -e
 
 #DEBHELPER#
 
+# Clean up the log directory
 if [ "$1" = "purge" ]; then
 	if [ -d /var/log/ulog ]; then
 		rm -rf /var/log/ulog

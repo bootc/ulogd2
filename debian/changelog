@@ -3,6 +3,10 @@ ulogd2 (2.0.2-4) UNRELEASED; urgency=low
   * Change priority of transitional packages to extra.
   * Change Vcs-{Browser,Git} to Alioth.
   * Update paths to docs in ulogd(8). (LP: #1232104)
+  * Disable and remove old ulogd init script. (Closes: #729657, LP: #1250520)
+    - Forcibly disable the init script in postinst.
+    - Remove the script safely using rm_conffile.
+    - Make the ulog2 init script provide ulogd.
 
  -- Chris Boot <debian@bootc.net>  Tue, 27 Aug 2013 15:53:20 +0100
 

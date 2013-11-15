@@ -1,0 +1,4 @@
+
+# Remove the old ulogd 1.x init script, as it can cause problems/confusion
+rm_conffile /etc/init.d/ulogd 2.0.2-4~ ulogd
+

@@ -12,5 +12,10 @@ if ! getent passwd ulog >/dev/null; then
 		--home /var/log/ulog ulog >/dev/null
 fi
 
+# ensure the ulogd 1.x init script doesn't run
+if [ -x "/etc/init.d/ulogd" ]; then
+	update-rc.d -f ulogd remove >/dev/null
+fi
+
 #DEBHELPER#
 
