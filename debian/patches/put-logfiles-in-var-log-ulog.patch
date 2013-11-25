@@ -6,10 +6,8 @@ Forwarded: not-needed
 Author: Chris Boot <debian@bootc.net>
 Last-Update: 2013-04-27
 
-Index: ulogd2/ulogd.conf.in
-===================================================================
---- ulogd2.orig/ulogd.conf.in	2013-04-01 12:02:36.908069963 +0100
-+++ ulogd2/ulogd.conf.in	2013-04-01 12:03:58.909966621 +0100
+--- a/ulogd.conf.in
++++ b/ulogd.conf.in
 @@ -179,25 +179,24 @@
  socket_path="/tmp/nuauth_ulogd2.sock"
  
@@ -36,12 +34,12 @@ Index: ulogd2/ulogd.conf.in
  
  [pcap1]
 -#default file is /var/log/ulogd.pcap
--#file=/var/log/ulogd.pcap
-+file=/var/log/ulog/ulogd.pcap
+-#file="/var/log/ulogd.pcap"
++file="/var/log/ulog/ulogd.pcap"
  sync=1
  
  [mysql1]
-@@ -276,7 +275,7 @@
+@@ -295,7 +294,7 @@
  
  [nacct1]
  sync = 1

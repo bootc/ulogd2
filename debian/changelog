@@ -1,6 +1,12 @@
 ulogd2 (2.0.3-1) UNRELEASED; urgency=low
 
   * New upstream release.
+  * Refresh put-logfiles-in-var-log-ulog.patch.
+  * Remove patches applied upstream:
+    - nice-before-setuid.patch
+    - write-pidfile.patch
+    - improve-pid-file-handling.patch
+    - nflog-close-handle-after-unbind.patch
 
  -- Chris Boot <debian@bootc.net>  Mon, 25 Nov 2013 13:31:24 +0000
 

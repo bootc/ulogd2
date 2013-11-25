@@ -1,8 +1,4 @@
 configure-logging.patch
 enable-nflog-by-default.patch
 put-logfiles-in-var-log-ulog.patch
-nice-before-setuid.patch
-write-pidfile.patch
-improve-pid-file-handling.patch
 ulogd8-ulogd2.patch
-nflog-close-handle-after-unbind.patch
