@@ -1,3 +1,9 @@
+ulogd2 (2.0.3-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+
+ -- Chris Boot <debian@bootc.net>  Mon, 25 Nov 2013 13:31:24 +0000
+
 ulogd2 (2.0.2-4) unstable; urgency=low
 
   * Change priority of transitional packages to extra.
