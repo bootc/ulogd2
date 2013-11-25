@@ -38,7 +38,7 @@ struct pgsql_instance {
 
 /* our configuration directives */
 static struct config_keyset pgsql_kset = {
-	.num_ces = DB_CE_NUM + 6,
+	.num_ces = DB_CE_NUM + 7,
 	.ces = {
 		DB_CES,
 		{ 
@@ -72,6 +72,11 @@ static struct config_keyset pgsql_kset = {
 			.options = CONFIG_OPT_NONE,
 			.u.string = "public",
 		},
+		{
+			.key = "connstring",
+			.type = CONFIG_TYPE_STRING,
+			.options = CONFIG_OPT_NONE,
+		},
 	},
 };
 #define db_ce(x)	(x->ces[DB_CE_NUM+0])
@@ -80,6 +85,7 @@ static struct config_keyset pgsql_kset = {
 #define pass_ce(x)	(x->ces[DB_CE_NUM+3])
 #define port_ce(x)	(x->ces[DB_CE_NUM+4])
 #define schema_ce(x)	(x->ces[DB_CE_NUM+5])
+#define connstr_ce(x)	(x->ces[DB_CE_NUM+6])
 
 #define PGSQL_HAVE_NAMESPACE_TEMPLATE 			\
 	"SELECT nspname FROM pg_namespace n WHERE n.nspname='%s'"
@@ -214,7 +220,9 @@ static int close_db_pgsql(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_instance *pi = (struct pgsql_instance *) upi->private;
 
-	PQfinish(pi->dbh);
+	if (pi->dbh)
+		PQfinish(pi->dbh);
+	pi->dbh = NULL;
 
 	return 0;
 }
@@ -224,52 +232,53 @@ static int open_db_pgsql(struct ulogd_pluginstance *upi)
 {
 	struct pgsql_instance *pi = (struct pgsql_instance *) upi->private;
 	int len;
-	char *connstr;
-	char *server = host_ce(upi->config_kset).u.string;
-	unsigned int port = port_ce(upi->config_kset).u.value;
-	char *user = user_ce(upi->config_kset).u.string;
-	char *pass = pass_ce(upi->config_kset).u.string;
-	char *db = db_ce(upi->config_kset).u.string;
+	char *connstr = connstr_ce(upi->config_kset).u.string;
 	char *schema = NULL;
 	char pgbuf[128];
 
-	/* 80 is more than what we need for the fixed parts below */
-	len = 80 + strlen(user) + strlen(db);
+	if (!connstr) {
+		char *server = host_ce(upi->config_kset).u.string;
+		unsigned int port = port_ce(upi->config_kset).u.value;
+		char *user = user_ce(upi->config_kset).u.string;
+		char *pass = pass_ce(upi->config_kset).u.string;
+		char *db = db_ce(upi->config_kset).u.string;
+		/* 80 is more than what we need for the fixed parts below */
+		len = 80 + strlen(user) + strlen(db);
 
-	/* hostname and  and password are the only optionals */
-	if (server)
-		len += strlen(server);
-	if (pass)
-		len += strlen(pass);
-	if (port)
-		len += 20;
+		/* hostname and  and password are the only optionals */
+		if (server)
+			len += strlen(server);
+		if (pass)
+			len += strlen(pass);
+		if (port)
+			len += 20;
 
-	connstr = (char *) malloc(len);
-	if (!connstr) 
-		return -ENOMEM;
-	connstr[0] = '\0';
+		connstr = (char *) malloc(len);
+		if (!connstr)
+			return -ENOMEM;
+		connstr[0] = '\0';
 
-	if (server && strlen(server) > 0) {
-		strcpy(connstr, " host=");
-		strcat(connstr, server);
+		if (server && strlen(server) > 0) {
+			strcpy(connstr, " host=");
+			strcat(connstr, server);
+		}
+
+		if (port) {
+			char portbuf[20];
+			snprintf(portbuf, sizeof(portbuf), " port=%u", port);
+			strcat(connstr, portbuf);
+		}
+
+		strcat(connstr, " dbname=");
+		strcat(connstr, db);
+		strcat(connstr, " user=");
+		strcat(connstr, user);
+
+		if (pass) {
+			strcat(connstr, " password=");
+			strcat(connstr, pass);
+		}
 	}
-
-	if (port) {
-		char portbuf[20];
-		snprintf(portbuf, sizeof(portbuf), " port=%u", port);
-		strcat(connstr, portbuf);
-	}
-
-	strcat(connstr, " dbname=");
-	strcat(connstr, db);
-	strcat(connstr, " user=");
-	strcat(connstr, user);
-
-	if (pass) {
-		strcat(connstr, " password=");
-		strcat(connstr, pass);
-	}
-	
 	pi->dbh = PQconnectdb(connstr);
 	if (PQstatus(pi->dbh) != CONNECTION_OK) {
 		ulogd_log(ULOGD_ERROR, "unable to connect to db (%s): %s\n",

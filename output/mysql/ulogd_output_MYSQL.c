@@ -162,7 +162,9 @@ static int get_columns_mysql(struct ulogd_pluginstance *upi)
 static int close_db_mysql(struct ulogd_pluginstance *upi)
 {
 	struct mysql_instance *mi = (struct mysql_instance *) upi->private;
-	mysql_close(mi->dbh);
+	if (mi->dbh)
+		mysql_close(mi->dbh);
+	mi->dbh = NULL;
 	return 0;
 }
 

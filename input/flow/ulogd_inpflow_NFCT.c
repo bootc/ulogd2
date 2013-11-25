@@ -48,6 +48,10 @@
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 
+#ifndef NSEC_PER_SEC
+#define NSEC_PER_SEC    1000000000L
+#endif
+
 typedef enum TIMES_ { START, STOP, __TIME_MAX } TIMES;
 
 struct ct_timestamp {
@@ -236,7 +240,7 @@ static struct ulogd_key nfct_okeys[] = {
 		},
 	},
 	{
-		.type	= ULOGD_RET_UINT32,
+		.type	= ULOGD_RET_UINT64,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "orig.raw.pktlen",
 		.ipfix	= {
@@ -246,7 +250,7 @@ static struct ulogd_key nfct_okeys[] = {
 		},
 	},
 	{
-		.type	= ULOGD_RET_UINT32,
+		.type	= ULOGD_RET_UINT64,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "orig.raw.pktcount",
 		.ipfix	= {
@@ -301,7 +305,7 @@ static struct ulogd_key nfct_okeys[] = {
 		},
 	},
 	{
-		.type	= ULOGD_RET_UINT32,
+		.type	= ULOGD_RET_UINT64,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "reply.raw.pktlen",
 		.ipfix	= {
@@ -311,7 +315,7 @@ static struct ulogd_key nfct_okeys[] = {
 		},
 	},
 	{
-		.type	= ULOGD_RET_UINT32,
+		.type	= ULOGD_RET_UINT64,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "reply.raw.pktcount",
 		.ipfix	= {
@@ -557,14 +561,14 @@ static int propagate_ct(struct ulogd_pluginstance *main_upi,
 			     htons(nfct_get_attr_u16(ct, ATTR_REPL_PORT_DST)));
 	}
 
-	okey_set_u32(&ret[NFCT_ORIG_RAW_PKTLEN],
-		     nfct_get_attr_u32(ct, ATTR_ORIG_COUNTER_BYTES));
-	okey_set_u32(&ret[NFCT_ORIG_RAW_PKTCOUNT],
-		     nfct_get_attr_u32(ct, ATTR_ORIG_COUNTER_PACKETS));
-	okey_set_u32(&ret[NFCT_REPLY_RAW_PKTLEN],
-		     nfct_get_attr_u32(ct, ATTR_REPL_COUNTER_BYTES));
-	okey_set_u32(&ret[NFCT_REPLY_RAW_PKTCOUNT],
-		     nfct_get_attr_u32(ct, ATTR_REPL_COUNTER_PACKETS));
+	okey_set_u64(&ret[NFCT_ORIG_RAW_PKTLEN],
+		     nfct_get_attr_u64(ct, ATTR_ORIG_COUNTER_BYTES));
+	okey_set_u64(&ret[NFCT_ORIG_RAW_PKTCOUNT],
+		     nfct_get_attr_u64(ct, ATTR_ORIG_COUNTER_PACKETS));
+	okey_set_u64(&ret[NFCT_REPLY_RAW_PKTLEN],
+		     nfct_get_attr_u64(ct, ATTR_REPL_COUNTER_BYTES));
+	okey_set_u64(&ret[NFCT_REPLY_RAW_PKTCOUNT],
+		     nfct_get_attr_u64(ct, ATTR_REPL_COUNTER_PACKETS));
 
 	okey_set_u32(&ret[NFCT_CT_MARK], nfct_get_attr_u32(ct, ATTR_MARK));
 	okey_set_u32(&ret[NFCT_CT_ID], nfct_get_attr_u32(ct, ATTR_ID));
@@ -617,6 +621,25 @@ do_propagate_ct(struct ulogd_pluginstance *upi,
 	propagate_ct(upi, upi, ct, type, ts);
 }
 
+static void set_timestamp_from_ct(struct ct_timestamp *ts,
+				   struct nf_conntrack *ct, int name)
+{
+	int attr_name;
+
+	if (name == START)
+		attr_name = ATTR_TIMESTAMP_START;
+	else
+		attr_name = ATTR_TIMESTAMP_STOP;
+
+	if (nfct_attr_is_set(ct, attr_name)) {
+		ts->time[name].tv_sec =
+		     nfct_get_attr_u64(ct, attr_name) / NSEC_PER_SEC;
+		ts->time[name].tv_usec =
+		     (nfct_get_attr_u64(ct, attr_name) % NSEC_PER_SEC) / 1000;
+	} else
+		gettimeofday(&ts->time[name], NULL);
+}
+
 static int
 event_handler_hashtable(enum nf_conntrack_msg_type type,
 			struct nf_conntrack *ct, void *data)
@@ -634,8 +657,8 @@ event_handler_hashtable(enum nf_conntrack_msg_type type,
 			return NFCT_CB_CONTINUE;
 
 		ts->ct = ct;
-		gettimeofday(&ts->time[START], NULL);
 
+		set_timestamp_from_ct(ts, ct, START);
 		id = hashtable_hash(cpi->ct_active, ct);
 		ret = hashtable_add(cpi->ct_active, &ts->hashnode, id);
 		if (ret < 0) {
@@ -655,8 +678,7 @@ event_handler_hashtable(enum nf_conntrack_msg_type type,
 				return NFCT_CB_CONTINUE;
 
 			ts->ct = ct;
-			gettimeofday(&ts->time[START], NULL);
-
+			set_timestamp_from_ct(ts, ct, START);
 			ret = hashtable_add(cpi->ct_active, &ts->hashnode, id);
 			if (ret < 0) {
 				free(ts);
@@ -670,7 +692,7 @@ event_handler_hashtable(enum nf_conntrack_msg_type type,
 		ts = (struct ct_timestamp *)
 			hashtable_find(cpi->ct_active, ct, id);
 		if (ts) {
-			gettimeofday(&ts->time[STOP], NULL);
+			set_timestamp_from_ct(ts, ct, STOP);
 			do_propagate_ct(upi, ct, type, ts);
 			hashtable_del(cpi->ct_active, &ts->hashnode);
 			nfct_destroy(ts->ct);
@@ -679,7 +701,7 @@ event_handler_hashtable(enum nf_conntrack_msg_type type,
 			struct ct_timestamp tmp = {
 				.ct = ct,
 			};
-			gettimeofday(&tmp.time[STOP], NULL);
+			set_timestamp_from_ct(&tmp, ct, STOP);
 			tmp.time[START].tv_sec = 0;
 			tmp.time[START].tv_usec = 0;
 			do_propagate_ct(upi, ct, type, &tmp);
@@ -704,12 +726,12 @@ event_handler_no_hashtable(enum nf_conntrack_msg_type type,
 
 	switch(type) {
 	case NFCT_T_NEW:
-		gettimeofday(&tmp.time[START], NULL);
+		set_timestamp_from_ct(&tmp, ct, START);
 		tmp.time[STOP].tv_sec = 0;
 		tmp.time[STOP].tv_usec = 0;
 		break;
 	case NFCT_T_DESTROY:
-		gettimeofday(&tmp.time[STOP], NULL);
+		set_timestamp_from_ct(&tmp, ct, STOP);
 		tmp.time[START].tv_sec = 0;
 		tmp.time[START].tv_usec = 0;
 		break;
@@ -744,7 +766,7 @@ polling_handler(enum nf_conntrack_msg_type type,
 				return NFCT_CB_CONTINUE;
 
 			ts->ct = ct;
-			gettimeofday(&ts->time[START], NULL);
+			set_timestamp_from_ct(ts, ct, START);
 
 			ret = hashtable_add(cpi->ct_active, &ts->hashnode, id);
 			if (ret < 0) {
@@ -881,7 +903,7 @@ static int overrun_handler(enum nf_conntrack_msg_type type,
 			return NFCT_CB_CONTINUE;
 
 		ts->ct = ct;
-		gettimeofday(&ts->time[START], NULL); /* do our best here */
+		set_timestamp_from_ct(ts, ct, START);
 
 		ret = hashtable_add(cpi->ct_active, &ts->hashnode, id);
 		if (ret < 0) {
@@ -944,7 +966,7 @@ dump_reset_handler(enum nf_conntrack_msg_type type,
 				return NFCT_CB_CONTINUE;
 
 			ts->ct = ct;
-			gettimeofday(&ts->time[START], NULL);
+			set_timestamp_from_ct(ts, ct, START);
 
 			rc = hashtable_add(cpi->ct_active, &ts->hashnode, id);
 			if (rc < 0) {

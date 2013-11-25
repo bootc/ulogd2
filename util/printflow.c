@@ -73,12 +73,12 @@ struct ulogd_key printflow_keys[FLOW_IDS] = {
 		.name = "orig.l4.dport",
 	},
 	{
-		.type = ULOGD_RET_UINT32,
+		.type = ULOGD_RET_UINT64,
 		.flags = ULOGD_RETF_NONE,
 		.name = "orig.raw.pktlen",
 	},
 	{
-		.type = ULOGD_RET_UINT32,
+		.type = ULOGD_RET_UINT64,
 		.flags = ULOGD_RETF_NONE,
 		.name = "orig.raw.pktcount",
 	},
@@ -108,12 +108,12 @@ struct ulogd_key printflow_keys[FLOW_IDS] = {
 		.name = "reply.l4.dport",
 	},
 	{
-		.type = ULOGD_RET_UINT32,
+		.type = ULOGD_RET_UINT64,
 		.flags = ULOGD_RETF_NONE,
 		.name = "reply.raw.pktlen",
 	},
 	{
-		.type = ULOGD_RET_UINT32,
+		.type = ULOGD_RET_UINT64,
 		.flags = ULOGD_RETF_NONE,
 		.name = "reply.raw.pktcount",
 	},
@@ -205,8 +205,8 @@ int printflow_print(struct ulogd_key *res, char *buf)
 	}
 
 orig_out:
-	pp_print(buf_cur, "PKTS", res, PRINTFLOW_ORIG_RAW_PKTCOUNT, u32);
-	pp_print(buf_cur, "BYTES", res, PRINTFLOW_ORIG_RAW_PKTLEN, u32);
+	pp_print(buf_cur, "PKTS", res, PRINTFLOW_ORIG_RAW_PKTCOUNT, u64);
+	pp_print(buf_cur, "BYTES", res, PRINTFLOW_ORIG_RAW_PKTLEN, u64);
 
 	buf_cur += sprintf(buf_cur, ", REPLY: ");
 
@@ -256,8 +256,8 @@ orig_out:
 	}
 
 reply_out:
-	pp_print(buf_cur, "PKTS", res, PRINTFLOW_REPLY_RAW_PKTCOUNT, u32);
-	pp_print(buf_cur, "BYTES", res, PRINTFLOW_REPLY_RAW_PKTLEN, u32);
+	pp_print(buf_cur, "PKTS", res, PRINTFLOW_REPLY_RAW_PKTCOUNT, u64);
+	pp_print(buf_cur, "BYTES", res, PRINTFLOW_REPLY_RAW_PKTLEN, u64);
 
 	strcat(buf_cur, "\n");
 	return 0;
