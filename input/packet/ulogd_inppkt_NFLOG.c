@@ -618,12 +618,12 @@ static int start(struct ulogd_pluginstance *upi)
 	return 0;
 
 out_bind:
-	nflog_close(ui->nful_h);
 	if (group_ce(upi->config_kset).u.value == 0) {
 		nflog_unbind_pf(ui->nful_h, AF_INET);
 		nflog_unbind_pf(ui->nful_h, AF_INET6);
 		nflog_unbind_pf(ui->nful_h, AF_BRIDGE);
 	}
+	nflog_close(ui->nful_h);
 out_handle:
 	free(ui->nfulog_buf);
 out_buf:

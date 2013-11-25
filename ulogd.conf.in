@@ -197,7 +197,7 @@ sync=1
 
 [pcap1]
 #default file is /var/log/ulogd.pcap
-#file=/var/log/ulogd.pcap
+#file="/var/log/ulogd.pcap"
 sync=1
 
 [mysql1]
@@ -207,6 +207,13 @@ user="nupik"
 table="ulog"
 pass="changeme"
 procedure="INSERT_PACKET_FULL"
+# backlog configuration:
+# set backlog_memcap to the size of memory that will be
+# allocated to store events in memory if data is temporary down
+# and insert them when the database came back.
+#backlog_memcap=1000000
+# number of events to insert at once when backlog is not empty
+#backlog_oneshot_requests=10
 
 [mysql2]
 db="nulog"
@@ -224,6 +231,18 @@ table="ulog"
 #schema="public"
 pass="changeme"
 procedure="INSERT_PACKET_FULL"
+# connstring can be used to define PostgreSQL connection string which
+# contains all parameters of the connection. If set, this value has
+# precedence on other variables used to build the connection string.
+# See http://www.postgresql.org/docs/9.2/static/libpq-connect.html#LIBPQ-CONNSTRING
+# for a complete description of options.
+#connstring="host=localhost port=4321 dbname=nulog user=nupik password=changeme"
+#backlog_memcap=1000000
+#backlog_oneshot_requests=10
+# If superior to 1 a thread dedicated to SQL request execution
+# is created. The value stores the number of SQL request to keep
+# in the ring buffer
+#ring_buffer_size=1000
 
 [pgsql2]
 db="nulog"

@@ -431,6 +431,8 @@ sqlite3_stop(struct ulogd_pluginstance *pi)
 
 	sqlite3_close(priv->dbh);
 
+	priv->dbh = NULL;
+
 	return 0;
 }
 

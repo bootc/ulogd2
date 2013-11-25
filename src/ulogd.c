@@ -4,6 +4,7 @@
  *
  * (C) 2000-2005 by Harald Welte <laforge@gnumonks.org>
  * (C) 2013 by Eric Leblond <eric@regit.org>
+ * (C) 2013 Chris Boot <bootc@bootc.net>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 
@@ -55,12 +56,14 @@
 #include <signal.h>
 #include <dlfcn.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <dirent.h>
 #include <getopt.h>
 #include <pwd.h>
 #include <grp.h>
 #include <syslog.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <ulogd/conffile.h>
 #include <ulogd/ulogd.h>
 #ifdef DEBUG
@@ -78,11 +81,14 @@
 static FILE *logfile = NULL;		/* logfile pointer */
 static char *ulogd_logfile = NULL;
 static const char *ulogd_configfile = ULOGD_CONFIGFILE;
+static const char *ulogd_pidfile = NULL;
+static int ulogd_pidfile_fd = -1;
 static FILE syslog_dummy;
 
 static int info_mode = 0;
 
 static int verbose = 0;
+static int created_pidfile = 0;
 
 /* linked list for all registered plugins */
 static LLIST_HEAD(ulogd_plugins);
@@ -94,6 +100,7 @@ static LLIST_HEAD(ulogd_pi_stacks);
 static int load_plugin(const char *file);
 static int create_stack(const char *file);
 static int logfile_open(const char *name);
+static void cleanup_pidfile();
 
 static struct config_keyset ulogd_kset = {
 	.num_ces = 4,
@@ -372,7 +379,7 @@ void ulogd_register_plugin(struct ulogd_plugin *me)
 				  me->name);
 			exit(EXIT_FAILURE);
 		}
-		ulogd_log(ULOGD_NOTICE, "registering plugin `%s'\n", me->name);
+		ulogd_log(ULOGD_DEBUG, "registering plugin `%s'\n", me->name);
 		llist_add(&me->list, &ulogd_plugins);
 	} else {
 		get_plugin_infos(me);
@@ -457,6 +464,8 @@ void __ulogd_log(int level, char *file, int line, const char *format, ...)
 
 static void warn_and_exit(int daemonize)
 {
+	cleanup_pidfile();
+
 	if (!daemonize) {
 		if (logfile && !verbose) {
 			fprintf(stderr, "Fatal error, check logfile \"%s\""
@@ -830,7 +839,7 @@ static int create_stack(const char *option)
 	}
 	INIT_LLIST_HEAD(&stack->list);
 
-	ulogd_log(ULOGD_DEBUG, "building new pluginstance stack (%s):\n",
+	ulogd_log(ULOGD_NOTICE, "building new pluginstance stack: '%s'\n",
 		  option);
 
 	/* PASS 1: find and instanciate plugins of stack, link them together */
@@ -1002,6 +1011,167 @@ static int parse_conffile(const char *section, struct config_keyset *ce)
 	return 1;
 }
 
+/*
+ * Apply F_WRLCK to fd using fcntl().
+ *
+ * This function is copied verbatim from atd's daemon.c file, published under
+ * the GPL2+ license with the following copyright statement:
+ * Copyright (C) 1996 Thomas Koenig
+ */
+static int lock_fd(int fd, int wait)
+{
+	struct flock lock;
+
+	lock.l_type = F_WRLCK;
+	lock.l_whence = SEEK_SET;
+	lock.l_start = 0;
+	lock.l_len = 0;
+
+	if (wait)
+		return fcntl(fd, F_SETLKW, &lock);
+	else
+		return fcntl(fd, F_SETLK, &lock);
+}
+
+/*
+ * Manage ulogd's pidfile.
+ *
+ * This function is based on atd's daemon.c:daemon_setup() function, published
+ * under the GPL2+ license with the following copyright statement:
+ * Copyright (C) 1996 Thomas Koenig
+ */
+static int create_pidfile()
+{
+	int fd;
+	FILE *fp;
+	pid_t pid = -1;
+
+	if (!ulogd_pidfile)
+		return 0;
+
+	fd = open(ulogd_pidfile, O_RDWR | O_CREAT | O_EXCL, 0644);
+	if (fd < 0) {
+		if (errno != EEXIST) {
+			ulogd_log(ULOGD_ERROR, "cannot open %s: %d\n",
+					ulogd_pidfile, errno);
+			return -1;
+		}
+
+		fd = open(ulogd_pidfile, O_RDWR);
+		if (fd < 0) {
+			ulogd_log(ULOGD_ERROR, "cannot open %s: %d\n",
+					ulogd_pidfile, errno);
+			return -1;
+		}
+
+		fp = fdopen(fd, "rw");
+		if (fp == NULL) {
+			ulogd_log(ULOGD_ERROR, "cannot fdopen %s: %d\n",
+					ulogd_pidfile, errno);
+			close(fd);
+			return -1;
+		}
+
+		if ((fscanf(fp, "%d", &pid) != 1) || (pid == getpid())
+				|| (lock_fd(fd, 0) == 0)) {
+			ulogd_log(ULOGD_NOTICE,
+				  "removing stale pidfile for pid %d\n", pid);
+
+			if (unlink(ulogd_pidfile) < 0) {
+				ulogd_log(ULOGD_ERROR, "cannot unlink %s: %d\n",
+						ulogd_pidfile, errno);
+				return -1;
+			}
+		} else {
+			ulogd_log(ULOGD_FATAL,
+				"another ulogd already running with pid %d\n",
+				pid);
+			fclose(fp);
+			close(fd);
+			return -1;
+		}
+
+		close(fd);
+		fclose(fp);
+		unlink(ulogd_pidfile);
+
+		fd = open(ulogd_pidfile, O_RDWR | O_CREAT | O_EXCL, 0644);
+
+		if (fd < 0) {
+			ulogd_log(ULOGD_ERROR,
+				"cannot open %s (2nd time round): %d\n",
+				ulogd_pidfile, errno);
+			return -1;
+		}
+	}
+
+	if (lock_fd(fd, 0) < 0) {
+		ulogd_log(ULOGD_ERROR, "cannot lock %s: %s\n", ulogd_pidfile,
+				strerror(errno));
+		close(fd);
+		return -1;
+	}
+	ulogd_pidfile_fd = fd;
+	return 0;
+}
+
+static int write_pidfile(int daemonize)
+{
+	FILE *fp;
+	if (!ulogd_pidfile)
+		return 0;
+
+	if (ulogd_pidfile_fd == -1) {
+		ulogd_log(ULOGD_ERROR, "unset pid file fd\n");
+		return -1;
+	}
+
+	if (daemonize) {
+		/* relocking as lock is not inherited */
+		if (lock_fd(ulogd_pidfile_fd, 1) < 0) {
+			ulogd_log(ULOGD_ERROR, "cannot lock %s: %d\n", ulogd_pidfile,
+					errno);
+			close(ulogd_pidfile_fd);
+			return -1;
+		}
+	}
+
+	fp = fdopen(ulogd_pidfile_fd, "w");
+	if (fp == NULL) {
+		ulogd_log(ULOGD_ERROR, "cannot fdopen %s: %d\n", ulogd_pidfile,
+				errno);
+		close(ulogd_pidfile_fd);
+		return -1;
+	}
+
+	fprintf(fp, "%d\n", getpid());
+	fflush(fp);
+
+	if (ftruncate(fileno(fp), ftell(fp)) < 0)
+		ulogd_log(ULOGD_NOTICE, "cannot ftruncate %s: %d\n",
+				ulogd_pidfile, errno);
+
+	/*
+	 * We do NOT close fd, since we want to keep the lock. However, we don't
+	 * want to keep the file descriptor in case of an exec().
+	 */
+	fcntl(ulogd_pidfile_fd, F_SETFD, FD_CLOEXEC);
+
+	created_pidfile = 1;
+
+	return 0;
+}
+
+static void cleanup_pidfile()
+{
+	if (!ulogd_pidfile || !created_pidfile)
+		return;
+
+	if (unlink(ulogd_pidfile) != 0)
+		ulogd_log(ULOGD_ERROR, "PID file %s could not be deleted: %d\n",
+				ulogd_pidfile, errno);
+}
+
 static void deliver_signal_pluginstances(int signal)
 {
 	struct ulogd_pluginstance_stack *stack;
@@ -1080,6 +1250,8 @@ static void sigterm_handler(int signal)
 
 	config_stop();
 
+	cleanup_pidfile();
+
 	exit(0);
 }
 
@@ -1121,6 +1293,7 @@ static void print_usage(void)
 	printf("\t-v --verbose\tOutput info on standard output\n");
 	printf("\t-l --loglevel\tSet log level\n");
 	printf("\t-c --configfile\tUse alternative Configfile\n");
+	printf("\t-p --pidfile\tRecord ulogd PID in file\n");
 	printf("\t-u --uid\tChange UID/GID\n");
 	printf("\t-i --info\tDisplay infos about plugin\n");
 }
@@ -1134,6 +1307,7 @@ static struct option opts[] = {
 	{ "info", 1, NULL, 'i' },
 	{ "verbose", 0, NULL, 'v' },
 	{ "loglevel", 1, NULL, 'l' },
+	{ "pidfile", 1, NULL, 'p' },
 	{NULL, 0, NULL, 0}
 };
 
@@ -1150,7 +1324,7 @@ int main(int argc, char* argv[])
 
 	ulogd_logfile = strdup(ULOGD_LOGFILE_DEFAULT);
 
-	while ((argch = getopt_long(argc, argv, "c:dvl:h::Vu:i:", opts, NULL)) != -1) {
+	while ((argch = getopt_long(argc, argv, "c:p:dvl:h::Vu:i:", opts, NULL)) != -1) {
 		switch (argch) {
 		default:
 		case '?':
@@ -1178,6 +1352,9 @@ int main(int argc, char* argv[])
 			break;
 		case 'c':
 			ulogd_configfile = optarg;
+			break;
+		case 'p':
+			ulogd_pidfile = optarg;
 			break;
 		case 'u':
 			change_uid = 1;
@@ -1210,11 +1387,29 @@ int main(int argc, char* argv[])
 		loglevel_ce.u.value = loglevel;
 		loglevel_ce.flag |= CONFIG_FLAG_VAL_PROTECTED;
 
+	if (ulogd_pidfile) {
+		if (create_pidfile() < 0)
+			warn_and_exit(0);
+	}
+
 	if (daemonize && verbose) {
 		verbose = 0;
 		ulogd_log(ULOGD_ERROR,
 		          "suppressing verbose output (not compatible"
 			  " with daemon mode).\n");
+	}
+
+	if (daemonize){
+		if (daemon(0, 0) < 0) {
+			ulogd_log(ULOGD_FATAL, "can't daemonize: %s (%d)",
+				  errno, strerror(errno));
+			warn_and_exit(daemonize);
+		}
+	}
+
+	if (ulogd_pidfile) {
+		if (write_pidfile(daemonize) < 0)
+			warn_and_exit(0);
 	}
 
 	if (config_register_file(ulogd_configfile)) {
@@ -1233,6 +1428,13 @@ int main(int argc, char* argv[])
 		ulogd_log(ULOGD_FATAL, 
 			  "not even a single working plugin stack\n");
 		warn_and_exit(daemonize);
+	}
+
+	errno = 0;
+	if (nice(-1) == -1) {
+		if (errno != 0)
+			ulogd_log(ULOGD_ERROR, "Could not nice process: %s\n",
+				  strerror(errno));
 	}
 
 	if (change_uid) {
@@ -1259,25 +1461,6 @@ int main(int argc, char* argv[])
 				  uid);
 			warn_and_exit(daemonize);
 		}
-	}
-
-	errno = 0;
-	if (nice(-1) == -1) {
-		if (errno != 0)
-			ulogd_log(ULOGD_ERROR, "Could not nice process: %s\n",
-				  strerror(errno));
-	}
-
-
-	if (daemonize){
-		if (fork()) {
-			exit(0);
-		}
-		if (logfile != stdout)
-			fclose(stdout);
-		fclose(stderr);
-		fclose(stdin);
-		setsid();
 	}
 
 	signal(SIGTERM, &sigterm_handler);

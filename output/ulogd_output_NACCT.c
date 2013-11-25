@@ -80,12 +80,12 @@ static struct ulogd_key nacct_inp[] = {
 	},
 	/* Assume we're interested more in download than upload */
 	[KEY_RAW_PKTLEN] = {
-		.type	= ULOGD_RET_UINT32,
+		.type	= ULOGD_RET_UINT64,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "reply.raw.pktlen",
 	},
 	[KEY_RAW_PKTCNT] = {
-		.type	= ULOGD_RET_UINT32,
+		.type	= ULOGD_RET_UINT64,
 		.flags	= ULOGD_RETF_NONE,
 		.name	= "reply.raw.pktcount",
 	},
@@ -127,26 +127,26 @@ nacct_interp(struct ulogd_pluginstance *pi)
 	   'timestamp' value use 'flow.end.sec' */
 	if (ikey_get_u8(&inp[KEY_IP_PROTO]) == IPPROTO_ICMP) {
 		snprintf(buf, sizeof(buf),
-				 "%u\t%u\t%s\t%u\t%s\t%u\t%u\t%u",
+				 "%u\t%u\t%s\t%u\t%s\t%u\t%llu\t%llu",
 				 ikey_get_u32(&inp[KEY_FLOW_END]),
 				 ikey_get_u8(&inp[KEY_IP_PROTO]),
 				 (char *) ikey_get_ptr(&inp[KEY_IP_SADDR]),
 				 ikey_get_u8(&inp[KEY_ICMP_TYPE]),
 				 (char *) ikey_get_ptr(&inp[KEY_IP_DADDR]),
 				 ikey_get_u8(&inp[KEY_ICMP_CODE]),
-				 ikey_get_u32(&inp[KEY_RAW_PKTCNT]),
-				 ikey_get_u32(&inp[KEY_RAW_PKTLEN]));
+				 ikey_get_u64(&inp[KEY_RAW_PKTCNT]),
+				 ikey_get_u64(&inp[KEY_RAW_PKTLEN]));
 	} else {
 		snprintf(buf, sizeof(buf),
-				 "%u\t%u\t%s\t%u\t%s\t%u\t%u\t%u",
+				 "%u\t%u\t%s\t%u\t%s\t%u\t%llu\t%llu",
 				 ikey_get_u32(&inp[KEY_FLOW_END]),
 				 ikey_get_u8(&inp[KEY_IP_PROTO]),
 				 (char *) ikey_get_ptr(&inp[KEY_IP_SADDR]),
 				 ikey_get_u16(&inp[KEY_L4_SPORT]),
 				 (char *) ikey_get_ptr(&inp[KEY_IP_DADDR]),
 				 ikey_get_u16(&inp[KEY_L4_DPORT]),
-				 ikey_get_u32(&inp[KEY_RAW_PKTCNT]),
-				 ikey_get_u32(&inp[KEY_RAW_PKTLEN]));
+				 ikey_get_u64(&inp[KEY_RAW_PKTCNT]),
+				 ikey_get_u64(&inp[KEY_RAW_PKTLEN]));
 	}
 
 	fprintf(priv->of, "%s\n", buf);
