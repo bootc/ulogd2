@@ -17,10 +17,10 @@ TMP	= $(CURDIR)/debian/$(PACKAGE)
 	dh $@ --with autotools-dev,systemd
 
 override_dh_auto_configure:
-	dh_auto_configure -- --with-pgsql --with-mysql --with-dbi
+	dh_auto_configure -- --disable-silent-rules --with-pgsql --with-mysql --with-dbi
 
 override_dh_auto_build:
-	dh_auto_build -- V=1
+	dh_auto_build
 	( cd doc && sgml2txt ulogd.sgml && sgml2html -s 0 ulogd.sgml )
 
 override_dh_auto_clean:

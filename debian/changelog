@@ -7,6 +7,7 @@ ulogd2 (2.0.3-1) UNRELEASED; urgency=low
     - write-pidfile.patch
     - improve-pid-file-handling.patch
     - nflog-close-handle-after-unbind.patch
+  * Use ./configure --disable-silent-rules instead of make V=1
 
  -- Chris Boot <debian@bootc.net>  Mon, 25 Nov 2013 13:31:24 +0000
 
