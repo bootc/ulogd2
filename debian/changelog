@@ -1,4 +1,4 @@
-ulogd2 (2.0.3-1) UNRELEASED; urgency=low
+ulogd2 (2.0.3-1) unstable; urgency=low
 
   * New upstream release.
   * Refresh put-logfiles-in-var-log-ulog.patch.
@@ -10,7 +10,7 @@ ulogd2 (2.0.3-1) UNRELEASED; urgency=low
   * Use ./configure --disable-silent-rules instead of make V=1.
   * Correct Vcs-Browser entry to point at gitweb on Alioth.
 
- -- Chris Boot <debian@bootc.net>  Mon, 25 Nov 2013 13:31:24 +0000
+ -- Chris Boot <debian@bootc.net>  Tue, 03 Dec 2013 13:38:36 +0000
 
 ulogd2 (2.0.2-4) unstable; urgency=low
 
