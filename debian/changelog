@@ -9,8 +9,10 @@ ulogd2 (2.0.3-1) unstable; urgency=low
     - nflog-close-handle-after-unbind.patch
   * Use ./configure --disable-silent-rules instead of make V=1.
   * Correct Vcs-Browser entry to point at gitweb on Alioth.
+  * If the old ulogd init script exists during preinst, try to stop ulogd using
+    that script. (Closes: #731257)
 
- -- Chris Boot <debian@bootc.net>  Tue, 03 Dec 2013 13:38:36 +0000
+ -- Chris Boot <debian@bootc.net>  Tue, 03 Dec 2013 22:50:05 +0000
 
 ulogd2 (2.0.2-4) unstable; urgency=low
 

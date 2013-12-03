@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+
+# Ensure any ulogd-1.x instances are stopped
+if [ -x "/etc/init.d/ulogd" ]; then
+	invoke-rc.d ulogd stop || true
+fi
+
+#DEBHELPER#
+
