@@ -5,6 +5,8 @@ ulogd2 (2.0.3-2) UNRELEASED; urgency=low
     - update debian/watch
     - add debian/upstream-signing-key.pgp
     - list the keyring file in debian/source/include-binaries
+  * Use dh-autoreconf instead of autotools-dev to fix FTBFS on newer
+    architectures (e.g. arm64 and Ubuntu's ppc64el). Patch from Ubuntu.
 
  -- Chris Boot <debian@bootc.net>  Sun, 08 Dec 2013 11:52:08 +0000
 

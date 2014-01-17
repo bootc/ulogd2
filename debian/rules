@@ -14,7 +14,7 @@ PACKAGE	= $(firstword $(shell dh_listpackages))
 TMP	= $(CURDIR)/debian/$(PACKAGE)
 
 %:
-	dh $@ --with autotools-dev,systemd --parallel
+	dh $@ --with autoreconf,systemd --parallel
 
 override_dh_auto_configure:
 	dh_auto_configure -- --disable-silent-rules --with-pgsql --with-mysql --with-dbi

@@ -2,7 +2,7 @@ Source: ulogd2
 Section: net
 Priority: optional
 Maintainer: Chris Boot <debian@bootc.net>
-Build-Depends: debhelper (>= 9), autotools-dev, pkg-config,
+Build-Depends: debhelper (>= 9), dh-autoreconf, pkg-config,
  libnfnetlink-dev (>= 1.0.1), libmnl-dev, libnetfilter-acct-dev,
  libnetfilter-conntrack-dev (>= 1.0.2), libnetfilter-log-dev,
  libmysqlclient-dev, libpq-dev, libsqlite3-dev, libdbi-dev, libpcap-dev,
