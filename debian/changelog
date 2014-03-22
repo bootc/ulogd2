@@ -1,4 +1,4 @@
-ulogd2 (2.0.3-2) UNRELEASED; urgency=low
+ulogd2 (2.0.3-2) unstable; urgency=low
 
   * Enable parallel build.
   * Enable GPG signature checking for uscan:
@@ -10,7 +10,7 @@ ulogd2 (2.0.3-2) UNRELEASED; urgency=low
     lives in the multiarch lib directory. Thanks to Hideki Yamane for the patch.
     (Closes: #738407)
 
- -- Chris Boot <debian@bootc.net>  Sun, 08 Dec 2013 11:52:08 +0000
+ -- Chris Boot <debian@bootc.net>  Sat, 22 Mar 2014 17:30:52 +0000
 
 ulogd2 (2.0.3-1) unstable; urgency=low
 
