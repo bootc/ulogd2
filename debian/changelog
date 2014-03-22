@@ -3,8 +3,7 @@ ulogd2 (2.0.3-2) UNRELEASED; urgency=low
   * Enable parallel build.
   * Enable GPG signature checking for uscan:
     - update debian/watch
-    - add debian/upstream-signing-key.pgp
-    - list the keyring file in debian/source/include-binaries
+    - add debian/upstream/signing-key.asc
   * Use dh-autoreconf instead of autotools-dev to fix FTBFS on newer
     architectures (e.g. arm64 and Ubuntu's ppc64el). (Closes: #735961)
   * Add --with-dbi-lib to configure options to work with newer libdbi which now
