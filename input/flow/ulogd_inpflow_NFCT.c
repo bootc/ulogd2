@@ -621,7 +621,7 @@ do_propagate_ct(struct ulogd_pluginstance *upi,
 	propagate_ct(upi, upi, ct, type, ts);
 }
 
-static void set_timestamp_from_ct(struct ct_timestamp *ts,
+static int set_timestamp_from_ct_try(struct ct_timestamp *ts,
 				   struct nf_conntrack *ct, int name)
 {
 	int attr_name;
@@ -636,7 +636,15 @@ static void set_timestamp_from_ct(struct ct_timestamp *ts,
 		     nfct_get_attr_u64(ct, attr_name) / NSEC_PER_SEC;
 		ts->time[name].tv_usec =
 		     (nfct_get_attr_u64(ct, attr_name) % NSEC_PER_SEC) / 1000;
-	} else
+		return 1;
+	}
+	return 0;
+}
+
+static void set_timestamp_from_ct(struct ct_timestamp *ts,
+				   struct nf_conntrack *ct, int name)
+{
+	if (!set_timestamp_from_ct_try(ts, ct, name))
 		gettimeofday(&ts->time[name], NULL);
 }
 
@@ -732,8 +740,10 @@ event_handler_no_hashtable(enum nf_conntrack_msg_type type,
 		break;
 	case NFCT_T_DESTROY:
 		set_timestamp_from_ct(&tmp, ct, STOP);
-		tmp.time[START].tv_sec = 0;
-		tmp.time[START].tv_usec = 0;
+		if (!set_timestamp_from_ct_try(&tmp, ct, START)) {
+			tmp.time[START].tv_sec = 0;
+			tmp.time[START].tv_usec = 0;
+		}
 		break;
 	default:
 		ulogd_log(ULOGD_NOTICE, "unsupported message type\n");

@@ -9,6 +9,10 @@ pkglib_LTLIBRARIES = ulogd_output_LOGEMU.la ulogd_output_SYSLOG.la \
 			 ulogd_output_NACCT.la ulogd_output_XML.la \
 			 ulogd_output_GRAPHITE.la
 
+if HAVE_JANSSON
+pkglib_LTLIBRARIES += ulogd_output_JSON.la
+endif
+
 ulogd_output_GPRINT_la_SOURCES = ulogd_output_GPRINT.c
 ulogd_output_GPRINT_la_LDFLAGS = -avoid-version -module
 
@@ -32,3 +36,9 @@ ulogd_output_XML_la_LDFLAGS = -avoid-version -module
 
 ulogd_output_GRAPHITE_la_SOURCES = ulogd_output_GRAPHITE.c
 ulogd_output_GRAPHITE_la_LDFLAGS = -avoid-version -module
+
+if HAVE_JANSSON
+ulogd_output_JSON_la_SOURCES = ulogd_output_JSON.c
+ulogd_output_JSON_la_LIBADD  = ${libjansson_LIBS}
+ulogd_output_JSON_la_LDFLAGS = -avoid-version -module
+endif

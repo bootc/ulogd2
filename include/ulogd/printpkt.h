@@ -3,7 +3,6 @@
 
 enum pkt_keys {
 	KEY_OOB_FAMILY,
-	KEY_OOB_TIME_SEC,
 	KEY_OOB_PREFIX,
 	KEY_OOB_IN,
 	KEY_OOB_OUT,

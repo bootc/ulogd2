@@ -102,18 +102,22 @@ static struct ulogd_key ip2str_keys[] = {
 	{
 		.type = ULOGD_RET_STRING,
 		.name = "ip.saddr.str",
+		.cim_name = "src_ip",
 	},
 	{
 		.type = ULOGD_RET_STRING,
 		.name = "ip.daddr.str",
+		.cim_name = "dest_ip",
 	},
 	{
 		.type = ULOGD_RET_STRING,
 		.name = "orig.ip.saddr.str",
+		.cim_name = "src_ip",
 	},
 	{
 		.type = ULOGD_RET_STRING,
 		.name = "orig.ip.daddr.str",
+		.cim_name = "dest_ip",
 	},
 	{
 		.type = ULOGD_RET_STRING,

@@ -146,7 +146,7 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 			return -ERRTOOLONG;
 		}
 
-		if (!(wordend = get_word(line, " \t\n[]", (char *) wordbuf)))
+		if (!(wordend = get_word(line, " \t\n\r[]", (char *) wordbuf)))
 			continue;
 		pr_debug("word: \"%s\"\n", wordbuf);
 		if (!strcmp(wordbuf, section)) {
@@ -178,7 +178,7 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 			return -ERRTOOLONG;
 		}
 
-		if (!(wordend = get_word(line, " =\t\n", (char *) &wordbuf)))
+		if (!(wordend = get_word(line, " =\t\n\r", (char *) &wordbuf)))
 			continue;
 
 		if (wordbuf[0] == '[' ) {
@@ -195,7 +195,7 @@ int config_parse_file(const char *section, struct config_keyset *kset)
 				continue;
 			}
 
-			wordend = get_word(wordend, " =\t\n", (char *) &wordbuf);
+			wordend = get_word(wordend, " =\t\n\r", (char *) &wordbuf);
 			args = (char *)&wordbuf;
 
 			if (ce->hit && !(ce->options & CONFIG_OPT_MULTI))

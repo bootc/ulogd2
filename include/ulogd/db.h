@@ -65,7 +65,7 @@ struct db_instance {
 #define TIME_ERR		((time_t)-1)	/* Be paranoid */
 #define RECONNECT_DEFAULT	2
 #define MAX_ONESHOT_REQUEST	10
-#define RING_BUFFER_DEFAULT_SIZE	10
+#define RING_BUFFER_DEFAULT_SIZE	0
 
 #define DB_CES							\
 		{						\
