@@ -8,7 +8,7 @@ Last-Update: 2013-04-27
 
 --- a/ulogd.conf.in
 +++ b/ulogd.conf.in
-@@ -179,25 +179,24 @@
+@@ -183,15 +183,15 @@
  socket_path="/tmp/nuauth_ulogd2.sock"
  
  [emu1]
@@ -27,24 +27,45 @@ Last-Update: 2013-04-27
  sync=1
  timestamp=1
  
- [xml1]
--directory="/var/log/"
-+directory="/var/log/ulog/"
+@@ -201,7 +201,7 @@
+ 
+ [json1]
  sync=1
+-#file="/var/log/ulogd.json"
++#file="/var/log/ulog/ulogd.json"
+ #timestamp=0
+ # device name to be used in JSON message
+ #device="My awesome Netfilter firewall"
+@@ -212,7 +212,7 @@
  
  [pcap1]
--#default file is /var/log/ulogd.pcap
+ #default file is /var/log/ulogd.pcap
 -#file="/var/log/ulogd.pcap"
-+file="/var/log/ulog/ulogd.pcap"
++#file="/var/log/ulog/ulogd.pcap"
  sync=1
  
  [mysql1]
-@@ -295,7 +294,7 @@
+@@ -297,12 +297,12 @@
+ 
+ [sqlite3_ct]
+ table="ulog_ct"
+-db="/var/log/ulogd.sqlite3db"
++db="/var/log/ulog/ulogd.sqlite3db"
+ buffer=200
+ 
+ [sqlite3_pkt]
+ table="ulog_pkt"
+-db="/var/log/ulogd.sqlite3db"
++db="/var/log/ulog/ulogd.sqlite3db"
+ buffer=200
+ 
+ [sys2]
+@@ -310,7 +310,7 @@
  
  [nacct1]
  sync = 1
 -#file = /var/log/ulogd_nacct.log
-+file = /var/log/ulog/nacct.log
++#file = /var/log/ulog/nacct.log
  
  [mark1]
  mark = 1

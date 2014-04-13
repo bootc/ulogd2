@@ -5,12 +5,10 @@ Forwarded: not-needed
 Author: Chris Boot <debian@bootc.net>
 Last-Update: 2013-04-27
 
-Index: ulogd2/ulogd.conf.in
-===================================================================
---- ulogd2.orig/ulogd.conf.in	2013-04-01 12:00:44.781476506 +0100
-+++ ulogd2/ulogd.conf.in	2013-04-01 12:02:36.908069963 +0100
-@@ -51,7 +51,7 @@
- plugin="@pkglibdir@/ulogd_output_GRAPHITE.so"
+--- a/ulogd.conf.in
++++ b/ulogd.conf.in
+@@ -52,7 +52,7 @@
+ #plugin="@pkglibdir@/ulogd_output_JSON.so"
  
  # this is a stack for logging packet send by system via LOGEMU
 -#stack=log1:NFLOG,base1:BASE,ifi1:IFINDEX,ip2str1:IP2STR,print1:PRINTPKT,emu1:LOGEMU
