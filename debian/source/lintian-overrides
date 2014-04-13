@@ -1,4 +1,5 @@
 
 # transitional packages only
 ulogd2 source: duplicate-long-description ulogd ulogd-mysql ulogd-pcap ulogd-pgsql ulogd-sqlite3
+ulogd2 source: duplicate-long-description ulogd ulogd-mysql ulogd-pgsql ulogd-pcap ulogd-sqlite3
 
