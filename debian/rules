@@ -20,7 +20,8 @@ TMP	= $(CURDIR)/debian/$(PACKAGE)
 
 override_dh_auto_configure:
 	dh_auto_configure -- --disable-silent-rules --with-pgsql --with-mysql \
-		             --with-dbi --with-dbi-lib=/usr/lib/$(DEB_HOST_MULTIARCH)
+		--with-dbi --with-dbi-lib=/usr/lib/$(DEB_HOST_MULTIARCH) \
+		--with-jansson
 
 override_dh_auto_build:
 	dh_auto_build
@@ -53,4 +54,4 @@ override_dh_strip:
 
 .PHONY: override_dh_auto_configure override_dh_auto_build \
 	override_dh_auto_clean override_dh_fixperms override_dh_install \
-       	override_dh_installdocs override_dh_strip
+	override_dh_installdocs override_dh_strip

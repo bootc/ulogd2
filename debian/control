@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 9), dh-autoreconf, pkg-config,
  libnfnetlink-dev (>= 1.0.1), libmnl-dev, libnetfilter-acct-dev,
  libnetfilter-conntrack-dev (>= 1.0.2), libnetfilter-log-dev,
  libmysqlclient-dev, libpq-dev, libsqlite3-dev, libdbi-dev, libpcap-dev,
- linuxdoc-tools, groff, dh-systemd (>= 1.5)
+ linuxdoc-tools, groff, dh-systemd (>= 1.5), libjansson-dev
 Standards-Version: 3.9.5
 Homepage: http://www.netfilter.org/projects/ulogd/
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ulogd2.git;a=summary
@@ -16,7 +16,8 @@ Package: ulogd2
 Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, lsb-base, ${misc:Depends}, adduser
-Suggests: ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql, ulogd2-pcap, ulogd2-sqlite3
+Suggests: ulogd2-dbi, ulogd2-json, ulogd2-mysql, ulogd2-pcap, ulogd2-pgsql,
+ ulogd2-sqlite3
 Breaks: ulogd (<< 2.0.2-3~)
 Replaces: ulogd (<< 2.0.2-3~)
 Description: Netfilter Userspace Logging Daemon
@@ -26,9 +27,11 @@ Description: Netfilter Userspace Logging Daemon
  accounting using NFACCT. Output can be sent to plain text log files, a variety
  of SQL database formats, XML files, pcap files, syslog, and many other formats.
  .
- Support for DBI, MySQL, PostgreSQL and SQLite 3 are in separate packages called
- ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql and ulogd2-sqlite3 respectively. Support
- for writing to pcap files is in the ulogd2-pcap package.
+ Support for the DBI database abstraction layer, MySQL, PostgreSQL and SQLite 3
+ databases is in separate packages called ulogd2-dbi, ulogd2-mysql, ulogd2-pgsql
+ and ulogd2-sqlite3 respectively. Support for writing to JSON files is the
+ ulogd2-json package. Support for writing to pcap files is in the ulogd2-pcap
+ package.
 
 Package: ulogd2-dbi
 Architecture: linux-any
@@ -44,6 +47,21 @@ Description: DBI extension to ulogd
  This module adds DBI support to ulogd. If you install this package, you can
  send netfilter logs or accounting data to an SQL database via the DBI database
  abstraction layer.
+
+Package: ulogd2-json
+Architecture: linux-any
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ulogd2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: JSON extension to ulogd
+ ulogd is an advanced netfilter logging daemon. It can act as a replacement for
+ syslog for logging netfilter ruleset violations (via the NFLOG or ULOG iptables
+ targets), can gather per-connection accounting using NFCT, or gather per-rule
+ accounting using NFACCT. Output can be sent to plain text log files, a variety
+ of SQL database formats, XML files, pcap files, syslog, and many other formats.
+ .
+ This module adds JSON support to ulogd. If you install this package, you can
+ send netfilter logs or accounting data to a log file using JavaScript Object
+ Notation (JSON).
 
 Package: ulogd2-mysql
 Architecture: linux-any

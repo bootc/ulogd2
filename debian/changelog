@@ -7,6 +7,12 @@ ulogd2 (2.0.4-1) UNRELEASED; urgency=medium
   * Refresh patches to eliminate fuzz and incorporate upstream changes:
     - debian/patches/enable-nflog-by-default.patch
     - debian/patches/put-logfiles-in-var-log-ulog.patch
+  * Enable the JSON output plugin:
+    - d/control: Add libjansson-dev to Build-Depends, add ulogd2-json package,
+        add ulogd2-json to ulogd2's Suggests, update the ulogd2 long
+        description.
+    - d/rules: Add --with-jansson to configure arguments.
+    - d/ulogd2-json.install: new file.
 
  -- Chris Boot <debian@bootc.net>  Sun, 13 Apr 2014 09:48:27 +0100
 
