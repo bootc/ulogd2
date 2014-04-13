@@ -1,4 +1,4 @@
-ulogd2 (2.0.4-1) UNRELEASED; urgency=medium
+ulogd2 (2.0.4-1) unstable; urgency=medium
 
   * New upstream release:
     - Disables database buffering by default. This was enabled unintentionally
@@ -14,7 +14,7 @@ ulogd2 (2.0.4-1) UNRELEASED; urgency=medium
     - d/rules: Add --with-jansson to configure arguments.
     - d/ulogd2-json.install: new file.
 
- -- Chris Boot <debian@bootc.net>  Sun, 13 Apr 2014 09:48:27 +0100
+ -- Chris Boot <debian@bootc.net>  Sun, 13 Apr 2014 14:48:34 +0100
 
 ulogd2 (2.0.3-2) unstable; urgency=low
 
