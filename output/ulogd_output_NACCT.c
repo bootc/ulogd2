@@ -127,7 +127,7 @@ nacct_interp(struct ulogd_pluginstance *pi)
 	   'timestamp' value use 'flow.end.sec' */
 	if (ikey_get_u8(&inp[KEY_IP_PROTO]) == IPPROTO_ICMP) {
 		snprintf(buf, sizeof(buf),
-				 "%u\t%u\t%s\t%u\t%s\t%u\t%llu\t%llu",
+				 "%u\t%u\t%s\t%u\t%s\t%u\t%" PRIu64 "\t%" PRIu64,
 				 ikey_get_u32(&inp[KEY_FLOW_END]),
 				 ikey_get_u8(&inp[KEY_IP_PROTO]),
 				 (char *) ikey_get_ptr(&inp[KEY_IP_SADDR]),
@@ -138,7 +138,7 @@ nacct_interp(struct ulogd_pluginstance *pi)
 				 ikey_get_u64(&inp[KEY_RAW_PKTLEN]));
 	} else {
 		snprintf(buf, sizeof(buf),
-				 "%u\t%u\t%s\t%u\t%s\t%u\t%llu\t%llu",
+				 "%u\t%u\t%s\t%u\t%s\t%u\t%" PRIu64 "\t%" PRIu64,
 				 ikey_get_u32(&inp[KEY_FLOW_END]),
 				 ikey_get_u8(&inp[KEY_IP_PROTO]),
 				 (char *) ikey_get_ptr(&inp[KEY_IP_SADDR]),

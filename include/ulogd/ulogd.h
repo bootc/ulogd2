@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <signal.h>	/* need this because of extension-sighandler */
 #include <sys/types.h>
+#include <inttypes.h>
 #include <string.h>
 #include <config.h>
 
@@ -96,6 +97,9 @@ struct ulogd_key {
 		u_int32_t	vendor;
 		u_int16_t	field_id;
 	} ipfix;
+
+	/* Store field name for Common Information Model */
+	char *cim_name;
 
 	union {
 		/* and finally the returned value */

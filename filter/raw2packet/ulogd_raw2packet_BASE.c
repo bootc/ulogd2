@@ -259,6 +259,7 @@ static struct ulogd_key iphdr_rets[] = {
 			.vendor = IPFIX_VENDOR_IETF,
 			.field_id = IPFIX_tcpSourcePort,
 		},
+		.cim_name = "src_port",
 	},
 	[KEY_TCP_DPORT] = {
 		.type = ULOGD_RET_UINT16,
@@ -268,6 +269,7 @@ static struct ulogd_key iphdr_rets[] = {
 			.vendor = IPFIX_VENDOR_IETF,
 			.field_id = IPFIX_tcpDestinationPort,
 		},
+		.cim_name = "dest_port",
 	},
 	[KEY_TCP_SEQ] = {
 		.type = ULOGD_RET_UINT32,
@@ -368,6 +370,7 @@ static struct ulogd_key iphdr_rets[] = {
 			.vendor = IPFIX_VENDOR_IETF, 
 			.field_id = IPFIX_udpSourcePort,
 		},
+		.cim_name = "src_port",
 	},
 	[KEY_UDP_DPORT] = {
 		.type = ULOGD_RET_UINT16,
@@ -377,6 +380,7 @@ static struct ulogd_key iphdr_rets[] = {
 			.vendor = IPFIX_VENDOR_IETF,
 			.field_id = IPFIX_udpDestinationPort,
 		},
+		.cim_name = "dest_port",
 	},
 	[KEY_UDP_LEN] = {
 		.type = ULOGD_RET_UINT16,
@@ -512,12 +516,14 @@ static struct ulogd_key iphdr_rets[] = {
 	[KEY_SCTP_SPORT] = {
 		.type = ULOGD_RET_UINT16,
 		.flags = ULOGD_RETF_NONE,
-		.name = "sctp.sport", 
+		.name = "sctp.sport",
+		.cim_name = "src_port",
 	},
 	[KEY_SCTP_DPORT] = {
 		.type = ULOGD_RET_UINT16,
 		.flags = ULOGD_RETF_NONE,
-		.name = "sctp.dport", 
+		.name = "sctp.dport",
+		.cim_name = "dest_port",
 	},
 	[KEY_SCTP_CSUM] = {
 		.type = ULOGD_RET_UINT32,

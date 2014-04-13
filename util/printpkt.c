@@ -39,7 +39,6 @@
 struct ulogd_key printpkt_keys[] = {
 	[KEY_OOB_FAMILY]	= { .name = "oob.family", },
 	[KEY_OOB_PROTOCOL]	= { .name = "oob.protocol", },
-	[KEY_OOB_TIME_SEC]	= { .name = "oob.time.sec", },
 	[KEY_OOB_PREFIX]	= { .name = "oob.prefix", },
 	[KEY_OOB_IN]		= { .name = "oob.in", },
 	[KEY_OOB_OUT]		= { .name = "oob.out", },
