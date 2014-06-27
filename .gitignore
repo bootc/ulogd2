@@ -20,3 +20,6 @@ Makefile.in
 /libtool
 /stamp-h1
 TAGS
+
+/doc/ulogd.*
+!/doc/ulogd.sgml
