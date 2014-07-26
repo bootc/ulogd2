@@ -158,7 +158,11 @@ static int json_interp(struct ulogd_pluginstance *upi)
 			break;
 		case ULOGD_RET_BOOL:
 		case ULOGD_RET_INT8:
+			json_object_set_new(msg, field_name, json_integer(key->u.value.i8));
+			break;
 		case ULOGD_RET_INT16:
+			json_object_set_new(msg, field_name, json_integer(key->u.value.i16));
+			break;
 		case ULOGD_RET_INT32:
 			json_object_set_new(msg, field_name, json_integer(key->u.value.i32));
 			break;
@@ -171,10 +175,17 @@ static int json_interp(struct ulogd_pluginstance *upi)
 					json_object_set_new(msg, "action", json_string("blocked"));
 				break;
 			}
+			json_object_set_new(msg, field_name, json_integer(key->u.value.ui8));
+			break;
 		case ULOGD_RET_UINT16:
+			json_object_set_new(msg, field_name, json_integer(key->u.value.ui16));
+			break;
 		case ULOGD_RET_UINT32:
+			json_object_set_new(msg, field_name, json_integer(key->u.value.ui32));
+			break;
 		case ULOGD_RET_UINT64:
 			json_object_set_new(msg, field_name, json_integer(key->u.value.ui64));
+			break;
 		default:
 			/* don't know how to interpret this key. */
 			break;
