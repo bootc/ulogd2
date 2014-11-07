@@ -142,7 +142,7 @@ dnl AM_CONDITIONAL(HAVE_PGSQL, test x$pgsqldir != x)
 
 AC_CONFIG_FILES(include/Makefile include/ulogd/Makefile include/libipulog/Makefile \
 	  include/linux/Makefile include/linux/netfilter/Makefile \
-	  libipulog/Makefile \
+	  include/linux/netfilter_ipv4/Makefile libipulog/Makefile \
 	  input/Makefile input/packet/Makefile input/flow/Makefile \
 	  input/sum/Makefile \
 	  filter/Makefile filter/raw2packet/Makefile filter/packet2flow/Makefile \
