@@ -1,6 +1,7 @@
 ulogd2 (2.0.4-2) UNRELEASED; urgency=medium
 
   * Fix removal of old ulogd initscript upon initial installation of ulogd2.
+  * Remove more obsolete conffiles.
 
  -- Andreas Beckmann <anbe@debian.org>  Wed, 04 Mar 2015 21:54:40 +0100
 

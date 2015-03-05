@@ -1,0 +1,2 @@
+rm_conffile /etc/init.d/ulogd 2.0.4-2~
+rm_conffile /etc/logrotate.d/ulogd 2.0.4-2~
