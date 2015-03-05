@@ -1,4 +1,6 @@
 
 # Remove the old ulogd 1.x init script, as it can cause problems/confusion
-rm_conffile /etc/init.d/ulogd 2.0.2-4~ ulogd
+# Provide a fall-back old-version ("0") as a hack to ensure this is performed
+# by dpkg-maintscript-helper on the initial install of ulogd2, too.
+rm_conffile /etc/init.d/ulogd 2.0.4-2~ ulogd -- "$@" 0
 
