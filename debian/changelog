@@ -1,4 +1,4 @@
-ulogd2 (2.0.4-2) UNRELEASED; urgency=medium
+ulogd2 (2.0.4-2) unstable; urgency=medium
 
   [ Andreas Beckmann ]
   * Fix removal of old ulogd initscript upon initial installation of ulogd2.
@@ -8,7 +8,7 @@ ulogd2 (2.0.4-2) UNRELEASED; urgency=medium
   * Apply patches from Andreas Beckmann correct the transition from ulogd to
     ulogd2. (Closes: #779865, LP: #1354720)
 
- -- Andreas Beckmann <anbe@debian.org>  Wed, 04 Mar 2015 21:54:40 +0100
+ -- Chris Boot <debian@bootc.net>  Sun, 08 Mar 2015 15:22:44 +0000
 
 ulogd2 (2.0.4-1) unstable; urgency=medium
 
