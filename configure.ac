@@ -52,27 +52,38 @@ fi
 dnl Check for the right nfnetlink version
 PKG_CHECK_MODULES([LIBNFNETLINK], [libnfnetlink >= 1.0.1])
 AC_ARG_ENABLE(nflog,
-       AS_HELP_STRING([--enable-nflog], [Enable nflog module [default=yes]]),,[enable_nflog=yes])
+       AS_HELP_STRING([--enable-nflog], [Enable nflog module [default=yes]]),[enable_nflog=$enableval],[enable_nflog=yes])
 AS_IF([test "x$enable_nflog" = "xyes"], [
     PKG_CHECK_MODULES([LIBNETFILTER_LOG], [libnetfilter_log >= 1.0.0])
     AC_DEFINE([BUILD_NFLOG], [1], [Building nflog module])
 ])
 AM_CONDITIONAL([BUILD_NFLOG], [test "x$enable_nflog" = "xyes"])
+if [! test "x$enable_nflog" = "xyes"]; then
+	enable_nflog="no"
+fi
+
 AC_ARG_ENABLE(nfct,
-       AS_HELP_STRING([--enable-nfct], [Enable nfct module [default=yes]]),,[enable_nfct=yes])
+       AS_HELP_STRING([--enable-nfct], [Enable nfct module [default=yes]]),[enable_nfct=$enableval],[enable_nfct=yes])
 AS_IF([test "x$enable_nfct" = "xyes"], [
     PKG_CHECK_MODULES([LIBNETFILTER_CONNTRACK], [libnetfilter_conntrack >= 1.0.2])
     AC_DEFINE([BUILD_NFCT], [1], [Building nfct module])
 ])
 AM_CONDITIONAL([BUILD_NFCT], [test "x$enable_nfct" = "xyes"])
+if [! test "x$enable_nfct" = "xyes"]; then
+	enable_nfct="no"
+fi
+
 AC_ARG_ENABLE(nfacct,
-       AS_HELP_STRING([--enable-nfacct], [Enable nfacct module [default=yes]]),,[enable_nfacct=yes])
+       AS_HELP_STRING([--enable-nfacct], [Enable nfacct module [default=yes]]),[enable_nfacct=$enableval],[enable_nfacct=yes])
 AS_IF([test "x$enable_nfacct" = "xyes"], [
     PKG_CHECK_MODULES([LIBMNL], [libmnl >= 1.0.3])
     PKG_CHECK_MODULES([LIBNETFILTER_ACCT], [libnetfilter_acct >= 1.0.1])
     AC_DEFINE([BUILD_NFACCT], [1], [Building nfacct module])
 ])
 AM_CONDITIONAL([BUILD_NFACCT], [test "x$enable_nfacct" = "xyes"])
+if [! test "x$enable_nfacct" = "xyes"]; then
+	enable_nfacct="no"
+fi
 
 CT_CHECK_POSTGRES_DB()
 AM_CONDITIONAL(HAVE_PGSQL, test "x$PQLIBPATH" != "x")
