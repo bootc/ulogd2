@@ -42,6 +42,13 @@ AC_SUBST([regular_CFLAGS])
 AC_SEARCH_LIBS([pthread_create], [pthread], [libpthread_LIBS="$LIBS"; LIBS=""])
 AC_SUBST([libpthread_LIBS])
 
+AC_ARG_ENABLE(ulog,
+       AS_HELP_STRING([--enable-ulog], [Enable ulog module [default=yes]]),[enable_ulog=$enableval],[enable_ulog=yes])
+AM_CONDITIONAL([BUILD_ULOG], [test "x$enable_ulog" = "xyes"])
+if [! test "x$enable_ulog" = "xyes"]; then
+	enable_ulog="no"
+fi
+
 dnl Check for the right nfnetlink version
 PKG_CHECK_MODULES([LIBNFNETLINK], [libnfnetlink >= 1.0.1])
 AC_ARG_ENABLE(nflog,
@@ -157,6 +164,7 @@ Ulogd configuration:
     NFLOG plugin:			${enable_nflog}
     NFCT plugin:			${enable_nfct}
     NFACCT plugin:			${enable_nfacct}
+    ULOG plugin:			${enable_ulog}
   Output plugins:
     PCAP plugin:			${enable_pcap}
     PGSQL plugin:			${enable_pgsql}
