@@ -2,7 +2,12 @@
 AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBNETFILTER_LOG_CFLAGS}
 AM_CFLAGS = ${regular_CFLAGS}
 
-pkglib_LTLIBRARIES = ulogd_inppkt_ULOG.la ulogd_inppkt_UNIXSOCK.la
+pkglib_LTLIBRARIES = ulogd_inppkt_UNIXSOCK.la
+
+if BUILD_ULOG
+pkglib_LTLIBRARIES += ulogd_inppkt_ULOG.la
+endif
+
 if BUILD_NFLOG
 pkglib_LTLIBRARIES += ulogd_inppkt_NFLOG.la
 endif

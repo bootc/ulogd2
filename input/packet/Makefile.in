@@ -78,7 +78,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@BUILD_NFLOG_TRUE@am__append_1 = ulogd_inppkt_NFLOG.la
+@BUILD_ULOG_TRUE@am__append_1 = ulogd_inppkt_ULOG.la
+@BUILD_NFLOG_TRUE@am__append_2 = ulogd_inppkt_NFLOG.la
 subdir = input/packet
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/build-aux/depcomp
@@ -141,6 +142,7 @@ ulogd_inppkt_ULOG_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(AM_CFLAGS) $(CFLAGS) $(ulogd_inppkt_ULOG_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
+@BUILD_ULOG_TRUE@am_ulogd_inppkt_ULOG_la_rpath = -rpath $(pkglibdir)
 ulogd_inppkt_UNIXSOCK_la_LIBADD =
 am_ulogd_inppkt_UNIXSOCK_la_OBJECTS = ulogd_inppkt_UNIXSOCK.lo
 ulogd_inppkt_UNIXSOCK_la_OBJECTS =  \
@@ -358,8 +360,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir)/include ${LIBNETFILTER_LOG_CFLAGS}
 AM_CFLAGS = ${regular_CFLAGS}
-pkglib_LTLIBRARIES = ulogd_inppkt_ULOG.la ulogd_inppkt_UNIXSOCK.la \
-	$(am__append_1)
+pkglib_LTLIBRARIES = ulogd_inppkt_UNIXSOCK.la $(am__append_1) \
+	$(am__append_2)
 ulogd_inppkt_NFLOG_la_SOURCES = ulogd_inppkt_NFLOG.c
 ulogd_inppkt_NFLOG_la_LDFLAGS = -avoid-version -module $(LIBNETFILTER_LOG_LIBS)
 ulogd_inppkt_ULOG_la_SOURCES = ulogd_inppkt_ULOG.c
@@ -441,7 +443,7 @@ ulogd_inppkt_NFLOG.la: $(ulogd_inppkt_NFLOG_la_OBJECTS) $(ulogd_inppkt_NFLOG_la_
 	$(AM_V_CCLD)$(ulogd_inppkt_NFLOG_la_LINK) $(am_ulogd_inppkt_NFLOG_la_rpath) $(ulogd_inppkt_NFLOG_la_OBJECTS) $(ulogd_inppkt_NFLOG_la_LIBADD) $(LIBS)
 
 ulogd_inppkt_ULOG.la: $(ulogd_inppkt_ULOG_la_OBJECTS) $(ulogd_inppkt_ULOG_la_DEPENDENCIES) $(EXTRA_ulogd_inppkt_ULOG_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(ulogd_inppkt_ULOG_la_LINK) -rpath $(pkglibdir) $(ulogd_inppkt_ULOG_la_OBJECTS) $(ulogd_inppkt_ULOG_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(ulogd_inppkt_ULOG_la_LINK) $(am_ulogd_inppkt_ULOG_la_rpath) $(ulogd_inppkt_ULOG_la_OBJECTS) $(ulogd_inppkt_ULOG_la_LIBADD) $(LIBS)
 
 ulogd_inppkt_UNIXSOCK.la: $(ulogd_inppkt_UNIXSOCK_la_OBJECTS) $(ulogd_inppkt_UNIXSOCK_la_DEPENDENCIES) $(EXTRA_ulogd_inppkt_UNIXSOCK_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(ulogd_inppkt_UNIXSOCK_la_LINK) -rpath $(pkglibdir) $(ulogd_inppkt_UNIXSOCK_la_OBJECTS) $(ulogd_inppkt_UNIXSOCK_la_LIBADD) $(LIBS)
