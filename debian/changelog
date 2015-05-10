@@ -1,3 +1,9 @@
+ulogd2 (2.0.5-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Chris Boot <debian@bootc.net>  Sun, 10 May 2015 17:48:35 +0100
+
 ulogd2 (2.0.4-2) unstable; urgency=medium
 
   [ Andreas Beckmann ]
