@@ -1,6 +1,8 @@
 ulogd2 (2.0.5-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+    - Corrects JSON output of integer types on big-endian systems.
+      (Closes: #784935)
   * Update Standards-Version to 3.9.6 (no changes required).
 
  -- Chris Boot <debian@bootc.net>  Sun, 10 May 2015 17:48:35 +0100
