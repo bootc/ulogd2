@@ -1,11 +1,11 @@
-ulogd2 (2.0.4-2+deb8u1) UNRELEASED; urgency=medium
+ulogd2 (2.0.4-2+deb8u1) stable; urgency=medium
 
   * Begin a new debian-jessie branch: update debian/gbp.conf.
   * Add upstream patch Fix-JSON-output-on-big-endian-systems.patch:
     - Corrects JSON output of integer types on big-endian systems.
       (Closes: #784935)
 
- -- Chris Boot <debian@bootc.net>  Mon, 11 May 2015 13:04:51 +0100
+ -- Chris Boot <debian@bootc.net>  Mon, 11 May 2015 13:32:13 +0100
 
 ulogd2 (2.0.4-2) unstable; urgency=medium
 
